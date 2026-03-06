@@ -1,10 +1,10 @@
-import { IconFile, IconFolder, IconPointFilled } from '@tabler/icons-react'
+import { IconDotsVertical, IconFile, IconFolder, IconPointFilled, IconTrash } from '@tabler/icons-react'
 
 import type { ContentItem } from '@/entities/content-item'
 import { isFileItem } from '@/entities/content-item'
 import { formatDate } from '@/shared/lib/date/format-date'
 import { formatFileSize } from '@/shared/lib/file/format-file-size'
-import { Checkbox, Group, ScrollArea, Table, Text } from '@/shared/ui'
+import { ActionIcon, Checkbox, Group, Menu, ScrollArea, Table, Text } from '@/shared/ui'
 import type { SortBy, SortOrder } from '@/shared/types/common'
 
 type FileTableProps = {
@@ -18,6 +18,7 @@ type FileTableProps = {
   onToggleSelect: (itemId: string) => void
   onOpenFile: (itemId: string) => void
   onOpenFolder: (folderId: string) => void
+  onDeleteItem: (item: ContentItem) => void
 }
 
 const SortableHeader = ({
@@ -52,6 +53,7 @@ export const FileTable = ({
   onToggleSelect,
   onOpenFile,
   onOpenFolder,
+  onDeleteItem,
 }: FileTableProps) => {
   if (loading) {
     return (
@@ -149,9 +151,22 @@ export const FileTable = ({
                   </Group>
                 </Table.Td>
                 <Table.Td>
-                  <Text size="xs" c="dimmed">
-                    --
-                  </Text>
+                  <Menu withinPortal position="bottom-end">
+                    <Menu.Target>
+                      <ActionIcon variant="subtle" color="gray" aria-label={`Actions for ${item.name}`}>
+                        <IconDotsVertical size={14} />
+                      </ActionIcon>
+                    </Menu.Target>
+                    <Menu.Dropdown>
+                      <Menu.Item
+                        color="red"
+                        leftSection={<IconTrash size={14} />}
+                        onClick={() => onDeleteItem(item)}
+                      >
+                        Delete
+                      </Menu.Item>
+                    </Menu.Dropdown>
+                  </Menu>
                 </Table.Td>
               </Table.Tr>
             )

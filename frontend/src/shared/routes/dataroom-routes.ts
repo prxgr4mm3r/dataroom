@@ -14,6 +14,13 @@ export const normalizeFolderId = (folderId?: string | null): string => {
   return folderId
 }
 
+export const toNullableFolderId = (folderId?: string | null): string | null => {
+  if (!folderId || folderId === ROOT_FOLDER_ID) {
+    return null
+  }
+  return folderId
+}
+
 export const withPreviewQuery = (previewId?: string | null): string => {
   if (!previewId) {
     return ''

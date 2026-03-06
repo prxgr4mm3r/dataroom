@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { normalizeFolderId, toFolderPath, withPreviewQuery } from './dataroom-routes'
+import { normalizeFolderId, toFolderPath, toNullableFolderId, withPreviewQuery } from './dataroom-routes'
 
 describe('dataroom-routes', () => {
   it('uses root path for empty/root folder ids', () => {
@@ -16,6 +16,12 @@ describe('dataroom-routes', () => {
     expect(normalizeFolderId(undefined)).toBe('root')
     expect(normalizeFolderId('root')).toBe('root')
     expect(normalizeFolderId('abc')).toBe('abc')
+  })
+
+  it('maps folder id to nullable api value', () => {
+    expect(toNullableFolderId(undefined)).toBeNull()
+    expect(toNullableFolderId('root')).toBeNull()
+    expect(toNullableFolderId('abc')).toBe('abc')
   })
 
   it('builds preview query', () => {

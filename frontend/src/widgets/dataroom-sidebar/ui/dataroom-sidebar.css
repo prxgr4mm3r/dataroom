@@ -1,0 +1,17 @@
+.sidebar-tree-row {
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background-color 120ms ease;
+}
+
+.sidebar-tree-row:hover {
+  background: #f1f4fa;
+}
+
+.sidebar-tree-row--active {
+  background: #e9edf8;
+}
+
+.sidebar-tree-row--active:hover {
+  background: #e3e9f8;
+}

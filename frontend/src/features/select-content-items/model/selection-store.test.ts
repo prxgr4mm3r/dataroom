@@ -25,7 +25,7 @@ describe('selection-store', () => {
   })
 
   it('clears ids', () => {
-    useSelectionStore.setState({ selectedIds: ['a'] })
+    useSelectionStore.setState({ selectedIds: ['a', 'b', 'c'] })
     useSelectionStore.getState().clear()
 
     expect(useSelectionStore.getState().selectedIds).toEqual([])

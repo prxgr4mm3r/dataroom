@@ -32,4 +32,26 @@ describe('toApiError', () => {
       message: 'Boom',
     })
   })
+
+  it('maps payload for 413-style api errors', () => {
+    const error = {
+      isAxiosError: true,
+      message: 'Request failed',
+      response: {
+        status: 413,
+        data: {
+          error: {
+            code: 'file_too_large',
+            message: 'Selected file exceeds size limit.',
+          },
+        },
+      },
+    }
+
+    expect(toApiError(error)).toEqual({
+      status: 413,
+      code: 'file_too_large',
+      message: 'Selected file exceeds size limit.',
+    })
+  })
 })

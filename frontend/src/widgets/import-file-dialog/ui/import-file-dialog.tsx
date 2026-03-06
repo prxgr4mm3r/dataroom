@@ -1,14 +1,17 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState, type DragEvent } from 'react'
 
 import { useGoogleFilesQuery } from '@/features/browse-google-files'
 import { useGoogleStatusQuery } from '@/features/check-google-status'
 import { useGoogleConnect } from '@/features/connect-google-drive'
 import { useImportFileFromGoogle } from '@/features/import-file-from-google'
+import { useUploadFileFromDevice } from '@/features/upload-file-from-device'
 import { toApiError } from '@/shared/api'
 import { t } from '@/shared/i18n/messages'
 import { formatFileSize } from '@/shared/lib/file/format-file-size'
+import { toNullableFolderId } from '@/shared/routes/dataroom-routes'
 import {
   Alert,
+  Box,
   Button,
   Group,
   Loader,
@@ -29,10 +32,14 @@ type ImportFileDialogProps = {
 
 export const ImportFileDialog = ({ opened, folderId, onClose }: ImportFileDialogProps) => {
   const [search, setSearch] = useState('')
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [dragActive, setDragActive] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const googleStatusQuery = useGoogleStatusQuery(opened)
   const googleConnect = useGoogleConnect()
   const importMutation = useImportFileFromGoogle(folderId)
+  const uploadMutation = useUploadFileFromDevice(folderId)
 
   const canBrowseGoogleFiles = Boolean(
     opened && googleStatusQuery.data?.connected && !googleStatusQuery.data?.tokenExpired,
@@ -48,13 +55,42 @@ export const ImportFileDialog = ({ opened, folderId, onClose }: ImportFileDialog
     try {
       await importMutation.mutateAsync({
         google_file_id: googleFileId,
-        target_folder_id: folderId === 'root' ? null : folderId,
+        target_folder_id: toNullableFolderId(folderId),
       })
       notifySuccess('File imported successfully')
       onClose()
     } catch (error) {
       notifyError(toApiError(error).message)
     }
+  }
+
+  const handleLocalUpload = async (file: File | null | undefined) => {
+    if (!file) {
+      setUploadError(t('uploadNoFile'))
+      return
+    }
+
+    setUploadError(null)
+
+    try {
+      await uploadMutation.mutateAsync({
+        file,
+        targetFolderId: toNullableFolderId(folderId),
+      })
+      notifySuccess(t('fileUploadedSuccess'))
+      onClose()
+    } catch (error) {
+      const message = toApiError(error).message
+      setUploadError(message)
+      notifyError(message)
+    }
+  }
+
+  const handleDrop = async (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault()
+    setDragActive(false)
+    const file = event.dataTransfer.files?.[0]
+    await handleLocalUpload(file)
   }
 
   return (
@@ -127,7 +163,49 @@ export const ImportFileDialog = ({ opened, folderId, onClose }: ImportFileDialog
         </Tabs.Panel>
 
         <Tabs.Panel value="upload" pt="md">
-          <Alert color="blue">{t('uploadComingSoon')}</Alert>
+          <Stack gap="sm">
+            <Box
+              onDragOver={(event) => {
+                event.preventDefault()
+                setDragActive(true)
+              }}
+              onDragLeave={() => setDragActive(false)}
+              onDrop={(event) => void handleDrop(event)}
+              p="xl"
+              style={{
+                border: `2px dashed ${dragActive ? '#2f6fed' : 'var(--border-soft)'}`,
+                borderRadius: 12,
+                background: dragActive ? '#edf2ff' : 'var(--bg-subtle)',
+                textAlign: 'center',
+              }}
+            >
+              <Stack gap="xs" align="center">
+                <Text size="sm">{t('uploadFileHint')}</Text>
+                <Group>
+                  <Button
+                    variant="default"
+                    onClick={() => fileInputRef.current?.click()}
+                    loading={uploadMutation.isPending}
+                  >
+                    {t('chooseFile')}
+                  </Button>
+                </Group>
+              </Stack>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                style={{ display: 'none' }}
+                onChange={(event) => {
+                  const file = event.currentTarget.files?.[0]
+                  void handleLocalUpload(file)
+                  event.currentTarget.value = ''
+                }}
+              />
+            </Box>
+
+            {uploadError ? <Alert color="red">{uploadError}</Alert> : null}
+          </Stack>
         </Tabs.Panel>
       </Tabs>
     </Modal>

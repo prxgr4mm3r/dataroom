@@ -3,7 +3,10 @@ export { isAuthError, toApiError } from './errors'
 export { queryKeys } from './query-keys'
 export type { ApiError } from './errors'
 export type {
+  BulkDeleteResponseDto,
   BreadcrumbDto,
+  CreateFolderRequestDto,
+  DeleteItemResponseDto,
   FolderRefDto,
   FolderTreeDto,
   FolderTreeNodeDto,

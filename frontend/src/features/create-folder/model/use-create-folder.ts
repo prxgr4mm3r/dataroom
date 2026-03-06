@@ -1,13 +1,14 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+
 import { queryKeys } from '@/shared/api'
 
-import { importFileFromGoogle, type ImportFromGooglePayload } from '../api/import-file-from-google'
+import { createFolder } from '../api/create-folder'
 
-export const useImportFileFromGoogle = (folderId: string) => {
+export const useCreateFolder = (folderId: string) => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (payload: ImportFromGooglePayload) => importFileFromGoogle(payload),
+    mutationFn: createFolder,
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.itemsPrefix(folderId) })
       await queryClient.invalidateQueries({ queryKey: queryKeys.folderTree })

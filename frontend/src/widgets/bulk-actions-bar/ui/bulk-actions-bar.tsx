@@ -4,9 +4,16 @@ import { Button, Group, Text } from '@/shared/ui'
 type BulkActionsBarProps = {
   selectedCount: number
   onClearSelection: () => void
+  onDeleteSelected: () => void
+  deletePending: boolean
 }
 
-export const BulkActionsBar = ({ selectedCount, onClearSelection }: BulkActionsBarProps) => {
+export const BulkActionsBar = ({
+  selectedCount,
+  onClearSelection,
+  onDeleteSelected,
+  deletePending,
+}: BulkActionsBarProps) => {
   if (selectedCount < 1) {
     return <Group h="100%" px="md" />
   }
@@ -23,13 +30,16 @@ export const BulkActionsBar = ({ selectedCount, onClearSelection }: BulkActionsB
         <Button variant="default" size="xs" disabled>
           {t('move')}
         </Button>
-        <Button color="red" variant="light" size="xs" disabled>
-          {t('delete')}
+        <Button color="red" variant="light" size="xs" onClick={onDeleteSelected} loading={deletePending}>
+          {t('deleteSelected')}
         </Button>
         <Button variant="subtle" size="xs" onClick={onClearSelection}>
           {t('clearSelection')}
         </Button>
       </Group>
+      <Text size="xs" c="dimmed">
+        {t('deleteNextIteration')}
+      </Text>
     </Group>
   )
 }
