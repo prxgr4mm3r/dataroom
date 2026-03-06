@@ -35,6 +35,11 @@ class ItemService:
         self.sort_policy = SortPolicy()
         self.serializer = ItemSerializer()
 
+    def _children_count_for_item(self, user_id: str, item: DataRoomItem) -> int:
+        if item.kind != ItemKind.FOLDER.value:
+            return 0
+        return self.items.count_children(user_id, item.id)
+
     @staticmethod
     def _normalize_parent_id(parent_id: str | None) -> str | None:
         if parent_id in (None, "", "root", "null"):
@@ -99,7 +104,7 @@ class ItemService:
             status=ItemStatus.ACTIVE.value,
         )
         self.items.save(folder)
-        return self.serializer.as_resource(folder)
+        return self.serializer.as_resource(folder, children_count=0)
 
     def get_folder_tree(self, user_id: str) -> dict:
         folders = self.items.list_all_folders(user_id)
@@ -143,6 +148,8 @@ class ItemService:
         assets_by_item_id = {
             asset.item_id: asset for asset in self.assets.list_for_items([entry.id for entry in entries])
         }
+        folder_ids = [entry.id for entry in entries if entry.kind == ItemKind.FOLDER.value]
+        children_count_by_parent_id = self.items.count_children_by_parent_ids(user_id, folder_ids)
         rows = [{"item": entry, "asset": assets_by_item_id.get(entry.id)} for entry in entries]
         rows = self.sort_policy.sort_rows(rows, sort_by, sort_order)
 
@@ -154,7 +161,14 @@ class ItemService:
         return {
             "folder": folder_payload,
             "breadcrumbs": self._build_breadcrumbs(user_id, folder),
-            "items": [self.serializer.as_resource(row["item"], row.get("asset")) for row in rows],
+            "items": [
+                self.serializer.as_resource(
+                    row["item"],
+                    row.get("asset"),
+                    children_count_by_parent_id.get(row["item"].id, 0),
+                )
+                for row in rows
+            ],
         }
 
     def get_item(self, user_id: str, item_id: str) -> tuple[DataRoomItem, FileAsset | None]:
@@ -166,7 +180,7 @@ class ItemService:
 
     def get_item_resource(self, user_id: str, item_id: str) -> dict:
         item, asset = self.get_item(user_id, item_id)
-        return self.serializer.as_resource(item, asset)
+        return self.serializer.as_resource(item, asset, self._children_count_for_item(user_id, item))
 
     def resolve_content(self, user_id: str, item_id: str) -> tuple[DataRoomItem, FileAsset]:
         item, asset = self.get_item(user_id, item_id)
@@ -251,7 +265,7 @@ class ItemService:
 
             self.items.save(item)
             self.assets.save(asset)
-            return self.serializer.as_resource(item, asset)
+            return self.serializer.as_resource(item, asset, children_count=0)
         except Exception:  # noqa: BLE001
             if saved_path:
                 self.storage_service.delete_file(saved_path)
@@ -306,7 +320,7 @@ class ItemService:
             item.status = ItemStatus.ACTIVE.value
             self.items.save(item)
             self.assets.save(asset)
-            return self.serializer.as_resource(item, asset)
+            return self.serializer.as_resource(item, asset, children_count=0)
         except Exception:  # noqa: BLE001
             if saved_path:
                 self.storage_service.delete_file(saved_path)
@@ -333,7 +347,7 @@ class ItemService:
         item.updated_at = datetime.now(timezone.utc)
         self.items.save(item)
         asset = self.assets.get_for_item(item.id) if item.kind == ItemKind.FILE.value else None
-        return self.serializer.as_resource(item, asset)
+        return self.serializer.as_resource(item, asset, self._children_count_for_item(user_id, item))
 
     def copy_item(
         self,
@@ -356,7 +370,11 @@ class ItemService:
             copied_asset = self.assets.get_for_item(copied.id) if copied.kind == ItemKind.FILE.value else None
             if created_paths_sink is not None:
                 created_paths_sink.extend(created_paths)
-            return self.serializer.as_resource(copied, copied_asset)
+            return self.serializer.as_resource(
+                copied,
+                copied_asset,
+                self._children_count_for_item(user_id, copied),
+            )
         except Exception:  # noqa: BLE001
             for path in created_paths:
                 self.storage_service.delete_file(path)

@@ -4,7 +4,12 @@ from app.models import DataRoomItem, FileAsset, ItemKind
 
 
 class ItemSerializer:
-    def as_resource(self, item: DataRoomItem, asset: FileAsset | None = None) -> dict:
+    def as_resource(
+        self,
+        item: DataRoomItem,
+        asset: FileAsset | None = None,
+        children_count: int | None = None,
+    ) -> dict:
         payload = {
             "id": item.id,
             "kind": item.kind,
@@ -13,6 +18,7 @@ class ItemSerializer:
             "status": item.status,
             "created_at": item.created_at.isoformat(),
             "updated_at": item.updated_at.isoformat(),
+            "children_count": int(children_count or 0),
         }
         if item.kind == ItemKind.FILE.value:
             payload.update(

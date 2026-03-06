@@ -153,6 +153,7 @@ class BackendApiTests(unittest.TestCase):
         self.assertEqual(200, root_items.status_code)
         self.assertEqual("root", root_items.json["folder"]["id"])
         self.assertEqual("Contracts", root_items.json["items"][0]["name"])
+        self.assertEqual(1, root_items.json["items"][0]["children_count"])
 
         nested_items = self.client.get(f"/api/items?parent_id={nested_id}", headers=headers)
         self.assertEqual(200, nested_items.status_code)
@@ -188,6 +189,7 @@ class BackendApiTests(unittest.TestCase):
 
         self.assertEqual(201, imported.status_code)
         imported_item_id = imported.json["id"]
+        self.assertEqual(0, imported.json["children_count"])
 
         upload = self.client.post(
             "/api/files/upload",
@@ -200,6 +202,7 @@ class BackendApiTests(unittest.TestCase):
         )
         self.assertEqual(201, upload.status_code)
         uploaded_item_id = upload.json["id"]
+        self.assertEqual(0, upload.json["children_count"])
 
         content = self.client.get(f"/api/items/{imported_item_id}/content", headers=headers)
         self.assertEqual(200, content.status_code)
@@ -213,6 +216,7 @@ class BackendApiTests(unittest.TestCase):
         )
         self.assertEqual(200, move_resp.status_code)
         self.assertEqual(folder_b, move_resp.json["parent_id"])
+        self.assertEqual(0, move_resp.json["children_count"])
 
         copy_resp = self.client.post(
             f"/api/items/{uploaded_item_id}/copy",
@@ -222,6 +226,7 @@ class BackendApiTests(unittest.TestCase):
         self.assertEqual(201, copy_resp.status_code)
         copied_item_id = copy_resp.json["id"]
         self.assertNotEqual(uploaded_item_id, copied_item_id)
+        self.assertEqual(0, copy_resp.json["children_count"])
 
         bulk_delete = self.client.post(
             "/api/items/bulk-delete",

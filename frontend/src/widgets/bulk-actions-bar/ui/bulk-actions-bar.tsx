@@ -4,14 +4,22 @@ import { Button, Group, Text } from '@/shared/ui'
 type BulkActionsBarProps = {
   selectedCount: number
   onClearSelection: () => void
+  onCopySelected: () => void
+  onMoveSelected: () => void
   onDeleteSelected: () => void
+  copyPending: boolean
+  movePending: boolean
   deletePending: boolean
 }
 
 export const BulkActionsBar = ({
   selectedCount,
   onClearSelection,
+  onCopySelected,
+  onMoveSelected,
   onDeleteSelected,
+  copyPending,
+  movePending,
   deletePending,
 }: BulkActionsBarProps) => {
   if (selectedCount < 1) {
@@ -24,10 +32,10 @@ export const BulkActionsBar = ({
         {t('selectedCount')}: {selectedCount}
       </Text>
       <Group gap="xs">
-        <Button variant="default" size="xs" disabled>
+        <Button variant="default" size="xs" onClick={onCopySelected} loading={copyPending}>
           {t('copy')}
         </Button>
-        <Button variant="default" size="xs" disabled>
+        <Button variant="default" size="xs" onClick={onMoveSelected} loading={movePending}>
           {t('move')}
         </Button>
         <Button color="red" variant="light" size="xs" onClick={onDeleteSelected} loading={deletePending}>
@@ -37,9 +45,6 @@ export const BulkActionsBar = ({
           {t('clearSelection')}
         </Button>
       </Group>
-      <Text size="xs" c="dimmed">
-        {t('deleteNextIteration')}
-      </Text>
     </Group>
   )
 }

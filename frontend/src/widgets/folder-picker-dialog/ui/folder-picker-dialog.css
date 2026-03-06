@@ -1,0 +1,17 @@
+.folder-picker-node {
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.folder-picker-node:hover {
+  background: #f3f6fb;
+}
+
+.folder-picker-node--selected {
+  background: #e9edf8;
+}
+
+.folder-picker-node--invalid {
+  background: #fff1f1;
+}

@@ -1,17 +1,297 @@
-.sidebar-tree-row {
+.dataroom-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dataroom-sidebar-rail {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: calc(8px + 36px + 12px) 6px 20px;
+}
+
+.dataroom-sidebar-rail__actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.dataroom-sidebar-rail__action-icon {
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  min-height: 34px;
+}
+
+.dataroom-sidebar-rail__account {
+  margin-top: auto;
+  border: none;
+  background: transparent;
+  padding: 0;
   cursor: pointer;
+  border-radius: 999px;
+}
+
+.dataroom-sidebar-rail__account:focus-visible {
+  outline: 2px solid #2f6fed;
+  outline-offset: 2px;
+}
+
+.dataroom-sidebar-rail__avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: #8a93a5;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 24%),
+    0 1px 2px rgb(16 24 40 / 16%);
+}
+
+.dataroom-sidebar-rail__avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dataroom-sidebar-rail__avatar-fallback {
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  user-select: none;
+}
+
+.dataroom-sidebar__title {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  margin: 0;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dataroom-sidebar__quick-actions {
+  display: grid;
+  gap: 8px;
+  padding: 0 8px 8px;
+}
+
+.dataroom-sidebar__quick-action-button {
+  --button-height: 34px;
+  justify-content: flex-start;
+  border-radius: 10px;
+  min-height: var(--button-height);
+  height: var(--button-height);
+}
+
+.dataroom-sidebar__quick-action-button .mantine-Button-inner {
+  justify-content: flex-start;
+  min-height: var(--button-height);
+}
+
+.dataroom-sidebar__quick-action-button .mantine-Button-label {
+  text-align: left;
+}
+
+.dataroom-sidebar__tree {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.dataroom-sidebar__account {
+  margin-top: auto;
+  border-top: 1px solid var(--separator-soft);
+  padding: 10px 8px 0;
+}
+
+.dataroom-sidebar__account-card {
+  width: 100%;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  padding: 7px 8px;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.dataroom-sidebar__account-card:hover {
+  background: #eef2f8;
+}
+
+.dataroom-sidebar__account-card:focus-visible {
+  outline: 2px solid #2f6fed;
+  outline-offset: 1px;
+}
+
+.dataroom-sidebar__account-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: #8a93a5;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  flex: 0 0 auto;
+  padding: 0;
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 24%),
+    0 1px 2px rgb(16 24 40 / 16%);
+}
+
+.dataroom-sidebar__account-avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dataroom-sidebar__account-avatar-fallback {
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  user-select: none;
+}
+
+.dataroom-sidebar__account-meta {
+  min-width: 0;
+  flex: 1 1 auto;
+  padding-block: 0;
+}
+
+.dataroom-sidebar__account-name {
+  line-height: 1.35;
+}
+
+.dataroom-sidebar__account-subtitle {
+  display: block;
+  margin-top: 0;
+  line-height: 1.4;
+}
+
+.dataroom-sidebar__account-more {
+  color: #6a7283;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.sidebar-tree-row {
+  --sidebar-tree-indent: 0px;
+  --sidebar-tree-row-min-width: 164px;
+  cursor: pointer;
+  display: block;
+  width: calc(100% - var(--sidebar-tree-indent));
+  margin-left: var(--sidebar-tree-indent);
+  min-width: var(--sidebar-tree-row-min-width);
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 0;
   border-radius: 8px;
   transition: background-color 120ms ease;
+  position: relative;
+}
+
+.sidebar-tree-children {
+  position: relative;
+  padding-left: 8px;
+}
+
+.sidebar-tree-children::before {
+  content: '';
+  position: absolute;
+  left: var(--sidebar-tree-line-x);
+  top: 6px;
+  bottom: 6px;
+  width: 1px;
+  background: #d4dae6;
+  pointer-events: none;
+  opacity: 0.9;
+}
+
+.sidebar-tree-children--active-branch::before {
+  background: #2f6fed;
+  left: calc(var(--sidebar-tree-line-x) - 0.5px);
+  width: 2px;
+  border-radius: 999px;
+  opacity: 1;
+}
+
+.sidebar-tree-row:focus-visible {
+  outline: 2px solid #2f6fed;
+  outline-offset: 1px;
 }
 
 .sidebar-tree-row:hover {
   background: #f1f4fa;
 }
 
-.sidebar-tree-row--active {
-  background: #e9edf8;
+.sidebar-tree-row--active-solid {
+  background: #e6eeff;
+  box-shadow: inset 0 0 0 1px #b2c5f6;
 }
 
-.sidebar-tree-row--active:hover {
-  background: #e3e9f8;
+.sidebar-tree-row--active-solid:hover {
+  background: #dee8ff;
+  box-shadow: inset 0 0 0 1px #a4baf1;
+}
+
+.sidebar-tree-row--active-file {
+  background: #e8f0ff;
+  box-shadow: inset 0 0 0 1px #a8c0ff;
+}
+
+.sidebar-tree-row--active-file:hover {
+  background: #e3edff;
+  box-shadow: inset 0 0 0 1px #9fb9ff;
+}
+
+.sidebar-tree-row--active-context {
+  background: #f5f8fd;
+  box-shadow: inset 0 0 0 1px #d7e0f1;
+}
+
+.sidebar-tree-row--active-context:hover {
+  background: #eff4fc;
+  box-shadow: inset 0 0 0 1px #cad6eb;
+}
+
+.sidebar-tree-row--drop-valid {
+  background: #eaf7ed;
+}
+
+.sidebar-tree-row--drop-invalid {
+  background: #fff1f1;
+}
+
+.sidebar-tree-row--dragging {
+  opacity: 0.45;
+}
+
+.sidebar-tree-row__expander {
+  display: inline-flex;
+  cursor: pointer;
+}
+
+.sidebar-tree-row__icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+}
+
+.sidebar-tree-row__label {
+  min-width: 0;
+  flex: 1 1 auto;
 }

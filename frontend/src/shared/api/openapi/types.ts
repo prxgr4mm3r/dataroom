@@ -15,6 +15,11 @@ export type CreateFolderRequestDto = components['schemas']['CreateFolderRequest'
 export type BulkDeleteRequestDto = components['schemas']['BulkDeleteRequest']
 export type DeleteItemResponseDto = components['schemas']['DeleteItemResponse']
 export type BulkDeleteResponseDto = components['schemas']['BulkDeleteResponse']
+export type MoveItemRequestDto = components['schemas']['MoveItemRequest']
+export type CopyItemRequestDto = components['schemas']['CopyItemRequest']
+export type BulkMoveRequestDto = components['schemas']['BulkMoveRequest']
+export type BulkCopyRequestDto = components['schemas']['BulkCopyRequest']
+export type BulkItemsResponseDto = components['schemas']['BulkItemsResponse']
 export type ErrorEnvelopeDto = components['schemas']['ErrorEnvelope']
 
 export type ListItemsParams = operations['listItems']['parameters']['query']

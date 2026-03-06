@@ -7,6 +7,7 @@ export const mapItemResourceDto = (dto: ItemResourceDto): ContentItem => ({
   kind: dto.kind,
   name: dto.name,
   parentId: dto.parent_id,
+  childrenCount: dto.children_count,
   status: dto.status,
   createdAt: dto.created_at,
   updatedAt: dto.updated_at,

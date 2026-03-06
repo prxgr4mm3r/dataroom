@@ -6,6 +6,7 @@ export type ContentItem = {
   kind: ItemKind
   name: string
   parentId: string | null
+  childrenCount: number
   status: ItemStatus
   createdAt: string
   updatedAt: string

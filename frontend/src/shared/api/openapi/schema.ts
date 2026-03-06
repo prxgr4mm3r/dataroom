@@ -397,6 +397,7 @@ export interface components {
             created_at: string;
             /** Format: date-time */
             updated_at: string;
+            children_count: number;
             mime_type?: string | null;
             size_bytes?: number | null;
             /** Format: date-time */

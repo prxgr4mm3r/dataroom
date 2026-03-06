@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.models import DataRoomItem, ItemKind, ItemStatus
@@ -60,6 +61,42 @@ class ItemRepository:
             )
             .all()
         )
+
+    def count_children(self, user_id: str, parent_id: str) -> int:
+        return int(
+            self.db.query(func.count(DataRoomItem.id))
+            .filter(
+                DataRoomItem.user_id == user_id,
+                DataRoomItem.parent_id == parent_id,
+                DataRoomItem.status != ItemStatus.DELETED.value,
+            )
+            .scalar()
+            or 0
+        )
+
+    def count_children_by_parent_ids(self, user_id: str, parent_ids: list[str]) -> dict[str, int]:
+        if not parent_ids:
+            return {}
+
+        rows = (
+            self.db.query(
+                DataRoomItem.parent_id,
+                func.count(DataRoomItem.id),
+            )
+            .filter(
+                DataRoomItem.user_id == user_id,
+                DataRoomItem.parent_id.in_(parent_ids),
+                DataRoomItem.status != ItemStatus.DELETED.value,
+            )
+            .group_by(DataRoomItem.parent_id)
+            .all()
+        )
+
+        result = {parent_id: 0 for parent_id in parent_ids}
+        for parent_id, count in rows:
+            if parent_id is not None:
+                result[parent_id] = int(count or 0)
+        return result
 
     def list_active_names_in_parent(
         self,

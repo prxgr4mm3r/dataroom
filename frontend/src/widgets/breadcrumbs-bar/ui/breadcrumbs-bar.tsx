@@ -6,18 +6,19 @@ import { Box, Group, Menu, Text } from '@/shared/ui'
 type BreadcrumbsBarProps = {
   breadcrumbs: Breadcrumb[]
   onNavigate: (folderId: string) => void
+  compact?: boolean
 }
 
 const COLLAPSE_THRESHOLD = 5
 
-export const BreadcrumbsBar = ({ breadcrumbs, onNavigate }: BreadcrumbsBarProps) => {
+export const BreadcrumbsBar = ({ breadcrumbs, onNavigate, compact = false }: BreadcrumbsBarProps) => {
   const shouldCollapse = breadcrumbs.length >= COLLAPSE_THRESHOLD
   const start = breadcrumbs[0]
   const end = shouldCollapse ? breadcrumbs.slice(-2) : breadcrumbs.slice(1)
   const hidden = shouldCollapse ? breadcrumbs.slice(1, -2) : []
 
   return (
-    <Group px="md" py="xs" gap={6} wrap="nowrap">
+    <Group px={compact ? 0 : 'md'} py={compact ? 0 : 'xs'} gap={6} wrap="nowrap">
       {start ? (
         <Text size="sm" fw={600} style={{ cursor: 'pointer' }} onClick={() => onNavigate(start.id)}>
           {start.name}

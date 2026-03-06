@@ -710,6 +710,9 @@ components:
         updated_at:
           type: string
           format: date-time
+        children_count:
+          type: integer
+          minimum: 0
         mime_type:
           type: [string, 'null']
         size_bytes:
@@ -723,7 +726,7 @@ components:
           enum: [google_drive, local_upload, copied, null]
         google_file_id:
           type: [string, 'null']
-      required: [id, kind, name, parent_id, status, created_at, updated_at]
+      required: [id, kind, name, parent_id, status, created_at, updated_at, children_count]
 
     FolderRef:
       type: object

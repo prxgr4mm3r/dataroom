@@ -1,1 +1,1 @@
-export { DataroomSidebar } from './ui/dataroom-sidebar'
+export { DataroomSidebar, DataroomSidebarRail } from './ui/dataroom-sidebar'
