@@ -1,0 +1,20 @@
+# frontend
+frontend/node_modules
+frontend/dist
+frontend/backend/.venv
+
+# backend
+backend/.venv
+backend/storage/uploads
+backend/*.db
+backend/.env
+backend/**/*.pyc
+backend/**/__pycache__/
+
+# root
+.env
+.secrets
+
+# secrets
+.secrets/
+backend/.secrets/

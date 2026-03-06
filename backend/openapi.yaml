@@ -1,0 +1,503 @@
+openapi: 3.1.0
+info:
+  title: Data Room Backend API
+  version: 1.0.0
+  description: |
+    Backend MVP API for Firebase-authenticated users, Google Drive OAuth integration,
+    and Data Room file CRUD.
+servers:
+  - url: http://localhost:5000
+    description: Local development server
+security:
+  - bearerAuth: []
+tags:
+  - name: Health
+  - name: User
+  - name: Google Integration
+  - name: Files
+paths:
+  /api/health:
+    get:
+      tags: [Health]
+      summary: Health check
+      operationId: getHealth
+      security: []
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /api/me:
+    get:
+      tags: [User]
+      summary: Get current authenticated user
+      operationId: getMe
+      responses:
+        '200':
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/integrations/google/status:
+    get:
+      tags: [Google Integration]
+      summary: Get Google Drive integration status
+      operationId: getGoogleIntegrationStatus
+      responses:
+        '200':
+          description: Integration status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GoogleStatusResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/integrations/google/connect:
+    post:
+      tags: [Google Integration]
+      summary: Create OAuth authorization URL for Google Drive connect flow
+      operationId: postGoogleConnect
+      responses:
+        '200':
+          description: OAuth authorization URL
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GoogleConnectResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/integrations/google/callback:
+    get:
+      tags: [Google Integration]
+      summary: Google OAuth callback endpoint
+      description: |
+        Public callback endpoint used by Google OAuth. On completion it redirects
+        to frontend callback URL with query params:
+        - success: `provider=google&status=success`
+        - error: `provider=google&status=error&code=<error_code>`
+      operationId: getGoogleCallback
+      security: []
+      parameters:
+        - name: code
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Authorization code from Google
+        - name: state
+          in: query
+          required: false
+          schema:
+            type: string
+          description: OAuth state generated during connect
+        - name: error
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Error returned by Google OAuth
+      responses:
+        '302':
+          description: Redirect to frontend OAuth callback route
+          headers:
+            Location:
+              description: Frontend URL with OAuth result query params
+              schema:
+                type: string
+                format: uri
+
+  /api/integrations/google/disconnect:
+    delete:
+      tags: [Google Integration]
+      summary: Disconnect active Google Drive integration
+      operationId: deleteGoogleDisconnect
+      responses:
+        '200':
+          description: Integration disconnected or already disconnected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GoogleDisconnectResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/integrations/google/files:
+    get:
+      tags: [Google Integration]
+      summary: List files from connected Google Drive account
+      operationId: getGoogleFiles
+      responses:
+        '200':
+          description: Google Drive files list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GoogleFilesResponse'
+        '400':
+          $ref: '#/components/responses/GoogleNotConnectedError'
+        '401':
+          description: Unauthorized or reconnect required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '502':
+          $ref: '#/components/responses/GoogleGatewayError'
+
+  /api/files:
+    get:
+      tags: [Files]
+      summary: List Data Room files for current user
+      operationId: getFiles
+      responses:
+        '200':
+          description: Files list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileListResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/files/import-from-google:
+    post:
+      tags: [Files]
+      summary: Import one Google Drive file into Data Room storage
+      operationId: postImportFileFromGoogle
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImportFromGoogleRequest'
+      responses:
+        '201':
+          description: File imported
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileResource'
+        '400':
+          description: Invalid request, not connected, or unsupported file type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '401':
+          description: Unauthorized or reconnect required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '413':
+          description: File too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '502':
+          $ref: '#/components/responses/GoogleGatewayError'
+
+  /api/files/{file_id}:
+    get:
+      tags: [Files]
+      summary: Get one Data Room file metadata
+      operationId: getFile
+      parameters:
+        - $ref: '#/components/parameters/FileId'
+      responses:
+        '200':
+          description: File metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileResource'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+    delete:
+      tags: [Files]
+      summary: Soft-delete a Data Room file and remove local content from disk
+      operationId: deleteFile
+      parameters:
+        - $ref: '#/components/parameters/FileId'
+      responses:
+        '200':
+          description: File marked as deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteFileResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/files/{file_id}/content:
+    get:
+      tags: [Files]
+      summary: Get file content for browser preview/download
+      operationId: getFileContent
+      parameters:
+        - $ref: '#/components/parameters/FileId'
+      responses:
+        '200':
+          description: File stream (inline for previewable types, attachment otherwise)
+          content:
+            '*/*':
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '410':
+          description: File metadata exists but local content is missing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    FileId:
+      name: file_id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Data Room file identifier
+
+  responses:
+    UnauthorizedError:
+      description: Missing/invalid Firebase token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+          examples:
+            unauthorized:
+              value:
+                error:
+                  code: unauthorized
+                  message: Missing Bearer token.
+    ForbiddenError:
+      description: Request is authenticated but forbidden
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    NotFoundError:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    ConflictError:
+      description: Conflict (already exists or already imported)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    GoogleNotConnectedError:
+      description: Google Drive is not connected for current user
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+          examples:
+            google_not_connected:
+              value:
+                error:
+                  code: google_not_connected
+                  message: Google Drive is not connected.
+    GoogleGatewayError:
+      description: Upstream Google API request failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          const: ok
+      required: [status]
+
+    MeResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        firebase_uid:
+          type: string
+        email:
+          type: [string, 'null']
+          format: email
+        display_name:
+          type: [string, 'null']
+        photo_url:
+          type: [string, 'null']
+          format: uri
+      required: [id, firebase_uid, email, display_name, photo_url]
+
+    GoogleStatusResponse:
+      oneOf:
+        - type: object
+          properties:
+            connected:
+              type: boolean
+              const: false
+          required: [connected]
+        - type: object
+          properties:
+            connected:
+              type: boolean
+              const: true
+            google_email:
+              type: [string, 'null']
+              format: email
+            token_expired:
+              type: boolean
+          required: [connected, google_email, token_expired]
+
+    GoogleConnectResponse:
+      type: object
+      properties:
+        auth_url:
+          type: string
+          format: uri
+      required: [auth_url]
+
+    GoogleDisconnectResponse:
+      type: object
+      properties:
+        connected:
+          type: boolean
+          const: false
+      required: [connected]
+
+    GoogleDriveFile:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        mime_type:
+          type: [string, 'null']
+        size_bytes:
+          type: [integer, 'null']
+          minimum: 0
+        modified_at:
+          type: [string, 'null']
+          format: date-time
+        web_view_link:
+          type: [string, 'null']
+          format: uri
+      required: [id, name, mime_type, size_bytes, modified_at, web_view_link]
+
+    GoogleFilesResponse:
+      type: object
+      properties:
+        files:
+          type: array
+          items:
+            $ref: '#/components/schemas/GoogleDriveFile'
+      required: [files]
+
+    FileResource:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        mime_type:
+          type: [string, 'null']
+        size_bytes:
+          type: [integer, 'null']
+          minimum: 0
+        status:
+          type: string
+          enum: [ready, failed, deleted]
+        imported_at:
+          type: [string, 'null']
+          format: date-time
+        google_file_id:
+          type: string
+      required: [id, name, mime_type, size_bytes, status, imported_at, google_file_id]
+
+    FileListResponse:
+      type: object
+      properties:
+        files:
+          type: array
+          items:
+            $ref: '#/components/schemas/FileResource'
+      required: [files]
+
+    ImportFromGoogleRequest:
+      type: object
+      properties:
+        google_file_id:
+          type: string
+          minLength: 1
+      required: [google_file_id]
+
+    DeleteFileResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+          const: deleted
+      required: [id, status]
+
+    ErrorEnvelope:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+          required: [code, message]
+      required: [error]
