@@ -13,7 +13,6 @@ backend/**/__pycache__/
 
 # root
 .env
-.secrets
 
 # secrets
 .secrets/
