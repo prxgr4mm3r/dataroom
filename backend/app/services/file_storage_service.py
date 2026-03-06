@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import os
 from pathlib import Path
+from typing import BinaryIO, Iterable
 
 from werkzeug.utils import secure_filename
 
@@ -37,6 +38,21 @@ class FileStorageService:
                 temp_path.unlink(missing_ok=True)
 
         return str(final_path), size_bytes, checksum.hexdigest()
+
+    def save_uploaded_file(self, user_id: str, file_id: str, original_name: str, stream: BinaryIO) -> tuple[str, int, str]:
+        return self.save_stream(user_id, file_id, original_name, self._iter_stream(stream))
+
+    def copy_file(self, user_id: str, source_path: str, new_file_id: str, original_name: str) -> tuple[str, int, str]:
+        with Path(source_path).open("rb") as fh:
+            return self.save_stream(user_id, new_file_id, original_name, self._iter_stream(fh))
+
+    @staticmethod
+    def _iter_stream(stream: BinaryIO, chunk_size: int = 64 * 1024) -> Iterable[bytes]:
+        while True:
+            chunk = stream.read(chunk_size)
+            if not chunk:
+                break
+            yield chunk
 
     @staticmethod
     def delete_file(path: str | None) -> None:

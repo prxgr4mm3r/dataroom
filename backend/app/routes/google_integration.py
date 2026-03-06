@@ -136,7 +136,21 @@ def google_files():
     if connection is None:
         raise ApiError(400, "google_not_connected", "Google Drive is not connected.")
 
+    raw_page_size = request.args.get("page_size", "100").strip()
+    try:
+        page_size = int(raw_page_size)
+    except ValueError as exc:
+        raise ApiError(400, "invalid_request", "page_size must be an integer.") from exc
+    page_token = request.args.get("page_token")
+    query = request.args.get("q")
+
     _, drive_service = _service_bundle()
-    files = drive_service.list_files(g.db, connection)
+    response = drive_service.list_files(
+        g.db,
+        connection,
+        page_size=page_size,
+        page_token=page_token,
+        query=query,
+    )
     g.db.commit()
-    return jsonify({"files": files})
+    return jsonify(response)

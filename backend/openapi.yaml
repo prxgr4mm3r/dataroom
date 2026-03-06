@@ -1,10 +1,10 @@
 openapi: 3.1.0
 info:
   title: Data Room Backend API
-  version: 1.0.0
+  version: 2.0.0
   description: |
-    Backend MVP API for Firebase-authenticated users, Google Drive OAuth integration,
-    and Data Room file CRUD.
+    Firebase-authenticated API with Google Drive OAuth integration and
+    hierarchical Data Room filesystem endpoints.
 servers:
   - url: http://localhost:5000
     description: Local development server
@@ -14,6 +14,8 @@ tags:
   - name: Health
   - name: User
   - name: Google Integration
+  - name: Folders
+  - name: Items
   - name: Files
 paths:
   /api/health:
@@ -81,11 +83,6 @@ paths:
     get:
       tags: [Google Integration]
       summary: Google OAuth callback endpoint
-      description: |
-        Public callback endpoint used by Google OAuth. On completion it redirects
-        to frontend callback URL with query params:
-        - success: `provider=google&status=success`
-        - error: `provider=google&status=error&code=<error_code>`
       operationId: getGoogleCallback
       security: []
       parameters:
@@ -94,25 +91,21 @@ paths:
           required: false
           schema:
             type: string
-          description: Authorization code from Google
         - name: state
           in: query
           required: false
           schema:
             type: string
-          description: OAuth state generated during connect
         - name: error
           in: query
           required: false
           schema:
             type: string
-          description: Error returned by Google OAuth
       responses:
         '302':
           description: Redirect to frontend OAuth callback route
           headers:
             Location:
-              description: Frontend URL with OAuth result query params
               schema:
                 type: string
                 format: uri
@@ -137,6 +130,24 @@ paths:
       tags: [Google Integration]
       summary: List files from connected Google Drive account
       operationId: getGoogleFiles
+      parameters:
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+        - name: page_token
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
       responses:
         '200':
           description: Google Drive files list
@@ -145,7 +156,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/GoogleFilesResponse'
         '400':
-          $ref: '#/components/responses/GoogleNotConnectedError'
+          $ref: '#/components/responses/BadRequestError'
         '401':
           description: Unauthorized or reconnect required
           content:
@@ -155,20 +166,277 @@ paths:
         '502':
           $ref: '#/components/responses/GoogleGatewayError'
 
-  /api/files:
+  /api/folders/tree:
     get:
-      tags: [Files]
-      summary: List Data Room files for current user
-      operationId: getFiles
+      tags: [Folders]
+      summary: Get folder tree for sidebar
+      operationId: getFolderTree
       responses:
         '200':
-          description: Files list
+          description: Folder tree
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/FileListResponse'
+                $ref: '#/components/schemas/FolderTreeResponse'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
+
+  /api/folders:
+    post:
+      tags: [Folders]
+      summary: Create folder
+      operationId: createFolder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateFolderRequest'
+      responses:
+        '201':
+          description: Folder created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemResource'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/items:
+    get:
+      tags: [Items]
+      summary: List folder content with breadcrumbs
+      operationId: listItems
+      parameters:
+        - name: parent_id
+          in: query
+          required: false
+          schema:
+            type: [string, 'null']
+        - name: sort_by
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [name, type, size, imported_at]
+        - name: sort_order
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+      responses:
+        '200':
+          description: Folder content
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListItemsResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/items/{item_id}:
+    get:
+      tags: [Items]
+      summary: Get one Data Room item
+      operationId: getItem
+      parameters:
+        - $ref: '#/components/parameters/ItemId'
+      responses:
+        '200':
+          description: Item metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemResource'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+    delete:
+      tags: [Items]
+      summary: Soft-delete item (recursive for folder)
+      operationId: deleteItem
+      parameters:
+        - $ref: '#/components/parameters/ItemId'
+      responses:
+        '200':
+          description: Item deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteItemResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/items/{item_id}/content:
+    get:
+      tags: [Items]
+      summary: Get file content for browser preview/download
+      operationId: getItemContent
+      parameters:
+        - $ref: '#/components/parameters/ItemId'
+      responses:
+        '200':
+          description: File stream
+          content:
+            '*/*':
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '410':
+          description: File metadata exists but local content is missing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+
+  /api/items/{item_id}/move:
+    patch:
+      tags: [Items]
+      summary: Move one item
+      operationId: moveItem
+      parameters:
+        - $ref: '#/components/parameters/ItemId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MoveItemRequest'
+      responses:
+        '200':
+          description: Updated item
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemResource'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+
+  /api/items/{item_id}/copy:
+    post:
+      tags: [Items]
+      summary: Copy one item (recursive for folder)
+      operationId: copyItem
+      parameters:
+        - $ref: '#/components/parameters/ItemId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CopyItemRequest'
+      responses:
+        '201':
+          description: Copied item
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemResource'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/items/bulk-move:
+    post:
+      tags: [Items]
+      summary: Move multiple items atomically
+      operationId: bulkMoveItems
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkMoveRequest'
+      responses:
+        '200':
+          description: Updated items
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkItemsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+
+  /api/items/bulk-copy:
+    post:
+      tags: [Items]
+      summary: Copy multiple items atomically
+      operationId: bulkCopyItems
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkCopyRequest'
+      responses:
+        '201':
+          description: Copied items
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkItemsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/items/bulk-delete:
+    post:
+      tags: [Items]
+      summary: Delete multiple items atomically
+      operationId: bulkDeleteItems
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkDeleteRequest'
+      responses:
+        '200':
+          description: Deleted items
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkDeleteResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
 
   /api/files/import-from-google:
     post:
@@ -187,25 +455,15 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/FileResource'
+                $ref: '#/components/schemas/ItemResource'
         '400':
-          description: Invalid request, not connected, or unsupported file type
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+          $ref: '#/components/responses/BadRequestError'
         '401':
-          description: Unauthorized or reconnect required
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+          $ref: '#/components/responses/UnauthorizedError'
         '403':
           $ref: '#/components/responses/ForbiddenError'
         '404':
           $ref: '#/components/responses/NotFoundError'
-        '409':
-          $ref: '#/components/responses/ConflictError'
         '413':
           description: File too large
           content:
@@ -215,63 +473,39 @@ paths:
         '502':
           $ref: '#/components/responses/GoogleGatewayError'
 
-  /api/files/{file_id}:
-    get:
+  /api/files/upload:
+    post:
       tags: [Files]
-      summary: Get one Data Room file metadata
-      operationId: getFile
-      parameters:
-        - $ref: '#/components/parameters/FileId'
+      summary: Upload one local file into Data Room
+      operationId: uploadLocalFile
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                target_folder_id:
+                  type: [string, 'null']
+              required: [file]
       responses:
-        '200':
-          description: File metadata
+        '201':
+          description: File uploaded
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/FileResource'
+                $ref: '#/components/schemas/ItemResource'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '404':
           $ref: '#/components/responses/NotFoundError'
-    delete:
-      tags: [Files]
-      summary: Soft-delete a Data Room file and remove local content from disk
-      operationId: deleteFile
-      parameters:
-        - $ref: '#/components/parameters/FileId'
-      responses:
-        '200':
-          description: File marked as deleted
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DeleteFileResponse'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-
-  /api/files/{file_id}/content:
-    get:
-      tags: [Files]
-      summary: Get file content for browser preview/download
-      operationId: getFileContent
-      parameters:
-        - $ref: '#/components/parameters/FileId'
-      responses:
-        '200':
-          description: File stream (inline for previewable types, attachment otherwise)
-          content:
-            '*/*':
-              schema:
-                type: string
-                format: binary
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-        '410':
-          description: File metadata exists but local content is missing
+        '413':
+          description: File too large
           content:
             application/json:
               schema:
@@ -285,15 +519,20 @@ components:
       bearerFormat: JWT
 
   parameters:
-    FileId:
-      name: file_id
+    ItemId:
+      name: item_id
       in: path
       required: true
       schema:
         type: string
-      description: Data Room file identifier
 
   responses:
+    BadRequestError:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
     UnauthorizedError:
       description: Missing/invalid Firebase token
       content:
@@ -319,7 +558,7 @@ components:
           schema:
             $ref: '#/components/schemas/ErrorEnvelope'
     ConflictError:
-      description: Conflict (already exists or already imported)
+      description: Conflict
       content:
         application/json:
           schema:
@@ -330,18 +569,6 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorEnvelope'
-    GoogleNotConnectedError:
-      description: Google Drive is not connected for current user
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorEnvelope'
-          examples:
-            google_not_connected:
-              value:
-                error:
-                  code: google_not_connected
-                  message: Google Drive is not connected.
     GoogleGatewayError:
       description: Upstream Google API request failed
       content:
@@ -438,38 +665,110 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/GoogleDriveFile'
-      required: [files]
+        next_page_token:
+          type: [string, 'null']
+      required: [files, next_page_token]
 
-    FileResource:
+    FolderTreeNode:
       type: object
       properties:
         id:
           type: string
         name:
           type: string
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/FolderTreeNode'
+      required: [id, name, children]
+
+    FolderTreeResponse:
+      type: object
+      properties:
+        root:
+          $ref: '#/components/schemas/FolderTreeNode'
+      required: [root]
+
+    ItemResource:
+      type: object
+      properties:
+        id:
+          type: string
+        kind:
+          type: string
+          enum: [folder, file]
+        name:
+          type: string
+        parent_id:
+          type: [string, 'null']
+        status:
+          type: string
+          enum: [active, failed, deleted]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
         mime_type:
           type: [string, 'null']
         size_bytes:
           type: [integer, 'null']
           minimum: 0
-        status:
-          type: string
-          enum: [ready, failed, deleted]
         imported_at:
           type: [string, 'null']
           format: date-time
+        origin:
+          type: [string, 'null']
+          enum: [google_drive, local_upload, copied, null]
         google_file_id:
-          type: string
-      required: [id, name, mime_type, size_bytes, status, imported_at, google_file_id]
+          type: [string, 'null']
+      required: [id, kind, name, parent_id, status, created_at, updated_at]
 
-    FileListResponse:
+    FolderRef:
       type: object
       properties:
-        files:
+        id:
+          type: string
+        name:
+          type: string
+        parent_id:
+          type: [string, 'null']
+      required: [id, name, parent_id]
+
+    Breadcrumb:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+      required: [id, name]
+
+    ListItemsResponse:
+      type: object
+      properties:
+        folder:
+          $ref: '#/components/schemas/FolderRef'
+        breadcrumbs:
           type: array
           items:
-            $ref: '#/components/schemas/FileResource'
-      required: [files]
+            $ref: '#/components/schemas/Breadcrumb'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ItemResource'
+      required: [folder, breadcrumbs, items]
+
+    CreateFolderRequest:
+      type: object
+      properties:
+        parent_id:
+          type: [string, 'null']
+        name:
+          type: string
+          minLength: 1
+      required: [name]
 
     ImportFromGoogleRequest:
       type: object
@@ -477,9 +776,59 @@ components:
         google_file_id:
           type: string
           minLength: 1
+        target_folder_id:
+          type: [string, 'null']
       required: [google_file_id]
 
-    DeleteFileResponse:
+    MoveItemRequest:
+      type: object
+      properties:
+        target_folder_id:
+          type: [string, 'null']
+      required: [target_folder_id]
+
+    CopyItemRequest:
+      type: object
+      properties:
+        target_folder_id:
+          type: [string, 'null']
+      required: [target_folder_id]
+
+    BulkMoveRequest:
+      type: object
+      properties:
+        item_ids:
+          type: array
+          items:
+            type: string
+          minItems: 1
+        target_folder_id:
+          type: [string, 'null']
+      required: [item_ids, target_folder_id]
+
+    BulkCopyRequest:
+      type: object
+      properties:
+        item_ids:
+          type: array
+          items:
+            type: string
+          minItems: 1
+        target_folder_id:
+          type: [string, 'null']
+      required: [item_ids, target_folder_id]
+
+    BulkDeleteRequest:
+      type: object
+      properties:
+        item_ids:
+          type: array
+          items:
+            type: string
+          minItems: 1
+      required: [item_ids]
+
+    DeleteItemResponse:
       type: object
       properties:
         id:
@@ -488,6 +837,24 @@ components:
           type: string
           const: deleted
       required: [id, status]
+
+    BulkItemsResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ItemResource'
+      required: [items]
+
+    BulkDeleteResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeleteItemResponse'
+      required: [items]
 
     ErrorEnvelope:
       type: object

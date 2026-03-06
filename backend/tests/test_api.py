@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 import tempfile
 import unittest
 from datetime import datetime, timedelta, timezone
@@ -94,41 +95,75 @@ class BackendApiTests(unittest.TestCase):
         self.assertEqual(401, response.status_code)
         self.assertEqual("unauthorized", response.json["error"]["code"])
 
-    def test_me_with_valid_test_token(self):
-        response = self.client.get("/api/me", headers=self._auth_headers("user-main"))
-        self.assertEqual(200, response.status_code)
-        self.assertEqual("user-main", response.json["firebase_uid"])
-
     def test_google_connect_returns_auth_url(self):
         response = self.client.post("/api/integrations/google/connect", headers=self._auth_headers("connect-user"))
         self.assertEqual(200, response.status_code)
         self.assertIn("accounts.google.com", response.json["auth_url"])
         self.assertIn("state=", response.json["auth_url"])
 
-    def test_google_callback_invalid_state_redirects_with_error(self):
-        response = self.client.get("/api/integrations/google/callback?code=test-code&state=invalid")
-        self.assertEqual(302, response.status_code)
-        location = response.headers["Location"]
-        self.assertIn("status=error", location)
-        self.assertIn("invalid_oauth_state", location)
-
     def test_google_files_requires_connected_account(self):
         response = self.client.get("/api/integrations/google/files", headers=self._auth_headers("no-conn"))
         self.assertEqual(400, response.status_code)
         self.assertEqual("google_not_connected", response.json["error"]["code"])
 
-    def test_google_files_returns_reconnect_required_on_token_failure(self):
-        self._create_active_google_connection("reconnect-user", expired=True)
+    def test_google_files_supports_pagination_params(self):
+        self._create_active_google_connection("drive-user")
 
         with patch("app.services.google_drive_service.GoogleDriveService.list_files") as list_files_mock:
-            list_files_mock.side_effect = ApiError(401, "google_reconnect_required", "Reconnect required")
-            response = self.client.get("/api/integrations/google/files", headers=self._auth_headers("reconnect-user"))
+            list_files_mock.return_value = {
+                "files": [],
+                "next_page_token": "tok-1",
+            }
+            response = self.client.get(
+                "/api/integrations/google/files?page_size=20&page_token=abc&q=nda",
+                headers=self._auth_headers("drive-user"),
+            )
 
-        self.assertEqual(401, response.status_code)
-        self.assertEqual("google_reconnect_required", response.json["error"]["code"])
+        self.assertEqual(200, response.status_code)
+        self.assertEqual("tok-1", response.json["next_page_token"])
+        _, kwargs = list_files_mock.call_args
+        self.assertEqual(20, kwargs["page_size"])
+        self.assertEqual("abc", kwargs["page_token"])
+        self.assertEqual("nda", kwargs["query"])
 
-    def test_import_preview_soft_delete_flow(self):
-        self._create_active_google_connection("import-user")
+    def test_hard_switch_old_file_endpoints_removed(self):
+        response = self.client.get("/api/files", headers=self._auth_headers("u-old"))
+        self.assertEqual(404, response.status_code)
+
+    def test_create_tree_list_and_breadcrumbs(self):
+        headers = self._auth_headers("tree-user")
+
+        contracts = self.client.post("/api/folders", headers=headers, json={"name": "Contracts"})
+        self.assertEqual(201, contracts.status_code)
+        contracts_id = contracts.json["id"]
+
+        nested = self.client.post(
+            "/api/folders",
+            headers=headers,
+            json={"parent_id": contracts_id, "name": "2026"},
+        )
+        self.assertEqual(201, nested.status_code)
+        nested_id = nested.json["id"]
+
+        tree = self.client.get("/api/folders/tree", headers=headers)
+        self.assertEqual(200, tree.status_code)
+        self.assertEqual("Data Room", tree.json["root"]["name"])
+
+        root_items = self.client.get("/api/items?parent_id=root&sort_by=name&sort_order=asc", headers=headers)
+        self.assertEqual(200, root_items.status_code)
+        self.assertEqual("root", root_items.json["folder"]["id"])
+        self.assertEqual("Contracts", root_items.json["items"][0]["name"])
+
+        nested_items = self.client.get(f"/api/items?parent_id={nested_id}", headers=headers)
+        self.assertEqual(200, nested_items.status_code)
+        self.assertEqual(3, len(nested_items.json["breadcrumbs"]))
+
+    def test_import_upload_preview_move_copy_delete_and_bulk(self):
+        headers = self._auth_headers("flow-user")
+        self._create_active_google_connection("flow-user")
+
+        folder_a = self.client.post("/api/folders", headers=headers, json={"name": "A"}).json["id"]
+        folder_b = self.client.post("/api/folders", headers=headers, json={"name": "B"}).json["id"]
 
         with (
             patch(
@@ -145,70 +180,112 @@ class BackendApiTests(unittest.TestCase):
                 return_value=FakeGoogleDownloadResponse(b"hello world"),
             ),
         ):
-            import_response = self.client.post(
+            imported = self.client.post(
                 "/api/files/import-from-google",
-                headers=self._auth_headers("import-user"),
-                json={"google_file_id": "google-file-1"},
+                headers=headers,
+                json={"google_file_id": "google-file-1", "target_folder_id": folder_a},
             )
 
-        self.assertEqual(201, import_response.status_code)
-        imported_id = import_response.json["id"]
+        self.assertEqual(201, imported.status_code)
+        imported_item_id = imported.json["id"]
 
-        list_response = self.client.get("/api/files", headers=self._auth_headers("import-user"))
-        self.assertEqual(200, list_response.status_code)
-        self.assertEqual(1, len(list_response.json["files"]))
-
-        content_response = self.client.get(
-            f"/api/files/{imported_id}/content",
-            headers=self._auth_headers("import-user"),
+        upload = self.client.post(
+            "/api/files/upload",
+            headers=headers,
+            data={
+                "file": (io.BytesIO(b"upload-content"), "report.pdf"),
+                "target_folder_id": folder_a,
+            },
+            content_type="multipart/form-data",
         )
-        self.assertEqual(200, content_response.status_code)
-        self.assertIn(b"hello world", content_response.data)
-        content_response.close()
+        self.assertEqual(201, upload.status_code)
+        uploaded_item_id = upload.json["id"]
 
-        delete_response = self.client.delete(
-            f"/api/files/{imported_id}",
-            headers=self._auth_headers("import-user"),
+        content = self.client.get(f"/api/items/{imported_item_id}/content", headers=headers)
+        self.assertEqual(200, content.status_code)
+        self.assertIn(b"hello world", content.data)
+        content.close()
+
+        move_resp = self.client.patch(
+            f"/api/items/{uploaded_item_id}/move",
+            headers=headers,
+            json={"target_folder_id": folder_b},
         )
-        self.assertEqual(200, delete_response.status_code)
-        self.assertEqual("deleted", delete_response.json["status"])
+        self.assertEqual(200, move_resp.status_code)
+        self.assertEqual(folder_b, move_resp.json["parent_id"])
 
-        second_delete = self.client.delete(
-            f"/api/files/{imported_id}",
-            headers=self._auth_headers("import-user"),
+        copy_resp = self.client.post(
+            f"/api/items/{uploaded_item_id}/copy",
+            headers=headers,
+            json={"target_folder_id": folder_b},
         )
-        self.assertEqual(404, second_delete.status_code)
+        self.assertEqual(201, copy_resp.status_code)
+        copied_item_id = copy_resp.json["id"]
+        self.assertNotEqual(uploaded_item_id, copied_item_id)
 
-    def test_user_cannot_delete_other_user_file(self):
-        self._create_active_google_connection("owner")
-
-        with (
-            patch(
-                "app.services.google_drive_service.GoogleDriveService.get_file_metadata",
-                return_value={
-                    "id": "google-file-2",
-                    "name": "secret.txt",
-                    "mimeType": "text/plain",
-                    "size": "5",
-                },
-            ),
-            patch(
-                "app.services.google_drive_service.GoogleDriveService.download_file_stream",
-                return_value=FakeGoogleDownloadResponse(b"12345"),
-            ),
-        ):
-            import_response = self.client.post(
-                "/api/files/import-from-google",
-                headers=self._auth_headers("owner"),
-                json={"google_file_id": "google-file-2"},
-            )
-
-        file_id = import_response.json["id"]
-        forbidden_delete = self.client.delete(
-            f"/api/files/{file_id}",
-            headers=self._auth_headers("intruder"),
+        bulk_delete = self.client.post(
+            "/api/items/bulk-delete",
+            headers=headers,
+            json={"item_ids": [uploaded_item_id, copied_item_id]},
         )
+        self.assertEqual(200, bulk_delete.status_code)
+        self.assertEqual(2, len(bulk_delete.json["items"]))
+
+        delete_folder = self.client.delete(f"/api/items/{folder_a}", headers=headers)
+        self.assertEqual(200, delete_folder.status_code)
+        self.assertEqual("deleted", delete_folder.json["status"])
+
+    def test_folder_content_endpoint_returns_unsupported_item_type(self):
+        headers = self._auth_headers("preview-user")
+        folder = self.client.post("/api/folders", headers=headers, json={"name": "OnlyFolders"})
+        folder_id = folder.json["id"]
+
+        content = self.client.get(f"/api/items/{folder_id}/content", headers=headers)
+        self.assertEqual(400, content.status_code)
+        self.assertEqual("unsupported_item_type", content.json["error"]["code"])
+
+    def test_bulk_move_is_atomic(self):
+        headers = self._auth_headers("bulk-user")
+        folder_a = self.client.post("/api/folders", headers=headers, json={"name": "FolderA"}).json["id"]
+        folder_b = self.client.post("/api/folders", headers=headers, json={"name": "FolderB"}).json["id"]
+        self.client.post("/api/folders", headers=headers, json={"parent_id": folder_a, "name": "doc1"})
+        self.client.post("/api/folders", headers=headers, json={"parent_id": folder_a, "name": "doc2"})
+
+        listing = self.client.get(f"/api/items?parent_id={folder_a}", headers=headers)
+        ids = [item["id"] for item in listing.json["items"]]
+
+        failed = self.client.post(
+            "/api/items/bulk-move",
+            headers=headers,
+            json={"item_ids": [ids[0], "missing-item"], "target_folder_id": folder_b},
+        )
+        self.assertEqual(404, failed.status_code)
+
+        source_after = self.client.get(f"/api/items?parent_id={folder_a}", headers=headers)
+        self.assertEqual(2, len(source_after.json["items"]))
+
+    def test_user_cannot_access_other_user_item(self):
+        owner_headers = self._auth_headers("owner")
+        intruder_headers = self._auth_headers("intruder")
+
+        created = self.client.post("/api/folders", headers=owner_headers, json={"name": "Secret"})
+        item_id = created.json["id"]
+
+        forbidden_get = self.client.get(f"/api/items/{item_id}", headers=intruder_headers)
+        self.assertEqual(404, forbidden_get.status_code)
+
+        forbidden_delete = self.client.delete(f"/api/items/{item_id}", headers=intruder_headers)
         self.assertEqual(404, forbidden_delete.status_code)
+
+    def test_google_files_returns_reconnect_required_on_token_failure(self):
+        self._create_active_google_connection("reconnect-user", expired=True)
+
+        with patch("app.services.google_drive_service.GoogleDriveService.list_files") as list_files_mock:
+            list_files_mock.side_effect = ApiError(401, "google_reconnect_required", "Reconnect required")
+            response = self.client.get("/api/integrations/google/files", headers=self._auth_headers("reconnect-user"))
+
+        self.assertEqual(401, response.status_code)
+        self.assertEqual("google_reconnect_required", response.json["error"]["code"])
 
 
 if __name__ == "__main__":

@@ -16,25 +16,42 @@ class GoogleDriveService:
         self.config = config
         self.token_cipher = token_cipher
 
-    def list_files(self, db: Session, connection: GoogleDriveConnection) -> list[dict[str, Any]]:
+    def list_files(
+        self,
+        db: Session,
+        connection: GoogleDriveConnection,
+        page_size: int = 100,
+        page_token: str | None = None,
+        query: str | None = None,
+    ) -> dict[str, Any]:
+        drive_query = "trashed=false and mimeType != 'application/vnd.google-apps.folder'"
+        if query:
+            safe_query = query.replace("'", "\\'")
+            drive_query = f"{drive_query} and name contains '{safe_query}'"
+
+        params = {
+            "fields": "files(id,name,mimeType,size,modifiedTime,webViewLink),nextPageToken",
+            "pageSize": max(1, min(int(page_size), 200)),
+            "q": drive_query,
+            "supportsAllDrives": "true",
+            "includeItemsFromAllDrives": "true",
+        }
+        if page_token:
+            params["pageToken"] = page_token
+
         response = self._request_with_retry(
             db,
             connection,
             "GET",
             self.config["GOOGLE_DRIVE_FILES_URL"],
-            params={
-                "fields": "files(id,name,mimeType,size,modifiedTime,webViewLink)",
-                "pageSize": 100,
-                "q": "trashed=false and mimeType != 'application/vnd.google-apps.folder'",
-                "supportsAllDrives": "true",
-                "includeItemsFromAllDrives": "true",
-            },
+            params=params,
         )
         if not response.ok:
             raise ApiError(502, "google_drive_api_error", self._extract_google_error(response))
 
         files = []
-        for item in response.json().get("files", []):
+        payload = response.json()
+        for item in payload.get("files", []):
             size_value = item.get("size")
             files.append(
                 {
@@ -46,7 +63,10 @@ class GoogleDriveService:
                     "web_view_link": item.get("webViewLink"),
                 }
             )
-        return files
+        return {
+            "files": files,
+            "next_page_token": payload.get("nextPageToken"),
+        }
 
     def get_file_metadata(self, db: Session, connection: GoogleDriveConnection, google_file_id: str) -> dict[str, Any]:
         response = self._request_with_retry(

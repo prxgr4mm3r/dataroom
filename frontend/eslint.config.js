@@ -19,5 +19,32 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@mantine/core',
+              message: 'Import Mantine through shared/ui wrappers.',
+            },
+            {
+              name: '@mantine/hooks',
+              message: 'Import Mantine hooks through shared/ui wrappers or shared/hooks.',
+            },
+            {
+              name: '@mantine/notifications',
+              message: 'Import notifications through shared/ui wrappers.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['src/shared/ui/**/*.{ts,tsx}', 'src/app/providers/theme-provider.tsx'],
+    rules: {
+      'no-restricted-imports': 'off',
+    },
   },
 ])

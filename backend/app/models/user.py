@@ -15,4 +15,4 @@ class User(Base, IdMixin, TimestampMixin):
     photo_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
 
     google_drive_connections = relationship("GoogleDriveConnection", back_populates="user")
-    files = relationship("DataFile", back_populates="user")
+    items = relationship("DataRoomItem", back_populates="user")

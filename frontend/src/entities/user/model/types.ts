@@ -1,0 +1,7 @@
+export type UserProfile = {
+  id: string
+  firebaseUid: string
+  email: string | null
+  displayName: string | null
+  photoUrl: string | null
+}

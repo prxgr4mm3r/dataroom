@@ -22,7 +22,6 @@ class GoogleDriveConnection(Base, IdMixin, TimestampMixin):
     last_sync_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     user = relationship("User", back_populates="google_drive_connections")
-    files = relationship("DataFile", back_populates="google_connection")
 
     __table_args__ = (
         Index(

@@ -1,0 +1,10 @@
+:root {
+  --bg-app: #f4f5f7;
+  --bg-surface: #ffffff;
+  --bg-subtle: #f8f9fb;
+  --border-soft: #dde1e7;
+  --text-primary: #1f2430;
+  --text-secondary: #5a6272;
+  --accent: #2f6fed;
+  --shadow-soft: 0 8px 24px rgb(20 26 44 / 8%);
+}

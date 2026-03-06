@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 from flask import Flask, jsonify
 from sqlalchemy.exc import IntegrityError
+from werkzeug.exceptions import HTTPException
 
 
 logger = logging.getLogger(__name__)
@@ -42,6 +43,12 @@ def register_error_handlers(app: Flask) -> None:
             ),
             409,
         )
+
+    @app.errorhandler(HTTPException)
+    def handle_http_exception(error: HTTPException):
+        code = "not_found" if error.code == 404 else "http_error"
+        message = error.description if error.description else "HTTP error."
+        return jsonify({"error": {"code": code, "message": message}}), error.code
 
     @app.errorhandler(Exception)
     def handle_unexpected_error(error: Exception):

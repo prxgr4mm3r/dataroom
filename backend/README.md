@@ -3,7 +3,7 @@
 Flask backend for Data Room MVP with:
 - Firebase ID token verification for app auth
 - Google Drive OAuth (server-side) with token storage
-- Local disk file storage and Data Room CRUD
+- Local disk file storage and hierarchical Data Room filesystem API
 
 OpenAPI spec: `backend/openapi.yaml`
 
