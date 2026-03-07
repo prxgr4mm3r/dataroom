@@ -693,9 +693,6 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
           <DataroomToolbar
             breadcrumbs={breadcrumbs}
             onNavigate={openFolder}
-            onImportFromGoogle={openGoogleImportDialog}
-            onImportFromComputer={openComputerImportPicker}
-            onNewFolder={() => setCreateFolderOpened(true)}
           />
         }
         content={

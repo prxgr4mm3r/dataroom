@@ -1,13 +1,3 @@
-.dataroom-toolbar__action-button.mantine-Button-root {
-  background: var(--toolbar-button-bg);
-  border: 1px solid var(--toolbar-button-border);
-  color: var(--toolbar-button-text);
-}
-
-.dataroom-toolbar__action-button.mantine-Button-root:hover {
-  background: var(--toolbar-button-hover);
-}
-
 .dataroom-toolbar__theme-toggle.mantine-ActionIcon-root {
   border: 1px solid transparent;
 }
