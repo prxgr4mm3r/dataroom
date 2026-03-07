@@ -70,6 +70,9 @@ const moveReasonMessage = (reason: ReturnType<typeof validateMoveTarget>['reason
   if (reason === 'descendant') {
     return t('invalidMoveDescendant')
   }
+  if (reason === 'same_parent') {
+    return t('invalidMoveSameFolder')
+  }
   if (reason === 'target_not_found') {
     return t('invalidMoveTarget')
   }

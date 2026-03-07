@@ -31,6 +31,9 @@ const reasonToMessage = (reason: ReturnType<typeof validateMoveTarget>['reason']
   if (reason === 'descendant') {
     return t('invalidMoveDescendant')
   }
+  if (reason === 'same_parent') {
+    return t('invalidMoveSameFolder')
+  }
   return t('invalidMoveTarget')
 }
 
@@ -105,6 +108,14 @@ export const useDragMoveController = ({
 
     const normalizedTarget = normalizeFolderId(folderId)
     const validation = validateMoveTarget(dragPayload.movingItems, normalizedTarget, folderTree)
+
+    if (!validation.valid && validation.reason === 'same_parent') {
+      event.dataTransfer.dropEffect = 'none'
+      setHoveredFolderId(null)
+      setHoverValidation(null)
+      return
+    }
+
     event.dataTransfer.dropEffect = validation.valid ? 'move' : 'none'
 
     setHoveredFolderId(normalizedTarget)
@@ -128,6 +139,11 @@ export const useDragMoveController = ({
 
     const normalizedTarget = normalizeFolderId(folderId)
     const validation = validateMoveTarget(dragPayload.movingItems, normalizedTarget, folderTree)
+
+    if (!validation.valid && validation.reason === 'same_parent') {
+      endDrag()
+      return
+    }
 
     if (!validation.valid) {
       onInvalidDrop(reasonToMessage(validation.reason))

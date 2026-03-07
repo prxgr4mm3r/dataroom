@@ -21,6 +21,11 @@ const makeFolder = (id: string, parentId: string | null): ContentItem => ({
   googleFileId: null,
 })
 
+const makeFile = (id: string, parentId: string | null): ContentItem => ({
+  ...makeFolder(id, parentId),
+  kind: 'file',
+})
+
 const tree: FolderNode = {
   id: 'root',
   name: 'Data Room',
@@ -34,6 +39,11 @@ const tree: FolderNode = {
 }
 
 describe('validateMoveTarget', () => {
+  it('rejects move when all items are already in target folder', () => {
+    const result = validateMoveTarget([makeFile('f-1', 'A'), makeFolder('f-2', 'A')], 'A', tree)
+    expect(result).toEqual({ valid: false, reason: 'same_parent' })
+  })
+
   it('rejects move into itself', () => {
     const result = validateMoveTarget([makeFolder('A', 'root')], 'A', tree)
     expect(result).toEqual({ valid: false, reason: 'self' })
@@ -45,7 +55,7 @@ describe('validateMoveTarget', () => {
   })
 
   it('accepts valid target', () => {
-    const result = validateMoveTarget([makeFolder('A', 'root')], 'root', tree)
+    const result = validateMoveTarget([makeFolder('B', 'A')], 'root', tree)
     expect(result).toEqual({ valid: true, reason: 'none' })
   })
 })

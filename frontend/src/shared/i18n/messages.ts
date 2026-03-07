@@ -44,6 +44,7 @@ export const messages = {
   moveItemsSuccess: 'Items moved successfully.',
   invalidMoveSelf: 'Cannot move folder into itself.',
   invalidMoveDescendant: 'Cannot move folder into a descendant folder.',
+  invalidMoveSameFolder: 'Item is already in this folder.',
   invalidMoveTarget: 'Target folder is not valid.',
   dragMoveHint: 'Drag to a folder to move items.',
   loading: 'Loading...',

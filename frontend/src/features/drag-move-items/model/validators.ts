@@ -3,8 +3,10 @@ import type { FolderNode } from '@/entities/folder'
 
 export type MoveValidationResult = {
   valid: boolean
-  reason: 'none' | 'self' | 'descendant' | 'target_not_found'
+  reason: 'none' | 'self' | 'descendant' | 'target_not_found' | 'same_parent'
 }
+
+const normalizeParentId = (parentId: string | null): string => (parentId ?? 'root')
 
 const buildParentMap = (root: FolderNode | undefined): Map<string, string | null> => {
   const map = new Map<string, string | null>()
@@ -39,6 +41,13 @@ export const validateMoveTarget = (
   targetFolderId: string,
   folderTree: FolderNode | undefined,
 ): MoveValidationResult => {
+  const allAlreadyInTarget = movingItems.every(
+    (item) => normalizeParentId(item.parentId) === targetFolderId,
+  )
+  if (allAlreadyInTarget) {
+    return { valid: false, reason: 'same_parent' }
+  }
+
   const parentMap = buildParentMap(folderTree)
 
   if (targetFolderId !== 'root' && !parentMap.has(targetFolderId)) {
