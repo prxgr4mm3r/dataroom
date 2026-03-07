@@ -146,6 +146,10 @@
   transition: none;
 }
 
+.dataroom-shell__frame--resizing .dataroom-shell__sidebar-toggle {
+  transition: background-color 120ms ease;
+}
+
 .dataroom-shell__frame--resizing * {
   cursor: col-resize !important;
 }

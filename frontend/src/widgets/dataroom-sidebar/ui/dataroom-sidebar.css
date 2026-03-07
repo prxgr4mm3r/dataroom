@@ -1,7 +1,15 @@
+:where(.dataroom-sidebar, .dataroom-sidebar-rail) {
+  --dataroom-sidebar-content-pad: 12px;
+  --dataroom-sidebar-stack-gap: 8px;
+  --dataroom-sidebar-title-height: 36px;
+  --dataroom-sidebar-account-pad: 8px;
+  --dataroom-sidebar-account-card-pad-y: 7px;
+}
+
 .dataroom-sidebar {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--dataroom-sidebar-stack-gap);
 }
 
 .dataroom-sidebar-rail {
@@ -9,7 +17,11 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 52px 6px 8px;
+  padding:
+    calc(
+      var(--dataroom-sidebar-content-pad) + var(--dataroom-sidebar-title-height) + var(--dataroom-sidebar-stack-gap)
+    )
+    6px var(--dataroom-sidebar-account-pad);
 }
 
 .dataroom-sidebar-rail__actions {
@@ -30,10 +42,9 @@
 
 .dataroom-sidebar-rail__account {
   margin-top: auto;
-  margin-bottom: 7px;
   border: none;
   background: transparent;
-  padding: 0;
+  padding: var(--dataroom-sidebar-account-card-pad-y) 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -76,7 +87,7 @@
 }
 
 .dataroom-sidebar__title {
-  height: 36px;
+  height: var(--dataroom-sidebar-title-height);
   display: flex;
   align-items: center;
   margin: 0;
@@ -88,8 +99,8 @@
 
 .dataroom-sidebar__quick-actions {
   display: grid;
-  gap: 8px;
-  padding: 0 8px 8px;
+  gap: var(--dataroom-sidebar-stack-gap);
+  padding: 0 8px var(--dataroom-sidebar-stack-gap);
 }
 
 .dataroom-sidebar__quick-action-button {
@@ -117,7 +128,7 @@
 .dataroom-sidebar__account {
   margin-top: auto;
   border-top: 1px solid var(--separator-soft);
-  padding: 8px;
+  padding: var(--dataroom-sidebar-account-pad);
 }
 
 .dataroom-sidebar__account-card {
@@ -125,7 +136,7 @@
   border: none;
   border-radius: 12px;
   background: transparent;
-  padding: 7px 8px;
+  padding: var(--dataroom-sidebar-account-card-pad-y) 8px;
   text-align: left;
   cursor: pointer;
   transition: background-color 120ms ease;
@@ -178,13 +189,13 @@
 }
 
 .dataroom-sidebar__account-name {
-  line-height: 1.35;
+  line-height: 16px;
 }
 
 .dataroom-sidebar__account-subtitle {
   display: block;
   margin-top: 0;
-  line-height: 1.4;
+  line-height: 14px;
 }
 
 .dataroom-sidebar__account-more {
