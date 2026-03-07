@@ -23,18 +23,33 @@ class GoogleDriveService:
         page_size: int = 100,
         page_token: str | None = None,
         query: str | None = None,
+        source: str = "recent",
+        order_by: str | None = None,
     ) -> dict[str, Any]:
         drive_query = "trashed=false and mimeType != 'application/vnd.google-apps.folder'"
+        if source == "my_drive":
+            drive_query = f"{drive_query} and 'me' in owners"
+        elif source == "shared":
+            drive_query = f"{drive_query} and sharedWithMe=true"
+
         if query:
             safe_query = query.replace("'", "\\'")
             drive_query = f"{drive_query} and name contains '{safe_query}'"
 
+        default_order_by = {
+            "recent": "modifiedTime desc",
+            "my_drive": "name_natural",
+            "shared": "modifiedTime desc",
+        }
+        resolved_order_by = order_by or default_order_by.get(source, "modifiedTime desc")
+
         params = {
-            "fields": "files(id,name,mimeType,size,modifiedTime,webViewLink),nextPageToken",
+            "fields": "files(id,name,mimeType,size,quotaBytesUsed,modifiedTime,webViewLink,thumbnailLink,iconLink,shared,owners(displayName,emailAddress,me)),nextPageToken",
             "pageSize": max(1, min(int(page_size), 200)),
             "q": drive_query,
             "supportsAllDrives": "true",
             "includeItemsFromAllDrives": "true",
+            "orderBy": resolved_order_by,
         }
         if page_token:
             params["pageToken"] = page_token
@@ -52,7 +67,9 @@ class GoogleDriveService:
         files = []
         payload = response.json()
         for item in payload.get("files", []):
-            size_value = item.get("size")
+            size_value = item.get("size") or item.get("quotaBytesUsed")
+            owners = item.get("owners") if isinstance(item.get("owners"), list) else []
+            owner = owners[0] if owners else {}
             files.append(
                 {
                     "id": item.get("id"),
@@ -61,6 +78,11 @@ class GoogleDriveService:
                     "size_bytes": int(size_value) if size_value not in (None, "") else None,
                     "modified_at": item.get("modifiedTime"),
                     "web_view_link": item.get("webViewLink"),
+                    "thumbnail_url": item.get("thumbnailLink"),
+                    "icon_url": item.get("iconLink"),
+                    "shared": bool(item.get("shared")),
+                    "owner_name": owner.get("displayName") if isinstance(owner, dict) else None,
+                    "owner_email": owner.get("emailAddress") if isinstance(owner, dict) else None,
                 }
             )
         return {

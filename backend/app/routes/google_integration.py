@@ -143,6 +143,39 @@ def google_files():
         raise ApiError(400, "invalid_request", "page_size must be an integer.") from exc
     page_token = request.args.get("page_token")
     query = request.args.get("q")
+    source = str(request.args.get("source", "recent")).strip() or "recent"
+    order_by = request.args.get("order_by")
+
+    allowed_sources = {"recent", "my_drive", "shared"}
+    if source not in allowed_sources:
+        raise ApiError(400, "invalid_request", "source must be one of: recent, my_drive, shared.")
+
+    allowed_order_values = {
+        None,
+        "",
+        "modified_desc",
+        "modified_asc",
+        "name_asc",
+        "name_desc",
+        "size_desc",
+        "size_asc",
+    }
+    if order_by not in allowed_order_values:
+        raise ApiError(
+            400,
+            "invalid_request",
+            "order_by must be one of: modified_desc, modified_asc, name_asc, name_desc, size_desc, size_asc.",
+        )
+
+    order_map = {
+        "modified_desc": "modifiedTime desc",
+        "modified_asc": "modifiedTime",
+        "name_asc": "name_natural",
+        "name_desc": "name_natural desc",
+        "size_desc": "quotaBytesUsed desc",
+        "size_asc": "quotaBytesUsed",
+    }
+    resolved_order_by = order_map.get(order_by) if order_by else None
 
     _, drive_service = _service_bundle()
     response = drive_service.list_files(
@@ -151,6 +184,32 @@ def google_files():
         page_size=page_size,
         page_token=page_token,
         query=query,
+        source=source,
+        order_by=resolved_order_by,
     )
     g.db.commit()
     return jsonify(response)
+
+
+@bp.get("/picker-token")
+@require_auth
+def picker_token():
+    repo = GoogleConnectionRepository(g.db)
+    connection = repo.get_active_for_user(g.current_user.id)
+    if connection is None:
+        raise ApiError(400, "google_not_connected", "Google Drive is not connected.")
+
+    _, drive_service = _service_bundle()
+    access_token = drive_service.ensure_valid_access_token(g.db, connection)
+
+    expiry_at = connection.token_expiry_at
+    if expiry_at is not None and expiry_at.tzinfo is None:
+        expiry_at = expiry_at.replace(tzinfo=timezone.utc)
+
+    g.db.commit()
+    return jsonify(
+        {
+            "access_token": access_token,
+            "expires_at": expiry_at.isoformat() if expiry_at else None,
+        }
+    )

@@ -148,6 +148,19 @@ paths:
           required: false
           schema:
             type: string
+        - name: source
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [recent, my_drive, shared]
+            default: recent
+        - name: order_by
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [modified_desc, modified_asc, name_asc, name_desc, size_desc, size_asc]
       responses:
         '200':
           description: Google Drive files list
@@ -165,6 +178,27 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
         '502':
           $ref: '#/components/responses/GoogleGatewayError'
+
+  /api/integrations/google/picker-token:
+    get:
+      tags: [Google Integration]
+      summary: Get Google access token for Google Picker
+      operationId: getGooglePickerToken
+      responses:
+        '200':
+          description: Google Picker token payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GooglePickerTokenResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          description: Unauthorized or reconnect required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
 
   /api/folders/tree:
     get:
@@ -688,7 +722,20 @@ components:
         web_view_link:
           type: [string, 'null']
           format: uri
-      required: [id, name, mime_type, size_bytes, modified_at, web_view_link]
+        thumbnail_url:
+          type: [string, 'null']
+          format: uri
+        icon_url:
+          type: [string, 'null']
+          format: uri
+        shared:
+          type: boolean
+        owner_name:
+          type: [string, 'null']
+        owner_email:
+          type: [string, 'null']
+          format: email
+      required: [id, name, mime_type, size_bytes, modified_at, web_view_link, thumbnail_url, icon_url, shared, owner_name, owner_email]
 
     GoogleFilesResponse:
       type: object
@@ -700,6 +747,17 @@ components:
         next_page_token:
           type: [string, 'null']
       required: [files, next_page_token]
+
+    GooglePickerTokenResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+          minLength: 1
+        expires_at:
+          type: [string, 'null']
+          format: date-time
+      required: [access_token, expires_at]
 
     FolderTreeNode:
       type: object

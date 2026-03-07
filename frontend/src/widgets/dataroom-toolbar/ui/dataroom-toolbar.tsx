@@ -4,18 +4,21 @@ import type { Breadcrumb } from '@/entities/folder'
 import { t } from '@/shared/i18n/messages'
 import { Box, Button, Group } from '@/shared/ui'
 import { BreadcrumbsBar } from '@/widgets/breadcrumbs-bar'
+import { ImportSourceMenu } from '@/widgets/import-source-menu'
 
 type DataroomToolbarProps = {
   breadcrumbs: Breadcrumb[]
   onNavigate: (folderId: string) => void
-  onImportFile: () => void
+  onImportFromGoogle: () => void
+  onImportFromComputer: () => void
   onNewFolder: () => void
 }
 
 export const DataroomToolbar = ({
   breadcrumbs,
   onNavigate,
-  onImportFile,
+  onImportFromGoogle,
+  onImportFromComputer,
   onNewFolder,
 }: DataroomToolbarProps) => (
   <Group justify="space-between" align="center" px="md" py="sm" wrap="nowrap" gap="md">
@@ -27,9 +30,12 @@ export const DataroomToolbar = ({
       <Button variant="default" leftSection={<IconFolderPlus size={16} />} onClick={onNewFolder}>
         {t('newFolder')}
       </Button>
-      <Button leftSection={<IconUpload size={16} />} onClick={onImportFile}>
-        {t('importFile')}
-      </Button>
+      <ImportSourceMenu
+        onImportFromGoogle={onImportFromGoogle}
+        onImportFromComputer={onImportFromComputer}
+      >
+        <Button leftSection={<IconUpload size={16} />}>{t('importFile')}</Button>
+      </ImportSourceMenu>
     </Group>
   </Group>
 )

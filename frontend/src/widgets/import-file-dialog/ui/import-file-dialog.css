@@ -1,0 +1,601 @@
+.import-file-dialog {
+  --gd-blue: #4285f4;
+  --gd-green: #34a853;
+  --gd-yellow: #fbbc04;
+  --gd-red: #ea4335;
+  --separator-muted: #dde5f0;
+  --control-text: #445673;
+  --control-text-active: #0b57d0;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.import-file-dialog__modal-content {
+  height: min(860px, calc(100dvh - 32px));
+  display: flex;
+  flex-direction: column;
+}
+
+.import-file-dialog__modal-content--compact {
+  height: auto;
+  max-height: calc(100dvh - 32px);
+}
+
+.import-file-dialog__modal-body {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.import-file-dialog__modal-body--compact {
+  height: auto;
+}
+
+.import-file-dialog__modal-shell-header {
+  align-items: flex-start;
+}
+
+.import-file-dialog__modal-close {
+  align-self: flex-start;
+  margin-top: -4px;
+}
+
+.import-file-dialog__modal-close:focus,
+.import-file-dialog__modal-close:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.import-file-dialog__modal-header {
+  display: grid;
+  gap: 6px;
+  padding-right: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--separator-muted);
+}
+
+.import-file-dialog__modal-header-main {
+  align-items: center;
+}
+
+.import-file-dialog__modal-title {
+  font-size: 1.125rem;
+  line-height: 1.2;
+  color: var(--text-primary);
+}
+
+.import-file-dialog__header-status-row {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  min-width: 0;
+  max-width: 100%;
+  border: 1px solid #dce5f2;
+  border-radius: 999px;
+  background: #f7f9fd;
+  padding: 5px 10px;
+}
+
+.import-file-dialog__header-status-row--connected {
+  border-color: #cae8d1;
+  background: #edf8f0;
+}
+
+.import-file-dialog__header-status-row--warning {
+  border-color: #f4d7a3;
+  background: #fff7e8;
+}
+
+.import-file-dialog__header-status-row--loading {
+  border-color: #c9dafd;
+  background: #eff4ff;
+}
+
+.import-file-dialog__header-status-row--disconnected {
+  border-color: #dce2ec;
+  background: #f5f7fb;
+}
+
+.import-file-dialog__header-status {
+  color: #526581;
+}
+
+.import-file-dialog__header-status--connected {
+  color: #1b7a33;
+}
+
+.import-file-dialog__header-status--warning {
+  color: #a76000;
+}
+
+.import-file-dialog__header-status--loading {
+  color: #2f5fbb;
+}
+
+.import-file-dialog__header-status--disconnected {
+  color: #5a6780;
+}
+
+.import-file-dialog__status-email {
+  max-width: min(42vw, 320px);
+  color: #3d7050;
+  line-height: 1.35;
+}
+
+.import-file-dialog__header-status {
+  line-height: 1.35;
+}
+
+.import-file-dialog__header-disconnect {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 2px;
+  padding: 2px 0 2px 10px;
+  border: 0;
+  border-left: 1px solid #cae8d1;
+  background: transparent;
+  color: #c43636;
+  font-size: 12px;
+  line-height: 1.35;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.import-file-dialog__header-disconnect svg {
+  display: block;
+}
+
+.import-file-dialog__header-disconnect:hover {
+  color: #a62626;
+}
+
+.import-file-dialog__header-disconnect:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.import-file-dialog__main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.import-file-dialog__main--compact {
+  flex: 0 0 auto;
+  overflow: visible;
+}
+
+.import-file-dialog__drive-glyph {
+  display: block;
+  flex: 0 0 auto;
+  object-fit: contain;
+}
+
+.import-file-dialog__drive-glyph--connect {
+  width: 18px;
+  height: 16px;
+}
+
+.import-file-dialog__drive-glyph--inline {
+  width: 14px;
+  height: 12px;
+}
+
+.import-file-dialog__state-card {
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--bg-subtle);
+}
+
+.import-file-dialog__connect-card {
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  padding: 12px;
+  background: var(--bg-subtle);
+  display: grid;
+  gap: 12px;
+}
+
+.import-file-dialog__connect-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--bg-surface);
+  border: 1px solid var(--separator-soft);
+  flex: 0 0 auto;
+}
+
+.import-file-dialog__connect-button {
+  border: 1px solid var(--border-soft);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.import-file-dialog__connect-button:hover {
+  background: var(--bg-subtle);
+}
+
+.import-file-dialog__drive-browser {
+  padding: 4px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: transparent;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.import-file-dialog__drive-browser-controls {
+  border: 0;
+  border-bottom: 1px solid var(--separator-muted);
+  border-radius: 0;
+  background: transparent;
+  padding: 0 0 10px;
+}
+
+.import-file-dialog__drive-browser-toolbar {
+  align-items: stretch;
+  gap: 8px;
+}
+
+.import-file-dialog__drive-browser-search {
+  flex: 1;
+}
+
+.import-file-dialog__drive-browser-search input {
+  border-color: #d4deec;
+  min-height: 36px;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.import-file-dialog__drive-browser-tabs {
+  flex: 0 0 auto;
+}
+
+.import-file-dialog__drive-browser-tab {
+  border: 1px solid transparent;
+  color: var(--control-text);
+  background: transparent;
+  border-radius: 8px;
+  min-height: 32px;
+  padding-inline: 10px;
+  font-weight: 600;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.import-file-dialog__drive-browser-tab:hover {
+  border-color: #d4deec;
+  background: #f8fbff;
+  color: #344a6c;
+}
+
+.import-file-dialog__drive-browser-tab--active {
+  border-color: #c9dafd;
+  background: #eef4ff;
+  color: var(--control-text-active);
+}
+
+.import-file-dialog__drive-browser-sort {
+  flex: 0 0 auto;
+}
+
+.import-file-dialog__drive-browser-sort-wrap {
+  flex: 0 0 auto;
+  border-left: 1px solid var(--separator-muted);
+  padding-left: 10px;
+}
+
+.import-file-dialog__drive-browser-sort-label {
+  letter-spacing: 0.01em;
+  color: #6d7f99;
+}
+
+.import-file-dialog__drive-browser-sort-button {
+  border: 1px solid transparent;
+  color: var(--control-text);
+  background: transparent;
+  border-radius: 8px;
+  min-height: 32px;
+  padding-inline: 10px;
+  font-weight: 600;
+}
+
+.import-file-dialog__drive-browser-sort-button:hover {
+  border-color: #d4deec;
+  background: #f8fbff;
+  color: #344a6c;
+}
+
+.import-file-dialog__drive-browser-sort-button--active {
+  border-color: #c9dafd;
+  background: #eef4ff;
+  color: var(--control-text-active);
+}
+
+.import-file-dialog__drive-browser-content {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.import-file-dialog__drive-browser-scroll {
+  --drive-grid-columns: 32px minmax(0, 1.9fr) minmax(118px, 1fr) 94px 128px 88px;
+  border: 1px solid #dde5f0;
+  border-radius: 10px;
+  background: var(--bg-surface);
+  padding: 0;
+  flex: 1;
+  min-height: 0;
+}
+
+.import-file-dialog__drive-grid-head {
+  display: grid;
+  grid-template-columns: var(--drive-grid-columns);
+  align-items: center;
+  column-gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #e1e8f2;
+  background: #f9fbff;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.import-file-dialog__drive-browser-list {
+  min-height: 0;
+}
+
+.import-file-dialog__drive-file-row {
+  border: 0;
+  border-bottom: 1px solid #e1e8f2;
+  border-radius: 0;
+  padding: 10px 12px;
+  text-align: left;
+  background: transparent;
+  width: 100%;
+  display: grid;
+  grid-template-columns: var(--drive-grid-columns);
+  align-items: center;
+  column-gap: 10px;
+  box-shadow: none;
+  cursor: pointer;
+  transition:
+    border-color 0.16s ease,
+    background-color 0.16s ease;
+}
+
+.import-file-dialog__drive-file-row:hover {
+  border-bottom-color: #c7d6ec;
+  background: #f8fbff;
+}
+
+.import-file-dialog__drive-file-row--selected {
+  background: #eef4ff;
+}
+
+.import-file-dialog__drive-file-row--too-large {
+  background: #fff8f8;
+  cursor: not-allowed;
+}
+
+.import-file-dialog__drive-file-row--too-large:hover {
+  border-bottom-color: #eacaca;
+  background: #fff8f8;
+}
+
+.import-file-dialog__drive-file-checkbox {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 2px;
+}
+
+.import-file-dialog__drive-file-name-cell {
+  min-width: 0;
+}
+
+.import-file-dialog__drive-file-icon {
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.import-file-dialog__drive-file-main {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.import-file-dialog__drive-file-name {
+  display: flex;
+  align-items: baseline;
+  gap: 0;
+  width: 100%;
+  min-width: 0;
+}
+
+.import-file-dialog__drive-file-name-base {
+  min-width: 0;
+  flex: 1 1 auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.import-file-dialog__drive-file-name-ext {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.import-file-dialog__drive-file-meta {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.import-file-dialog__drive-file-owner {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.import-file-dialog__drive-file-type-cell,
+.import-file-dialog__drive-file-size-cell,
+.import-file-dialog__drive-file-updated-cell {
+  display: block;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.import-file-dialog__drive-file-shared-pill {
+  border: 1px solid #d5e2fb;
+  border-radius: 999px;
+  padding: 3px 10px;
+  background: #eff4ff;
+  color: #4f6491;
+  font-weight: 600;
+  white-space: nowrap;
+  flex: 0 0 auto;
+  justify-self: end;
+}
+
+.import-file-dialog__drive-file-too-large-pill {
+  border: 1px solid #f4b4b4;
+  border-radius: 999px;
+  padding: 3px 10px;
+  background: #fff1f1;
+  color: #c43636;
+  font-weight: 700;
+  white-space: nowrap;
+  justify-self: end;
+}
+
+.import-file-dialog__drive-browser-empty {
+  border: 1px dashed var(--border-soft);
+  border-radius: 8px;
+  padding: 16px 12px;
+  text-align: center;
+  background: var(--bg-surface);
+}
+
+.import-file-dialog__drive-browser-footer {
+  border-top: 1px solid var(--separator-muted);
+  padding-top: 12px;
+  margin-top: auto;
+  background: transparent;
+}
+
+.import-file-dialog__upload-dropzone {
+  border: 1px dashed var(--border-soft);
+  border-radius: 10px;
+  background: var(--bg-subtle);
+  text-align: center;
+  transition:
+    border-color 0.16s ease,
+    background-color 0.16s ease;
+}
+
+.import-file-dialog__upload-dropzone--active {
+  border-color: var(--accent);
+  background: #f0f3f8;
+}
+
+.import-file-dialog__upload-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: var(--bg-surface);
+  border: 1px solid var(--separator-soft);
+  color: var(--text-secondary);
+}
+
+.import-file-dialog__choose-button {
+  border: 1px solid var(--border-soft);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.import-file-dialog__choose-button:hover {
+  background: var(--bg-subtle);
+}
+
+.import-file-dialog__upload-limit {
+  color: #61708d;
+}
+
+.import-file-dialog__hidden-input {
+  display: none;
+}
+
+@media (max-width: 860px) {
+  .import-file-dialog__modal-header-main {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .import-file-dialog__header-actions {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .import-file-dialog__status-email {
+    max-width: min(54vw, 240px);
+  }
+
+  .import-file-dialog__drive-browser-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .import-file-dialog__drive-browser-tabs {
+    justify-content: flex-start;
+  }
+
+  .import-file-dialog__drive-browser-sort {
+    justify-content: flex-start;
+  }
+
+  .import-file-dialog__drive-grid-head,
+  .import-file-dialog__drive-file-row {
+    grid-template-columns: 28px minmax(0, 1.7fr) minmax(100px, 1fr) 84px 112px 76px;
+    column-gap: 8px;
+  }
+}

@@ -1,7 +1,8 @@
 export const queryKeys = {
   me: ['user', 'me'] as const,
   googleStatus: ['google', 'status'] as const,
-  googleFiles: (query: string) => ['google', 'files', query] as const,
+  googleFiles: (query: string, source: string, orderBy: string) =>
+    ['google', 'files', query, source, orderBy] as const,
   folderTree: ['dataroom', 'folder-tree'] as const,
   items: ['dataroom', 'items'] as const,
   itemsPrefix: (folderId: string) => ['dataroom', 'items', folderId] as const,

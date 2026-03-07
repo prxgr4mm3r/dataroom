@@ -16,6 +16,7 @@ export const OAuthCallbackPage = () => {
   useEffect(() => {
     const status = searchParams.get('status')
     const code = searchParams.get('code')
+    const provider = searchParams.get('provider')
 
     if (status === 'success') {
       notifySuccess(t('oauthSuccess'))
@@ -26,7 +27,8 @@ export const OAuthCallbackPage = () => {
     void queryClient.invalidateQueries({ queryKey: queryKeys.googleStatus })
 
     const timeoutId = window.setTimeout(() => {
-      navigate(routes.dataroomRoot, { replace: true })
+      const shouldOpenGoogleImport = provider === 'google'
+      navigate(shouldOpenGoogleImport ? `${routes.dataroomRoot}?import=google` : routes.dataroomRoot, { replace: true })
     }, 900)
 
     return () => window.clearTimeout(timeoutId)

@@ -16,6 +16,14 @@ const optionalIntEnv = (value: string | undefined, fallback: number): number => 
   return parsed
 }
 
+const optionalStringEnv = (value: string | undefined): string | undefined => {
+  const normalized = value?.trim()
+  if (!normalized) {
+    return undefined
+  }
+  return normalized
+}
+
 const DEFAULT_MAX_IMPORT_FILE_SIZE_BYTES = 4 * 1024 * 1024
 
 export const env = {
@@ -28,4 +36,6 @@ export const env = {
     import.meta.env.VITE_MAX_IMPORT_FILE_SIZE_BYTES,
     DEFAULT_MAX_IMPORT_FILE_SIZE_BYTES,
   ),
+  googlePickerApiKey: optionalStringEnv(import.meta.env.VITE_GOOGLE_PICKER_API_KEY),
+  googlePickerAppId: optionalStringEnv(import.meta.env.VITE_GOOGLE_PICKER_APP_ID),
 } as const

@@ -18,7 +18,7 @@ import { formatFileSize } from '@/shared/lib/file/format-file-size'
 import { getFileTypePresentation } from '@/shared/lib/file/file-type-presentation'
 import { MAX_IMPORT_FILE_SIZE_BYTES } from '@/shared/lib/file/import-file-size-limit'
 import { splitFileName } from '@/shared/lib/file/split-file-name'
-import { ActionIcon, Box, Checkbox, FileTypeIcon, Group, Loader, Menu, ScrollArea, Table, Text } from '@/shared/ui'
+import { ActionIcon, Box, FileTypeIcon, Group, Loader, Menu, ScrollArea, SelectionCheckbox, Table, Text } from '@/shared/ui'
 import type { SortBy, SortOrder } from '@/shared/types/common'
 import './file-table.css'
 
@@ -274,7 +274,7 @@ export const FileTable = ({
         <Table className="file-table" stickyHeader highlightOnHover withColumnBorders={false}>
           <Table.Thead>
             <Table.Tr>
-              <Table.Th className="file-table__th" w={44} />
+              <Table.Th className="file-table__th file-table__th--select" w={44} />
               <SortableHeader
                 label="Name"
                 active={sortBy === 'name'}
@@ -368,13 +368,15 @@ export const FileTable = ({
                   }
                   style={{ opacity: isDragging ? 0.45 : 1 }}
                 >
-                  <Table.Td className="file-table__td">
-                    <Checkbox
-                      checked={isSelected}
-                      aria-label={`Select ${item.name}`}
-                      onChange={() => onToggleSelect(item.id)}
-                      onClick={(event) => event.stopPropagation()}
-                    />
+                  <Table.Td className="file-table__td file-table__td--select">
+                    <span className="file-table__select-control">
+                      <SelectionCheckbox
+                        checked={isSelected}
+                        ariaLabel={`Select ${item.name}`}
+                        onCheckedChange={() => onToggleSelect(item.id)}
+                        onClick={(event) => event.stopPropagation()}
+                      />
+                    </span>
                   </Table.Td>
 
                   <Table.Td

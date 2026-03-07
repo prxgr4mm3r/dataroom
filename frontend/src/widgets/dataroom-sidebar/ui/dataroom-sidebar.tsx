@@ -20,6 +20,7 @@ import { getFileTypePresentation } from '@/shared/lib/file/file-type-presentatio
 import { splitFileName } from '@/shared/lib/file/split-file-name'
 import { normalizeFolderId } from '@/shared/routes/dataroom-routes'
 import { ActionIcon, Box, Button, FileTypeIcon, Group, Menu, ScrollArea, Text, Title, Tooltip } from '@/shared/ui'
+import { ImportSourceMenu } from '@/widgets/import-source-menu'
 import './dataroom-sidebar.css'
 
 type DropState = 'none' | 'valid' | 'warning' | 'invalid'
@@ -31,7 +32,8 @@ type DataroomSidebarProps = {
   expandedIds: Set<string>
   onGoRoot: () => void
   onNewFolder: () => void
-  onImportFile: () => void
+  onImportFromGoogle: () => void
+  onImportFromComputer: () => void
   onToggleExpanded: (folderId: string) => void
   onOpenFolder: (folderId: string) => void
   onOpenFile: (fileId: string, parentFolderId: string) => void
@@ -70,7 +72,8 @@ type DataroomSidebarRailProps = {
   currentUser: UserProfile
   onGoRoot: () => void
   onNewFolder: () => void
-  onImportFile: () => void
+  onImportFromGoogle: () => void
+  onImportFromComputer: () => void
   onSignOut: () => void
 }
 
@@ -106,7 +109,8 @@ export const DataroomSidebarRail = ({
   currentUser,
   onGoRoot,
   onNewFolder,
-  onImportFile,
+  onImportFromGoogle,
+  onImportFromComputer,
   onSignOut,
 }: DataroomSidebarRailProps) => {
   const accountName = currentUser.displayName || currentUser.email || currentUser.firebaseUid
@@ -144,18 +148,26 @@ export const DataroomSidebarRail = ({
           </ActionIcon>
         </Tooltip>
 
-        <Tooltip label={t('importFile')} position="right">
-          <ActionIcon
-            className="dataroom-sidebar-rail__action-icon"
-            variant="subtle"
-            size="lg"
-            radius="md"
-            aria-label={t('importFile')}
-            onClick={onImportFile}
-          >
-            <IconUpload size={18} />
-          </ActionIcon>
-        </Tooltip>
+        <ImportSourceMenu
+          onImportFromGoogle={onImportFromGoogle}
+          onImportFromComputer={onImportFromComputer}
+          position="right-start"
+          offset={8}
+        >
+          <Box>
+            <Tooltip label={t('importFile')} position="right">
+              <ActionIcon
+                className="dataroom-sidebar-rail__action-icon"
+                variant="subtle"
+                size="lg"
+                radius="md"
+                aria-label={t('importFile')}
+              >
+                <IconUpload size={18} />
+              </ActionIcon>
+            </Tooltip>
+          </Box>
+        </ImportSourceMenu>
       </Group>
 
       <Menu withinPortal position="right-end" offset={10}>
@@ -494,7 +506,8 @@ export const DataroomSidebar = ({
   expandedIds,
   onGoRoot,
   onNewFolder,
-  onImportFile,
+  onImportFromGoogle,
+  onImportFromComputer,
   onToggleExpanded,
   onOpenFolder,
   onOpenFile,
@@ -546,16 +559,22 @@ export const DataroomSidebar = ({
         >
           {t('newFolder')}
         </Button>
-        <Button
-          variant="subtle"
-          size="xs"
-          fullWidth
-          className="dataroom-sidebar__quick-action-button"
-          leftSection={<IconUpload size={18} />}
-          onClick={onImportFile}
+        <ImportSourceMenu
+          onImportFromGoogle={onImportFromGoogle}
+          onImportFromComputer={onImportFromComputer}
+          position="right-start"
+          offset={8}
         >
-          {t('importFile')}
-        </Button>
+          <Button
+            variant="subtle"
+            size="xs"
+            fullWidth
+            className="dataroom-sidebar__quick-action-button"
+            leftSection={<IconUpload size={18} />}
+          >
+            {t('importFile')}
+          </Button>
+        </ImportSourceMenu>
       </Box>
 
       <ScrollArea
