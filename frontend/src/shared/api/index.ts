@@ -9,6 +9,7 @@ export type {
   CopyItemRequestDto,
   CreateFolderRequestDto,
   DeleteItemResponseDto,
+  DownloadItemsRequestDto,
   FolderRefDto,
   FolderTreeDto,
   FolderTreeNodeDto,

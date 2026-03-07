@@ -16,7 +16,7 @@ type CreateFolderDialogProps = {
 export const CreateFolderDialog = ({ opened, folderId, onClose }: CreateFolderDialogProps) => {
   const [name, setName] = useState('')
   const [inlineError, setInlineError] = useState<string | null>(null)
-  const createFolderMutation = useCreateFolder(folderId)
+  const createFolderMutation = useCreateFolder()
 
   const handleClose = () => {
     setName('')

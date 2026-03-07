@@ -4,9 +4,11 @@ import { Button, Group, Text } from '@/shared/ui'
 type BulkActionsBarProps = {
   selectedCount: number
   onClearSelection: () => void
+  onDownloadSelected: () => void
   onCopySelected: () => void
   onMoveSelected: () => void
   onDeleteSelected: () => void
+  downloadPending: boolean
   copyPending: boolean
   movePending: boolean
   deletePending: boolean
@@ -15,9 +17,11 @@ type BulkActionsBarProps = {
 export const BulkActionsBar = ({
   selectedCount,
   onClearSelection,
+  onDownloadSelected,
   onCopySelected,
   onMoveSelected,
   onDeleteSelected,
+  downloadPending,
   copyPending,
   movePending,
   deletePending,
@@ -32,6 +36,9 @@ export const BulkActionsBar = ({
         {t('selectedCount')}: {selectedCount}
       </Text>
       <Group gap="xs">
+        <Button variant="default" size="xs" onClick={onDownloadSelected} loading={downloadPending}>
+          {t('download')}
+        </Button>
         <Button variant="default" size="xs" onClick={onCopySelected} loading={copyPending}>
           {t('copy')}
         </Button>

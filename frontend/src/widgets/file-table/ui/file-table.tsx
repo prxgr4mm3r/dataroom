@@ -1,6 +1,7 @@
 import {
   IconArrowsMove,
   IconCopy,
+  IconDownload,
   IconDotsVertical,
   IconFile,
   IconFolder,
@@ -30,6 +31,7 @@ type FileTableProps = {
   onToggleSelect: (itemId: string) => void
   onOpenFile: (itemId: string) => void
   onOpenFolder: (folderId: string) => void
+  onDownloadItem: (item: ContentItem) => void
   onCopyItem: (item: ContentItem) => void
   onMoveItem: (item: ContentItem) => void
   onDeleteItem: (item: ContentItem) => void
@@ -75,6 +77,7 @@ export const FileTable = ({
   onToggleSelect,
   onOpenFile,
   onOpenFolder,
+  onDownloadItem,
   onCopyItem,
   onMoveItem,
   onDeleteItem,
@@ -245,6 +248,9 @@ export const FileTable = ({
                       </ActionIcon>
                     </Menu.Target>
                     <Menu.Dropdown>
+                      <Menu.Item leftSection={<IconDownload size={14} />} onClick={() => onDownloadItem(item)}>
+                        Download
+                      </Menu.Item>
                       <Menu.Item leftSection={<IconCopy size={14} />} onClick={() => onCopyItem(item)}>
                         Copy
                       </Menu.Item>

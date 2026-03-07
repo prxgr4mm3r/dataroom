@@ -35,4 +35,21 @@ describe('useContentTreeBrowser', () => {
     })
     expect(result.current.expandedIds.has('folder-3')).toBe(true)
   })
+
+  it('can force-expand node after content appears', () => {
+    const { result } = renderHook(() =>
+      useContentTreeBrowser({
+        activeFolderId: 'folder-2',
+        expandedPathIds: ['root', 'folder-1', 'folder-2'],
+      }),
+    )
+
+    expect(result.current.expandedIds.has('folder-2')).toBe(false)
+
+    act(() => {
+      result.current.expand('folder-2')
+    })
+
+    expect(result.current.expandedIds.has('folder-2')).toBe(true)
+  })
 })

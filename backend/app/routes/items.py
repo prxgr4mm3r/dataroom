@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from flask import Blueprint, current_app, g, jsonify, request, send_file
 
 from app.auth import require_auth
-from app.services import BulkService, FileStorageService, GoogleDriveService, ItemService, TokenCipher
+from app.services import BulkService, DownloadService, FileStorageService, GoogleDriveService, ItemService, TokenCipher
 
 bp = Blueprint("items", __name__, url_prefix="/api/items")
 
@@ -52,6 +54,27 @@ def get_item_content(item_id: str):
         conditional=True,
         max_age=0,
     )
+
+
+@bp.post("/download")
+@require_auth
+def download_items():
+    payload = request.get_json(silent=True) or {}
+    item_ids = payload.get("item_ids") or []
+
+    service = DownloadService(g.db)
+    download = service.prepare_download(g.current_user.id, item_ids)
+    response = send_file(
+        download.file_path,
+        mimetype=download.mime_type,
+        as_attachment=True,
+        download_name=download.download_name,
+        conditional=True,
+        max_age=0,
+    )
+    if download.temporary:
+        response.call_on_close(lambda file_path=download.file_path: Path(file_path).unlink(missing_ok=True))
+    return response
 
 
 @bp.patch("/<item_id>/move")

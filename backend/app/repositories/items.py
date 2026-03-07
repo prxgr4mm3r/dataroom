@@ -40,6 +40,16 @@ class ItemRepository:
             query = query.filter(DataRoomItem.status != ItemStatus.DELETED.value)
         return query.all()
 
+    def list_active_for_user(self, user_id: str) -> list[DataRoomItem]:
+        return (
+            self.db.query(DataRoomItem)
+            .filter(
+                DataRoomItem.user_id == user_id,
+                DataRoomItem.status != ItemStatus.DELETED.value,
+            )
+            .all()
+        )
+
     def list_children(self, user_id: str, parent_id: str | None) -> list[DataRoomItem]:
         query = self.db.query(DataRoomItem).filter(
             DataRoomItem.user_id == user_id,

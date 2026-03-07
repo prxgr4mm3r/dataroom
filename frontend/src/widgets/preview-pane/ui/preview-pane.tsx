@@ -4,6 +4,7 @@ import { IconDownload, IconExternalLink, IconX } from '@tabler/icons-react'
 import { useCloseFilePreview } from '@/features/open-file-preview'
 import { useItemContentQuery, useItemQuery } from '@/features/load-item-content'
 import { t } from '@/shared/i18n/messages'
+import { downloadBlob } from '@/shared/lib/file/download-blob'
 import { isInlinePreviewableMime } from '@/shared/lib/file/is-previewable-file'
 import { toApiError } from '@/shared/api'
 import {
@@ -28,13 +29,6 @@ const PREVIEW_MIN_WIDTH = 320
 const PREVIEW_MAX_WIDTH = 760
 
 const clamp = (value: number, min: number, max: number): number => Math.min(Math.max(value, min), max)
-
-const downloadBlob = (url: string, filename: string): void => {
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.download = filename
-  anchor.click()
-}
 
 export const PreviewPane = ({ folderId, previewItemId }: PreviewPaneProps) => {
   const [width, setWidth] = useState(420)
@@ -152,7 +146,7 @@ export const PreviewPane = ({ folderId, previewItemId }: PreviewPaneProps) => {
                 <Button
                   size="compact-sm"
                   variant="default"
-                  onClick={() => downloadBlob(content.objectUrl, item.name)}
+                  onClick={() => downloadBlob(content.blob, item.name)}
                 >
                   <IconDownload size={14} />
                 </Button>

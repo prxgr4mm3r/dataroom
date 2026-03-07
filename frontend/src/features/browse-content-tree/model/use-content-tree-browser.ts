@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 
 import { normalizeFolderId } from '@/shared/routes/dataroom-routes'
 
@@ -67,9 +67,26 @@ export const useContentTreeBrowser = ({
     })
   }
 
+  const expand = useCallback((folderId: string) => {
+    const normalizedFolderId = normalizeFolderId(folderId)
+
+    setUserExpandedIds((prev) => {
+      const next = new Set(prev)
+      next.add(normalizedFolderId)
+      return next
+    })
+
+    setUserCollapsedIds((prev) => {
+      const next = new Set(prev)
+      next.delete(normalizedFolderId)
+      return next
+    })
+  }, [])
+
   return {
     expandedIds,
     toggleExpanded,
+    expand,
     isExpanded: (folderId: string) => expandedIds.has(normalizeFolderId(folderId)),
   }
 }

@@ -305,6 +305,38 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
 
+  /api/items/download:
+    post:
+      tags: [Items]
+      summary: Download one or many items (folder and multi-item downloads are zipped)
+      operationId: downloadItems
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DownloadItemsRequest'
+      responses:
+        '200':
+          description: Download stream
+          content:
+            '*/*':
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '410':
+          description: File metadata exists but local content is missing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+
   /api/items/{item_id}/move:
     patch:
       tags: [Items]
@@ -822,6 +854,16 @@ components:
       required: [item_ids, target_folder_id]
 
     BulkDeleteRequest:
+      type: object
+      properties:
+        item_ids:
+          type: array
+          items:
+            type: string
+          minItems: 1
+      required: [item_ids]
+
+    DownloadItemsRequest:
       type: object
       properties:
         item_ids:

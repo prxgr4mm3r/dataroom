@@ -21,6 +21,7 @@ export const messages = {
   folderCreatedSuccess: 'Folder created successfully.',
   selectedCount: 'Selected',
   clearSelection: 'Clear selection',
+  download: 'Download',
   copy: 'Copy',
   move: 'Move',
   copyItemTitle: 'Copy item',

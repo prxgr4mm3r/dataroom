@@ -14,7 +14,7 @@ export type AuthSession = {
   loading: boolean
   signInWithGoogle: () => Promise<void>
   signOutUser: () => Promise<void>
-  getIdToken: () => Promise<string | null>
+  getIdToken: (forceRefresh?: boolean) => Promise<string | null>
 }
 
 const googleProvider = new GoogleAuthProvider()
@@ -40,12 +40,12 @@ export const useAuthSession = (): AuthSession => {
     await signOut(firebaseAuth)
   }, [])
 
-  const getIdToken = useCallback(async (): Promise<string | null> => {
+  const getIdToken = useCallback(async (forceRefresh?: boolean): Promise<string | null> => {
     const active = firebaseAuth.currentUser
     if (!active) {
       return null
     }
-    return active.getIdToken()
+    return active.getIdToken(Boolean(forceRefresh))
   }, [])
 
   return useMemo(

@@ -4,13 +4,15 @@ import { queryKeys } from '@/shared/api'
 
 import { createFolder } from '../api/create-folder'
 
-export const useCreateFolder = (folderId: string) => {
+export const useCreateFolder = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: createFolder,
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.itemsPrefix(folderId) })
+      // Sidebar expansion arrows depend on `childrenCount` from parent folder listings,
+      // so we need to refresh all cached folder item lists after folder creation.
+      await queryClient.invalidateQueries({ queryKey: queryKeys.items })
       await queryClient.invalidateQueries({ queryKey: queryKeys.folderTree })
     },
   })

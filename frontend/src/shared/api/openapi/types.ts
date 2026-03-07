@@ -19,6 +19,7 @@ export type MoveItemRequestDto = components['schemas']['MoveItemRequest']
 export type CopyItemRequestDto = components['schemas']['CopyItemRequest']
 export type BulkMoveRequestDto = components['schemas']['BulkMoveRequest']
 export type BulkCopyRequestDto = components['schemas']['BulkCopyRequest']
+export type DownloadItemsRequestDto = components['schemas']['DownloadItemsRequest']
 export type BulkItemsResponseDto = components['schemas']['BulkItemsResponse']
 export type ErrorEnvelopeDto = components['schemas']['ErrorEnvelope']
 

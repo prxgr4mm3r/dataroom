@@ -1,4 +1,5 @@
 from app.services.bulk_service import BulkService
+from app.services.download_service import DownloadService
 from app.services.file_storage_service import FileStorageService
 from app.services.folder_service import FolderService
 from app.services.google_drive_service import GoogleDriveService
@@ -16,4 +17,5 @@ __all__ = [
     "FolderService",
     "ItemService",
     "BulkService",
+    "DownloadService",
 ]

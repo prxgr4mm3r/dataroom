@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 
 import { useAuth } from '@/app/providers'
@@ -7,6 +7,7 @@ import type { UserProfile } from '@/entities/user'
 import { useContentTreeBrowser } from '@/features/browse-content-tree'
 import { useBulkCopyItems, useCopyItem } from '@/features/copy-content-items'
 import { useBulkDeleteItems, useDeleteItem } from '@/features/delete-content-items'
+import { useDownloadContentItems } from '@/features/download-content-items'
 import { useDragMoveController, validateMoveTarget } from '@/features/drag-move-items'
 import { useListContentItemsQuery } from '@/features/list-content-items'
 import { useBulkMoveItems, useMoveItem } from '@/features/move-content-items'
@@ -96,6 +97,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
 
   const deleteItemMutation = useDeleteItem(normalizedFolderId)
   const bulkDeleteMutation = useBulkDeleteItems(normalizedFolderId)
+  const downloadItemsMutation = useDownloadContentItems()
   const copyItemMutation = useCopyItem()
   const bulkCopyMutation = useBulkCopyItems()
   const moveItemMutation = useMoveItem()
@@ -118,6 +120,26 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
     activeFolderId: normalizedFolderId,
     expandedPathIds,
   })
+  const expandTreeFolder = treeBrowser.expand
+  const previousItemsCountRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    previousItemsCountRef.current = null
+  }, [normalizedFolderId])
+
+  useEffect(() => {
+    const nextCount = listQuery.data?.items.length
+    if (typeof nextCount !== 'number') {
+      return
+    }
+
+    const previousCount = previousItemsCountRef.current
+    if (typeof previousCount === 'number' && nextCount > previousCount) {
+      expandTreeFolder(normalizedFolderId)
+    }
+
+    previousItemsCountRef.current = nextCount
+  }, [listQuery.data?.items.length, normalizedFolderId, expandTreeFolder])
 
   const openFolder = (id: string) => {
     navigate(toFolderPath(id))
@@ -334,6 +356,25 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
     setDeleteDialog({ mode: 'bulk' })
   }
 
+  const downloadItems = async (itemIds: string[]) => {
+    try {
+      await downloadItemsMutation.mutateAsync({ itemIds })
+    } catch (error) {
+      notifyError(toApiError(error).message)
+    }
+  }
+
+  const downloadSingleItem = (item: ContentItem) => {
+    void downloadItems([item.id])
+  }
+
+  const downloadSelectedItems = () => {
+    if (!selectedIds.length) {
+      return
+    }
+    void downloadItems(selectedIds)
+  }
+
   const deletePending =
     deleteDialog?.mode === 'bulk' ? bulkDeleteMutation.isPending : deleteItemMutation.isPending
 
@@ -464,6 +505,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
                   onToggleSelect={toggleSelected}
                   onOpenFile={openFilePreview}
                   onOpenFolder={openFolder}
+                  onDownloadItem={downloadSingleItem}
                   onCopyItem={openSingleCopyDialog}
                   onMoveItem={openSingleMoveDialog}
                   onDeleteItem={openSingleDeleteDialog}
@@ -486,9 +528,11 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
           <BulkActionsBar
             selectedCount={selectedIds.length}
             onClearSelection={clearSelection}
+            onDownloadSelected={downloadSelectedItems}
             onCopySelected={openBulkCopyDialog}
             onMoveSelected={openBulkMoveDialog}
             onDeleteSelected={openBulkDeleteDialog}
+            downloadPending={downloadItemsMutation.isPending}
             copyPending={Boolean(
               transferDialog?.mode === 'copy' && transferDialog.scope === 'bulk' && transferPending,
             )}

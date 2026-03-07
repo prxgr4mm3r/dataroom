@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import tempfile
 import unittest
+import zipfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import patch
@@ -280,6 +281,81 @@ class BackendApiTests(unittest.TestCase):
         content = self.client.get(f"/api/items/{folder_id}/content", headers=headers)
         self.assertEqual(400, content.status_code)
         self.assertEqual("unsupported_item_type", content.json["error"]["code"])
+
+    def test_download_single_file_folder_and_multi_items(self):
+        headers = self._auth_headers("download-user")
+        docs_folder = self.client.post("/api/folders", headers=headers, json={"name": "Docs"}).json["id"]
+        self.client.post(
+            "/api/folders",
+            headers=headers,
+            json={"name": "Empty", "parent_id": docs_folder},
+        )
+        archive_folder = self.client.post("/api/folders", headers=headers, json={"name": "Archive"}).json["id"]
+
+        docs_file = self.client.post(
+            "/api/files/upload",
+            headers=headers,
+            data={
+                "file": (io.BytesIO(b"docs-content"), "note.txt"),
+                "target_folder_id": docs_folder,
+            },
+            content_type="multipart/form-data",
+        )
+        archive_file = self.client.post(
+            "/api/files/upload",
+            headers=headers,
+            data={
+                "file": (io.BytesIO(b"archive-content"), "note.txt"),
+                "target_folder_id": archive_folder,
+            },
+            content_type="multipart/form-data",
+        )
+
+        docs_file_id = docs_file.json["id"]
+        archive_file_id = archive_file.json["id"]
+
+        single_download = self.client.post(
+            "/api/items/download",
+            headers=headers,
+            json={"item_ids": [docs_file_id]},
+        )
+        self.assertEqual(200, single_download.status_code)
+        self.assertIn("filename=note.txt", single_download.headers.get("Content-Disposition", ""))
+        self.assertEqual(b"docs-content", single_download.data)
+        single_download.close()
+
+        folder_download = self.client.post(
+            "/api/items/download",
+            headers=headers,
+            json={"item_ids": [docs_folder]},
+        )
+        self.assertEqual(200, folder_download.status_code)
+        self.assertIn("filename=Docs.zip", folder_download.headers.get("Content-Disposition", ""))
+        self.assertEqual("application/zip", folder_download.mimetype)
+        with zipfile.ZipFile(io.BytesIO(folder_download.data), "r") as archive:
+            names = set(archive.namelist())
+            self.assertIn("Docs/note.txt", names)
+            self.assertIn("Docs/Empty/", names)
+            self.assertEqual(b"docs-content", archive.read("Docs/note.txt"))
+        folder_download.close()
+
+        multi_download = self.client.post(
+            "/api/items/download",
+            headers=headers,
+            json={"item_ids": [docs_file_id, archive_file_id]},
+        )
+        self.assertEqual(200, multi_download.status_code)
+        self.assertIn("filename=dataroom-download.zip", multi_download.headers.get("Content-Disposition", ""))
+        with zipfile.ZipFile(io.BytesIO(multi_download.data), "r") as archive:
+            names = set(archive.namelist())
+            self.assertSetEqual({"note.txt", "note (1).txt"}, names)
+            payloads = {archive.read(name) for name in names}
+            self.assertSetEqual({b"docs-content", b"archive-content"}, payloads)
+        multi_download.close()
+
+        invalid_request = self.client.post("/api/items/download", headers=headers, json={"item_ids": []})
+        self.assertEqual(400, invalid_request.status_code)
+        self.assertEqual("invalid_request", invalid_request.json["error"]["code"])
 
     def test_bulk_move_is_atomic(self):
         headers = self._auth_headers("bulk-user")
