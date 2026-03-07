@@ -185,17 +185,18 @@
 .dataroom-sidebar__account-meta {
   min-width: 0;
   flex: 1 1 auto;
-  padding-block: 0;
+  /* Keep a tiny vertical buffer so descenders are not clipped on browser zoom. */
+  padding-block: 1px;
 }
 
 .dataroom-sidebar__account-name {
-  line-height: 16px;
+  line-height: 1.25;
 }
 
 .dataroom-sidebar__account-subtitle {
   display: block;
   margin-top: 0;
-  line-height: 14px;
+  line-height: 1.35;
 }
 
 .dataroom-sidebar__account-more {
