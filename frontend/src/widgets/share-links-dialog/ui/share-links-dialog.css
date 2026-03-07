@@ -10,9 +10,9 @@
 
 .share-links-dialog__shell {
   position: relative;
-  border: 1px solid #d8e1f0;
+  border: 1px solid var(--border-soft);
   border-radius: 12px;
-  background: #fcfdff;
+  background: var(--bg-surface);
   padding: 16px;
   /* padding-right: 48px; */
 }
@@ -28,14 +28,14 @@
   align-items: center;
   gap: 8px;
   padding: 8px 0;
-  color: #64748b;
+  color: var(--text-secondary);
 }
 
 .share-links-dialog__loading {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  color: #64748b;
+  color: var(--text-secondary);
 }
 
 .share-links-dialog__panel {
@@ -46,18 +46,18 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: #2563eb;
+  color: var(--accent-hover);
 }
 
 .share-links-dialog__link-box {
   margin-top: 4px;
-  border: 1px solid #d8e1f0;
+  border: 1px solid var(--border-soft);
   border-radius: 10px;
-  background: #f8fbff;
+  background: var(--state-info-bg-soft);
   padding: 10px 12px;
   font-size: 13px;
   line-height: 1.4;
-  color: #334155;
+  color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

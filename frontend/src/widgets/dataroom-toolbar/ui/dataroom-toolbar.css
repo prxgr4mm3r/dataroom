@@ -1,0 +1,33 @@
+.dataroom-toolbar__action-button.mantine-Button-root {
+  background: var(--toolbar-button-bg);
+  border: 1px solid var(--toolbar-button-border);
+  color: var(--toolbar-button-text);
+}
+
+.dataroom-toolbar__action-button.mantine-Button-root:hover {
+  background: var(--toolbar-button-hover);
+}
+
+.dataroom-toolbar__theme-toggle.mantine-ActionIcon-root {
+  border: 1px solid transparent;
+}
+
+.dataroom-toolbar__theme-toggle--sun.mantine-ActionIcon-root {
+  background: #f4f8ff;
+  border-color: #c7d8f3;
+  color: #223a5c;
+}
+
+.dataroom-toolbar__theme-toggle--sun.mantine-ActionIcon-root:hover {
+  background: #eaf1ff;
+}
+
+.dataroom-toolbar__theme-toggle--moon.mantine-ActionIcon-root {
+  background: #1b2a3d;
+  border-color: #344b66;
+  color: #dbe7f7;
+}
+
+.dataroom-toolbar__theme-toggle--moon.mantine-ActionIcon-root:hover {
+  background: #24364d;
+}

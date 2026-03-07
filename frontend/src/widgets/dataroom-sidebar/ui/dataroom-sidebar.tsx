@@ -299,7 +299,7 @@ const TreeRow = ({
     .filter(Boolean)
     .join(' ')
 
-  const labelColor = !active ? 'var(--text-primary)' : activeVariant === 'context' ? '#4b5f84' : '#2f6fed'
+  const labelColor = !active ? 'var(--text-primary)' : activeVariant === 'context' ? 'var(--text-secondary)' : 'var(--accent)'
 
   return (
     <Box
@@ -324,7 +324,11 @@ const TreeRow = ({
               onToggle?.()
             }}
           >
-            {expanded ? <IconChevronDown size={14} color="#6d7588" /> : <IconChevronRight size={14} color="#6d7588" />}
+            {expanded ? (
+              <IconChevronDown size={14} color="var(--text-muted)" />
+            ) : (
+              <IconChevronRight size={14} color="var(--text-muted)" />
+            )}
           </Box>
         ) : null}
 
@@ -332,7 +336,7 @@ const TreeRow = ({
           {isFile ? (
             <FileTypeIcon iconKey={fileTypePresentation?.iconKey ?? 'default'} size={16} />
           ) : (
-            <IconFolder size={16} color="#2f6fed" />
+            <IconFolder size={16} color="var(--accent)" />
           )}
         </Box>
 

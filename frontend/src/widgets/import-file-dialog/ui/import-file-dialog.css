@@ -3,9 +3,8 @@
   --gd-green: #34a853;
   --gd-yellow: #fbbc04;
   --gd-red: #ea4335;
-  --separator-muted: #dde5f0;
-  --control-text: #445673;
-  --control-text-active: #0b57d0;
+  --control-text: var(--text-secondary);
+  --control-text-active: var(--accent);
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -74,55 +73,55 @@
   width: fit-content;
   min-width: 0;
   max-width: 100%;
-  border: 1px solid #dce5f2;
+  border: 1px solid var(--border-soft);
   border-radius: 999px;
-  background: #f7f9fd;
+  background: var(--bg-subtle);
   padding: 5px 10px;
 }
 
 .import-file-dialog__header-status-row--connected {
-  border-color: #cae8d1;
-  background: #edf8f0;
+  border-color: var(--state-success-border);
+  background: var(--state-success-bg-soft);
 }
 
 .import-file-dialog__header-status-row--warning {
-  border-color: #f4d7a3;
-  background: #fff7e8;
+  border-color: var(--state-warning-border);
+  background: var(--state-warning-bg-soft);
 }
 
 .import-file-dialog__header-status-row--loading {
-  border-color: #c9dafd;
-  background: #eff4ff;
+  border-color: var(--state-info-border);
+  background: var(--state-info-bg);
 }
 
 .import-file-dialog__header-status-row--disconnected {
-  border-color: #dce2ec;
-  background: #f5f7fb;
+  border-color: var(--border-soft);
+  background: var(--bg-subtle);
 }
 
 .import-file-dialog__header-status {
-  color: #526581;
+  color: var(--text-secondary);
 }
 
 .import-file-dialog__header-status--connected {
-  color: #1b7a33;
+  color: var(--state-success-text);
 }
 
 .import-file-dialog__header-status--warning {
-  color: #a76000;
+  color: var(--state-warning-text);
 }
 
 .import-file-dialog__header-status--loading {
-  color: #2f5fbb;
+  color: var(--state-info-text);
 }
 
 .import-file-dialog__header-status--disconnected {
-  color: #5a6780;
+  color: var(--text-secondary);
 }
 
 .import-file-dialog__status-email {
   max-width: min(42vw, 320px);
-  color: #3d7050;
+  color: var(--state-success-text);
   line-height: 1.35;
 }
 
@@ -137,9 +136,9 @@
   margin-left: 2px;
   padding: 2px 0 2px 10px;
   border: 0;
-  border-left: 1px solid #cae8d1;
+  border-left: 1px solid var(--state-success-border);
   background: transparent;
-  color: #c43636;
+  color: var(--state-danger-text);
   font-size: 12px;
   line-height: 1.35;
   font-weight: 600;
@@ -151,7 +150,7 @@
 }
 
 .import-file-dialog__header-disconnect:hover {
-  color: #a62626;
+  color: var(--state-danger-icon);
 }
 
 .import-file-dialog__header-disconnect:disabled {
@@ -256,10 +255,10 @@
 }
 
 .import-file-dialog__drive-browser-search input {
-  border-color: #d4deec;
+  border-color: var(--border-muted);
   min-height: 36px;
   border-radius: 8px;
-  background: #fff;
+  background: var(--bg-surface);
 }
 
 .import-file-dialog__drive-browser-tabs {
@@ -281,14 +280,14 @@
 }
 
 .import-file-dialog__drive-browser-tab:hover {
-  border-color: #d4deec;
-  background: #f8fbff;
-  color: #344a6c;
+  border-color: var(--border-muted);
+  background: var(--state-info-bg-soft);
+  color: var(--text-secondary);
 }
 
 .import-file-dialog__drive-browser-tab--active {
-  border-color: #c9dafd;
-  background: #eef4ff;
+  border-color: var(--state-info-border);
+  background: var(--state-info-bg);
   color: var(--control-text-active);
 }
 
@@ -304,7 +303,7 @@
 
 .import-file-dialog__drive-browser-sort-label {
   letter-spacing: 0.01em;
-  color: #6d7f99;
+  color: var(--text-muted);
 }
 
 .import-file-dialog__drive-browser-sort-button {
@@ -318,14 +317,14 @@
 }
 
 .import-file-dialog__drive-browser-sort-button:hover {
-  border-color: #d4deec;
-  background: #f8fbff;
-  color: #344a6c;
+  border-color: var(--border-muted);
+  background: var(--state-info-bg-soft);
+  color: var(--text-secondary);
 }
 
 .import-file-dialog__drive-browser-sort-button--active {
-  border-color: #c9dafd;
-  background: #eef4ff;
+  border-color: var(--state-info-border);
+  background: var(--state-info-bg);
   color: var(--control-text-active);
 }
 
@@ -344,7 +343,7 @@
 
 .import-file-dialog__drive-browser-scroll {
   --drive-grid-columns: 32px minmax(0, 1.9fr) minmax(118px, 1fr) 94px 128px 88px;
-  border: 1px solid #dde5f0;
+  border: 1px solid var(--separator-muted);
   border-radius: 10px;
   background: var(--bg-surface);
   padding: 0;
@@ -358,8 +357,8 @@
   align-items: center;
   column-gap: 10px;
   padding: 10px 12px;
-  border-bottom: 1px solid #e1e8f2;
-  background: #f9fbff;
+  border-bottom: 1px solid var(--separator-soft);
+  background: var(--state-info-bg-soft);
   position: sticky;
   top: 0;
   z-index: 1;
@@ -371,7 +370,7 @@
 
 .import-file-dialog__drive-file-row {
   border: 0;
-  border-bottom: 1px solid #e1e8f2;
+  border-bottom: 1px solid var(--separator-soft);
   border-radius: 0;
   padding: 10px 12px;
   text-align: left;
@@ -389,22 +388,22 @@
 }
 
 .import-file-dialog__drive-file-row:hover {
-  border-bottom-color: #c7d6ec;
-  background: #f8fbff;
+  border-bottom-color: var(--border-muted);
+  background: var(--state-info-bg-soft);
 }
 
 .import-file-dialog__drive-file-row--selected {
-  background: #eef4ff;
+  background: var(--state-info-bg);
 }
 
 .import-file-dialog__drive-file-row--too-large {
-  background: #fff8f8;
+  background: var(--state-danger-bg-soft);
   cursor: not-allowed;
 }
 
 .import-file-dialog__drive-file-row--too-large:hover {
-  border-bottom-color: #eacaca;
-  background: #fff8f8;
+  border-bottom-color: var(--state-danger-border);
+  background: var(--state-danger-bg-soft);
 }
 
 .import-file-dialog__drive-file-checkbox {
@@ -480,11 +479,11 @@
 }
 
 .import-file-dialog__drive-file-shared-pill {
-  border: 1px solid #d5e2fb;
+  border: 1px solid var(--state-info-border);
   border-radius: 999px;
   padding: 3px 10px;
-  background: #eff4ff;
-  color: #4f6491;
+  background: var(--state-info-bg);
+  color: var(--text-secondary);
   font-weight: 600;
   white-space: nowrap;
   flex: 0 0 auto;
@@ -492,11 +491,11 @@
 }
 
 .import-file-dialog__drive-file-too-large-pill {
-  border: 1px solid #f4b4b4;
+  border: 1px solid var(--state-danger-border);
   border-radius: 999px;
   padding: 3px 10px;
-  background: #fff1f1;
-  color: #c43636;
+  background: var(--state-danger-bg);
+  color: var(--state-danger-text);
   font-weight: 700;
   white-space: nowrap;
   justify-self: end;
@@ -529,7 +528,7 @@
 
 .import-file-dialog__upload-dropzone--active {
   border-color: var(--accent);
-  background: #f0f3f8;
+  background: var(--bg-hover-soft);
 }
 
 .import-file-dialog__upload-icon {
@@ -556,7 +555,7 @@
 }
 
 .import-file-dialog__upload-limit {
-  color: #61708d;
+  color: var(--text-secondary);
 }
 
 .import-file-dialog__hidden-input {

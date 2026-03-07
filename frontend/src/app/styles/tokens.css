@@ -1,12 +1,223 @@
 :root {
   --bg-app: #f4f5f7;
+  --bg-app-gradient-top: #eff1f5;
+  --bg-app-gradient-mid: #f5f6f9;
+  --bg-app-gradient-bottom: #eceff4;
   --bg-surface: #ffffff;
   --bg-subtle: #f8f9fb;
   --bg-sidebar: #f5f7fb;
+  --bg-hover-soft: #eef2f8;
+  --bg-hover-muted: #f1f4fa;
+
   --border-soft: #dde1e7;
+  --border-muted: #d4deec;
   --separator-soft: #e7ebf2;
+  --separator-muted: #dde5f0;
+
   --text-primary: #1f2430;
   --text-secondary: #5a6272;
+  --text-muted: #6d7588;
+  --icon-muted: #667085;
+  --icon-strong: #4a5161;
+
   --accent: #2f6fed;
+  --accent-hover: #2563eb;
+  --accent-soft: #eef4ff;
+  --accent-soft-strong: #e6eeff;
+  --focus-ring: rgb(47 111 237 / 35%);
+
+  --state-success-bg: #eaf7ed;
+  --state-success-bg-soft: #f0fdf4;
+  --state-success-border: #cae8d1;
+  --state-success-border-strong: #2f6a46;
+  --state-success-text: #1b7a33;
+  --state-success-icon: #2f9e44;
+
+  --state-warning-bg: #fff8db;
+  --state-warning-bg-soft: #fff7e8;
+  --state-warning-border: #f4d7a3;
+  --state-warning-text: #a76000;
+  --state-warning-icon: #c87900;
+
+  --state-danger-bg: #fff1f1;
+  --state-danger-bg-soft: #fff5f5;
+  --state-danger-border: #ffd8d8;
+  --state-danger-text: #c43636;
+  --state-danger-icon: #e03131;
+
+  --state-info-bg: #eff4ff;
+  --state-info-bg-soft: #f8fbff;
+  --state-info-border: #c9dafd;
+  --state-info-text: #2f5fbb;
+
+  --drop-ready-bg: rgb(47 111 237 / 8%);
+  --drop-ready-border: rgb(47 111 237 / 45%);
+  --drop-warning-bg: rgb(245 159 0 / 12%);
+  --drop-warning-border: rgb(245 159 0 / 55%);
+  --drop-danger-bg: rgb(224 49 49 / 10%);
+  --drop-danger-border: rgb(224 49 49 / 50%);
+  --drop-upload-bg: rgb(246 248 252 / 95%);
+  --drop-upload-border: rgb(148 163 184 / 50%);
+  --drop-icon-ready: #1d4ed8;
+  --drop-icon-warning: #c87900;
+  --drop-icon-danger: #c92a2a;
+
+  --tree-line: #d4dae6;
+  --tree-branch-active: #2f6fed;
+  --tree-row-hover: #f1f4fa;
+  --tree-row-active-solid-bg: #e6eeff;
+  --tree-row-active-solid-border: #b2c5f6;
+  --tree-row-active-solid-hover-bg: #dee8ff;
+  --tree-row-active-solid-hover-border: #a4baf1;
+  --tree-row-active-file-bg: #e8f0ff;
+  --tree-row-active-file-border: #a8c0ff;
+  --tree-row-active-file-hover-bg: #e3edff;
+  --tree-row-active-file-hover-border: #9fb9ff;
+  --tree-row-active-context-bg: #f5f8fd;
+  --tree-row-active-context-border: #d7e0f1;
+  --tree-row-active-context-hover-bg: #eff4fc;
+  --tree-row-active-context-hover-border: #cad6eb;
+
+  --checkbox-border: #b9c6d8;
+  --checkbox-bg: #ffffff;
+  --checkbox-hover-border: #9eb0c8;
+  --checkbox-hover-bg: #f7faff;
+  --checkbox-checked: #3b82f6;
+  --checkbox-checked-hover: #2563eb;
+  --checkbox-disabled-border: #d5deea;
+  --checkbox-disabled-bg: #f5f7fb;
+  --checkbox-disabled-color: #a8b5c7;
+  --error-glow-primary: rgb(59 130 246 / 11%);
+  --error-glow-danger: rgb(239 68 68 / 8%);
+
+  --overlay-card-bg: rgb(255 255 255 / 90%);
+  --overlay-card-shadow: 0 6px 20px rgb(15 23 42 / 8%);
+
+  --table-header-bg: #f3f6fb;
+  --table-separator: #e5ebf4;
+  --table-row-hover-bg: rgb(47 111 237 / 8%);
+  --table-row-hover-border: rgb(47 111 237 / 22%);
+
+  --toolbar-button-bg: #ffffff;
+  --toolbar-button-hover: #f4f7fc;
+  --toolbar-button-border: #d6dfeb;
+  --toolbar-button-text: #1f2430;
+  --toolbar-icon-bg: #ffffff;
+  --toolbar-icon-hover: #f4f7fc;
+  --toolbar-icon-border: #d6dfeb;
+  --toolbar-icon-color: #4c5f7b;
+
   --shadow-soft: 0 8px 24px rgb(20 26 44 / 8%);
+}
+
+:root[data-mantine-color-scheme='dark'] {
+  --bg-app: #0f141d;
+  --bg-app-gradient-top: #121a26;
+  --bg-app-gradient-mid: #101824;
+  --bg-app-gradient-bottom: #0d131d;
+  --bg-surface: #141c28;
+  --bg-subtle: #1a2433;
+  --bg-sidebar: #111925;
+  --bg-hover-soft: #1f2a3b;
+  --bg-hover-muted: #1c2738;
+
+  --border-soft: #2a394b;
+  --border-muted: #32445a;
+  --separator-soft: #28384c;
+  --separator-muted: #2c3a4d;
+
+  --text-primary: #e4ebf6;
+  --text-secondary: #b0bfd2;
+  --text-muted: #8e9fb8;
+  --icon-muted: #9fb2c9;
+  --icon-strong: #c4cedc;
+
+  --accent: #5b8fff;
+  --accent-hover: #6ea0ff;
+  --accent-soft: #223654;
+  --accent-soft-strong: #2a4263;
+  --focus-ring: rgb(91 143 255 / 45%);
+
+  --state-success-bg: #1c3325;
+  --state-success-bg-soft: #1a2d23;
+  --state-success-border: #2c5b3d;
+  --state-success-border-strong: #3d8356;
+  --state-success-text: #86d4a8;
+  --state-success-icon: #7ecb9f;
+
+  --state-warning-bg: #3a2f20;
+  --state-warning-bg-soft: #342b20;
+  --state-warning-border: #705c39;
+  --state-warning-text: #f0c87c;
+  --state-warning-icon: #e6bc6a;
+
+  --state-danger-bg: #3a2228;
+  --state-danger-bg-soft: #342027;
+  --state-danger-border: #6c3a45;
+  --state-danger-text: #ff9ca5;
+  --state-danger-icon: #ff8a95;
+
+  --state-info-bg: #1d2d47;
+  --state-info-bg-soft: #1c2a40;
+  --state-info-border: #37598c;
+  --state-info-text: #9ec0ff;
+
+  --drop-ready-bg: rgb(91 143 255 / 24%);
+  --drop-ready-border: rgb(110 160 255 / 65%);
+  --drop-warning-bg: rgb(224 162 67 / 22%);
+  --drop-warning-border: rgb(236 184 96 / 60%);
+  --drop-danger-bg: rgb(214 91 106 / 22%);
+  --drop-danger-border: rgb(232 129 142 / 62%);
+  --drop-upload-bg: rgb(30 42 58 / 92%);
+  --drop-upload-border: rgb(101 128 165 / 62%);
+  --drop-icon-ready: #8fb4ff;
+  --drop-icon-warning: #f0c87c;
+  --drop-icon-danger: #ff9ca5;
+
+  --tree-line: #32455d;
+  --tree-branch-active: #6ea0ff;
+  --tree-row-hover: #1d2a3c;
+  --tree-row-active-solid-bg: #223654;
+  --tree-row-active-solid-border: #476da3;
+  --tree-row-active-solid-hover-bg: #2a4263;
+  --tree-row-active-solid-hover-border: #527bb4;
+  --tree-row-active-file-bg: #223654;
+  --tree-row-active-file-border: #476da3;
+  --tree-row-active-file-hover-bg: #2a4263;
+  --tree-row-active-file-hover-border: #527bb4;
+  --tree-row-active-context-bg: #1f2d40;
+  --tree-row-active-context-border: #334a6c;
+  --tree-row-active-context-hover-bg: #24354b;
+  --tree-row-active-context-hover-border: #3e5a80;
+
+  --checkbox-border: #4b5f79;
+  --checkbox-bg: #111b2a;
+  --checkbox-hover-border: #6782a6;
+  --checkbox-hover-bg: #182538;
+  --checkbox-checked: #2f6fed;
+  --checkbox-checked-hover: #3f7ff1;
+  --checkbox-disabled-border: #3d4f66;
+  --checkbox-disabled-bg: #182432;
+  --checkbox-disabled-color: #5f7594;
+  --error-glow-primary: rgb(59 130 246 / 20%);
+  --error-glow-danger: rgb(239 68 68 / 16%);
+
+  --overlay-card-bg: rgb(19 28 40 / 94%);
+  --overlay-card-shadow: 0 6px 20px rgb(0 0 0 / 35%);
+
+  --table-header-bg: #1b2738;
+  --table-separator: #2f425b;
+  --table-row-hover-bg: rgb(91 143 255 / 14%);
+  --table-row-hover-border: rgb(110 160 255 / 32%);
+
+  --toolbar-button-bg: #1b2a3d;
+  --toolbar-button-hover: #24364d;
+  --toolbar-button-border: #344b66;
+  --toolbar-button-text: #dbe7f7;
+  --toolbar-icon-bg: #1b2a3d;
+  --toolbar-icon-hover: #24364d;
+  --toolbar-icon-border: #344b66;
+  --toolbar-icon-color: #c0d2e8;
+
+  --shadow-soft: 0 10px 30px rgb(0 0 0 / 28%);
 }

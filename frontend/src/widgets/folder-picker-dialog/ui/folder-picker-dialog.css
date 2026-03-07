@@ -5,13 +5,13 @@
 }
 
 .folder-picker-node:hover {
-  background: #f3f6fb;
+  background: var(--bg-hover-muted);
 }
 
 .folder-picker-node--selected {
-  background: #e9edf8;
+  background: var(--accent-soft);
 }
 
 .folder-picker-node--invalid {
-  background: #fff1f1;
+  background: var(--state-danger-bg);
 }

@@ -91,7 +91,7 @@ export const ImportResultsDialog = ({
           <Box className="import-results-dialog__section">
             <Group justify="space-between" wrap="nowrap">
               <Group gap={6} wrap="nowrap">
-                <IconFileCheck size={16} color="#2f9e44" />
+                <IconFileCheck size={16} color="var(--state-success-icon)" />
                 <Text size="sm" fw={600}>
                   Imported files
                 </Text>
@@ -105,7 +105,7 @@ export const ImportResultsDialog = ({
                 <Stack gap={6}>
                   {uploadedFiles.map((fileName, index) => (
                     <Group key={`${fileName}:${index}`} className="import-results-dialog__file-row" wrap="nowrap">
-                      <IconFile size={14} color="#667085" />
+                      <IconFile size={14} color="var(--icon-muted)" />
                       <Text size="sm" truncate="end">
                         {fileName}
                       </Text>
@@ -123,7 +123,7 @@ export const ImportResultsDialog = ({
           <Box className="import-results-dialog__section">
             <Group justify="space-between" wrap="nowrap">
               <Group gap={6} wrap="nowrap">
-                <IconX size={16} color="#e03131" />
+                <IconX size={16} color="var(--state-danger-icon)" />
                 <Text size="sm" fw={600}>
                   Failed files
                 </Text>

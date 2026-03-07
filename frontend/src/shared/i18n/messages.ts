@@ -12,6 +12,8 @@ export const messages = {
   collapseSidebar: 'Collapse sidebar',
   expandSidebar: 'Expand sidebar',
   resizeSidebar: 'Resize sidebar',
+  switchToDarkTheme: 'Switch to dark theme',
+  switchToLightTheme: 'Switch to light theme',
   createFolderTitle: 'Create folder',
   folderNameLabel: 'Folder name',
   folderNamePlaceholder: 'Enter folder name',

@@ -25,6 +25,28 @@ export const createDragPreview = ({
     return null
   }
 
+  const isDarkTheme = document.documentElement.getAttribute('data-mantine-color-scheme') === 'dark'
+
+  const palette = isDarkTheme
+    ? {
+        border: '#32445a',
+        background: 'linear-gradient(180deg, #182335 0%, #131d2e 100%)',
+        shadow: '0 12px 28px rgba(0, 0, 0, 0.35)',
+        badgeBackground: '#2f6fed',
+        badgeText: '#ffffff',
+        title: '#e4ebf6',
+        subtitle: '#a4b3c8',
+      }
+    : {
+        border: '#cbd5e1',
+        background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
+        shadow: '0 12px 28px rgba(15, 23, 42, 0.2)',
+        badgeBackground: '#2f6fed',
+        badgeText: '#ffffff',
+        title: '#0f172a',
+        subtitle: '#475569',
+      }
+
   const container = document.createElement('div')
   container.style.position = 'fixed'
   container.style.left = '-9999px'
@@ -36,9 +58,9 @@ export const createDragPreview = ({
   container.style.gap = '10px'
   container.style.padding = '8px 10px'
   container.style.borderRadius = '12px'
-  container.style.border = '1px solid #cbd5e1'
-  container.style.background = 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)'
-  container.style.boxShadow = '0 12px 28px rgba(15, 23, 42, 0.2)'
+  container.style.border = `1px solid ${palette.border}`
+  container.style.background = palette.background
+  container.style.boxShadow = palette.shadow
   container.style.minWidth = '220px'
   container.style.maxWidth = '320px'
   container.style.fontFamily = 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
@@ -50,8 +72,8 @@ export const createDragPreview = ({
   badge.style.width = '22px'
   badge.style.height = '22px'
   badge.style.borderRadius = '999px'
-  badge.style.backgroundColor = '#2f6fed'
-  badge.style.color = '#ffffff'
+  badge.style.backgroundColor = palette.badgeBackground
+  badge.style.color = palette.badgeText
   badge.style.fontSize = '11px'
   badge.style.fontWeight = '700'
   badge.textContent = count > 99 ? '99+' : String(Math.max(1, count))
@@ -65,7 +87,7 @@ export const createDragPreview = ({
   const titleNode = document.createElement('span')
   titleNode.style.fontSize = '13px'
   titleNode.style.fontWeight = '600'
-  titleNode.style.color = '#0f172a'
+  titleNode.style.color = palette.title
   titleNode.style.whiteSpace = 'nowrap'
   titleNode.style.overflow = 'hidden'
   titleNode.style.textOverflow = 'ellipsis'
@@ -73,7 +95,7 @@ export const createDragPreview = ({
 
   const subtitleNode = document.createElement('span')
   subtitleNode.style.fontSize = '11px'
-  subtitleNode.style.color = '#475569'
+  subtitleNode.style.color = palette.subtitle
   subtitleNode.textContent = subtitle
 
   textWrap.appendChild(titleNode)

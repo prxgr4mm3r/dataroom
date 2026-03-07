@@ -43,7 +43,7 @@ const FolderRow = ({
 
   return (
     <Group className={className} px="sm" py={6} gap={8} wrap="nowrap" style={{ marginLeft: depth * 12 }} onClick={onClick}>
-      <IconFolder size={15} color={invalid ? '#e03131' : '#2f6fed'} />
+      <IconFolder size={15} color={invalid ? 'var(--state-danger-icon)' : 'var(--accent)'} />
       <Text size="sm" c={invalid ? 'red' : undefined}>
         {node.name}
       </Text>

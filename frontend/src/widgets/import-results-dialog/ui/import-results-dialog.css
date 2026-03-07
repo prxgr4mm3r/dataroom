@@ -5,11 +5,11 @@
 }
 
 .import-results-dialog__hero--success {
-  background: #ebfbee;
+  background: var(--state-success-bg);
 }
 
 .import-results-dialog__hero--warning {
-  background: #fff9db;
+  background: var(--state-warning-bg);
 }
 
 .import-results-dialog__hero-icon {
@@ -19,8 +19,8 @@
   width: 24px;
   height: 24px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.85);
-  color: #1e293b;
+  background: var(--bg-surface);
+  color: var(--text-primary);
   flex: 0 0 auto;
 }
 
@@ -34,15 +34,15 @@
   border: 1px solid var(--border-soft);
   border-radius: 10px;
   padding: 10px 12px;
-  background: #f8f9fc;
+  background: var(--bg-subtle);
 }
 
 .import-results-dialog__stat-card--success {
-  background: #f0fdf4;
+  background: var(--state-success-bg-soft);
 }
 
 .import-results-dialog__stat-card--failed {
-  background: #fff5f5;
+  background: var(--state-danger-bg-soft);
 }
 
 .import-results-dialog__sections {
@@ -55,22 +55,22 @@
   border: 1px solid var(--border-soft);
   border-radius: 10px;
   padding: 10px;
-  background: #ffffff;
+  background: var(--bg-surface);
   min-height: 120px;
 }
 
 .import-results-dialog__file-row {
   border-radius: 8px;
   padding: 6px 8px;
-  border: 1px solid #edf1f7;
-  background: #f8fafc;
+  border: 1px solid var(--border-soft);
+  background: var(--bg-subtle);
 }
 
 .import-results-dialog__failed-row {
   border-radius: 8px;
   padding: 8px;
-  border: 1px solid #ffd8d8;
-  background: #fff5f5;
+  border: 1px solid var(--state-danger-border);
+  background: var(--state-danger-bg-soft);
 }
 
 @media (max-width: 760px) {

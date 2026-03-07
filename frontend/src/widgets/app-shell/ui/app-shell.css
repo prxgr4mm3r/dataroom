@@ -93,7 +93,7 @@
   position: absolute;
   top: 12px;
   z-index: 35;
-  color: #667085;
+  color: var(--icon-muted);
   min-width: 36px;
   min-height: 36px;
   border-radius: 10px;
@@ -111,7 +111,7 @@
 }
 
 .dataroom-shell__sidebar-toggle:hover {
-  background: rgba(15, 23, 42, 0.05);
+  background: var(--bg-hover-soft);
 }
 
 .dataroom-shell__sidebar-resizer {
@@ -137,7 +137,7 @@
 }
 
 .dataroom-shell__sidebar-resizer:hover::after {
-  background: #d7dde8;
+  background: var(--border-soft);
 }
 
 .dataroom-shell__frame--resizing {

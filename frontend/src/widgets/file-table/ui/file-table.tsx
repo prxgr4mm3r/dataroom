@@ -152,7 +152,7 @@ export const FileTable = ({
         <div className="file-table__drop-overlay file-table__drop-overlay--uploading" aria-live="polite">
           <div className="file-table__drop-overlay-card">
             <span className="file-table__drop-overlay-icon">
-              <Loader size={18} color="#2563eb" />
+              <Loader size={18} color="var(--accent)" />
             </span>
             <div>
               <Text size="sm" fw={700}>
@@ -252,9 +252,9 @@ export const FileTable = ({
     let emptyBackground: string | undefined
     if (!isImportOverlayActive) {
       if (currentFolderDropState === 'valid') {
-        emptyBackground = '#eaf7ed'
+        emptyBackground = 'var(--state-success-bg)'
       } else if (currentFolderDropState === 'invalid') {
-        emptyBackground = '#fff1f1'
+        emptyBackground = 'var(--state-danger-bg)'
       }
     }
 
@@ -277,9 +277,9 @@ export const FileTable = ({
   let tableBodyBackground: string | undefined
   if (!isImportOverlayActive) {
     if (currentFolderDropState === 'valid') {
-      tableBodyBackground = '#f3fbf5'
+      tableBodyBackground = 'var(--state-success-bg-soft)'
     } else if (currentFolderDropState === 'invalid') {
-      tableBodyBackground = '#fff5f5'
+      tableBodyBackground = 'var(--state-danger-bg-soft)'
     }
   }
 
@@ -346,13 +346,13 @@ export const FileTable = ({
 
               let rowBackground: string | undefined
               if (dropState === 'valid') {
-                rowBackground = '#eaf7ed'
+                rowBackground = 'var(--state-success-bg)'
               } else if (dropState === 'warning') {
-                rowBackground = '#fff8db'
+                rowBackground = 'var(--state-warning-bg)'
               } else if (dropState === 'invalid') {
-                rowBackground = '#fff1f1'
+                rowBackground = 'var(--state-danger-bg)'
               } else if (isOpened) {
-                rowBackground = '#eef2ff'
+                rowBackground = 'var(--accent-soft)'
               }
 
               return (
@@ -409,7 +409,7 @@ export const FileTable = ({
                         {isFileItem(item) ? (
                           <FileTypeIcon iconKey={fileTypePresentation?.iconKey ?? 'default'} size={16} />
                         ) : (
-                          <IconFolder size={16} color="#2f6fed" />
+                          <IconFolder size={16} color="var(--accent)" />
                         )}
                       </span>
                       <Text size="sm" fw={item.kind === 'folder' ? 600 : 500} className="file-table__name-text" title={item.name}>

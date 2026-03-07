@@ -1,4 +1,4 @@
-import { MantineProvider, createTheme } from '@mantine/core'
+import { MantineProvider, createTheme, localStorageColorSchemeManager } from '@mantine/core'
 import { Notifications } from '@mantine/notifications'
 import type { PropsWithChildren } from 'react'
 
@@ -8,8 +8,12 @@ const theme = createTheme({
   defaultRadius: 'md',
 })
 
+const colorSchemeManager = localStorageColorSchemeManager({
+  key: 'dataroom-color-scheme',
+})
+
 export const ThemeProvider = ({ children }: PropsWithChildren) => (
-  <MantineProvider theme={theme} defaultColorScheme="light">
+  <MantineProvider theme={theme} colorSchemeManager={colorSchemeManager} defaultColorScheme="auto">
     <Notifications />
     {children}
   </MantineProvider>

@@ -27,11 +27,11 @@ export const BreadcrumbsBar = ({ breadcrumbs, onNavigate, compact = false }: Bre
 
       {shouldCollapse ? (
         <>
-          <IconChevronRight size={14} color="#7e8798" />
+          <IconChevronRight size={14} color="var(--text-muted)" />
           <Menu withinPortal>
             <Menu.Target>
               <Box style={{ cursor: 'pointer', display: 'inline-flex' }}>
-                <IconDots size={16} color="#4a5161" />
+                <IconDots size={16} color="var(--icon-strong)" />
               </Box>
             </Menu.Target>
             <Menu.Dropdown>
@@ -47,7 +47,7 @@ export const BreadcrumbsBar = ({ breadcrumbs, onNavigate, compact = false }: Bre
 
       {end.map((crumb) => (
         <Group gap={6} key={crumb.id} wrap="nowrap">
-          <IconChevronRight size={14} color="#7e8798" />
+          <IconChevronRight size={14} color="var(--text-muted)" />
           <Text size="sm" style={{ cursor: 'pointer' }} onClick={() => onNavigate(crumb.id)}>
             {crumb.name}
           </Text>

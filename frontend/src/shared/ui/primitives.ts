@@ -21,6 +21,8 @@ export {
   TextInput,
   Title,
   Tooltip,
+  useComputedColorScheme,
+  useMantineColorScheme,
 } from '@mantine/core'
 
 export type { ButtonProps, ModalProps } from '@mantine/core'

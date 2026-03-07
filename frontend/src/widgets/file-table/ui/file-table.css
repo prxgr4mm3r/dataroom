@@ -4,6 +4,8 @@
 }
 
 .file-table {
+  --table-sticky-header-background-color: var(--table-header-bg);
+  --table-highlight-on-hover-color: var(--table-row-hover-bg);
   width: calc(100% - 24px);
   margin: 0 12px;
   border: none;
@@ -11,7 +13,8 @@
 }
 
 .file-table__th {
-  border-bottom: 1px solid var(--separator-soft);
+  border-bottom: 1px solid var(--table-separator);
+  background: var(--table-header-bg);
   color: var(--text-secondary);
   font-weight: 600;
   padding-top: 10px;
@@ -39,7 +42,7 @@
 }
 
 .file-table__td {
-  border-bottom: 1px solid var(--separator-soft);
+  border-bottom: 1px solid var(--table-separator);
   padding-top: 11px;
   padding-bottom: 11px;
   vertical-align: middle;
@@ -127,6 +130,12 @@
   border-bottom: none;
 }
 
+.file-table__row:hover .file-table__td {
+  box-shadow:
+    inset 0 1px 0 var(--table-row-hover-border),
+    inset 0 -1px 0 var(--table-row-hover-border);
+}
+
 .file-table__drop-overlay {
   position: absolute;
   inset: 0;
@@ -143,23 +152,23 @@
 }
 
 .file-table__drop-overlay--ready {
-  background: rgba(47, 111, 237, 0.08);
-  border-color: rgba(47, 111, 237, 0.45);
+  background: var(--drop-ready-bg);
+  border-color: var(--drop-ready-border);
 }
 
 .file-table__drop-overlay--too-large {
-  background: rgba(224, 49, 49, 0.1);
-  border-color: rgba(224, 49, 49, 0.5);
+  background: var(--drop-danger-bg);
+  border-color: var(--drop-danger-border);
 }
 
 .file-table__drop-overlay--warning {
-  background: rgba(245, 159, 0, 0.12);
-  border-color: rgba(245, 159, 0, 0.55);
+  background: var(--drop-warning-bg);
+  border-color: var(--drop-warning-border);
 }
 
 .file-table__drop-overlay--uploading {
-  background: rgba(246, 248, 252, 0.95);
-  border-color: rgba(148, 163, 184, 0.5);
+  background: var(--drop-upload-bg);
+  border-color: var(--drop-upload-border);
 }
 
 .file-table__drop-overlay-card {
@@ -169,8 +178,8 @@
   max-width: 520px;
   padding: 14px 18px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08);
+  background: var(--overlay-card-bg);
+  box-shadow: var(--overlay-card-shadow);
 }
 
 .file-table__drop-overlay-icon {
@@ -180,15 +189,15 @@
 }
 
 .file-table__drop-overlay--ready .file-table__drop-overlay-icon {
-  color: #1d4ed8;
+  color: var(--drop-icon-ready);
 }
 
 .file-table__drop-overlay--too-large .file-table__drop-overlay-icon {
-  color: #c92a2a;
+  color: var(--drop-icon-danger);
 }
 
 .file-table__drop-overlay--warning .file-table__drop-overlay-icon {
-  color: #c87900;
+  color: var(--drop-icon-warning);
 }
 
 @keyframes file-table-drop-overlay-in {

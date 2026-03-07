@@ -55,7 +55,7 @@
 }
 
 .dataroom-sidebar-rail__account:focus-visible {
-  outline: 2px solid #2f6fed;
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
@@ -63,7 +63,7 @@
   width: 32px;
   height: 32px;
   border-radius: 999px;
-  background: #8a93a5;
+  background: var(--text-muted);
   display: grid;
   place-items: center;
   overflow: hidden;
@@ -148,11 +148,11 @@
 }
 
 .dataroom-sidebar__account-card:hover {
-  background: #eef2f8;
+  background: var(--bg-hover-soft);
 }
 
 .dataroom-sidebar__account-card:focus-visible {
-  outline: 2px solid #2f6fed;
+  outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
 
@@ -160,7 +160,7 @@
   width: 32px;
   height: 32px;
   border-radius: 999px;
-  background: #8a93a5;
+  background: var(--text-muted);
   display: grid;
   place-items: center;
   overflow: hidden;
@@ -205,7 +205,7 @@
 }
 
 .dataroom-sidebar__account-more {
-  color: #6a7283;
+  color: var(--text-secondary);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -241,13 +241,13 @@
   top: 6px;
   bottom: 6px;
   width: 1px;
-  background: #d4dae6;
+  background: var(--tree-line);
   pointer-events: none;
   opacity: 0.9;
 }
 
 .sidebar-tree-children--active-branch::before {
-  background: #2f6fed;
+  background: var(--tree-branch-active);
   left: calc(var(--sidebar-tree-line-x) - 0.5px);
   width: 2px;
   border-radius: 999px;
@@ -255,54 +255,54 @@
 }
 
 .sidebar-tree-row:focus-visible {
-  outline: 2px solid #2f6fed;
+  outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
 
 .sidebar-tree-row:hover {
-  background: #f1f4fa;
+  background: var(--tree-row-hover);
 }
 
 .sidebar-tree-row--active-solid {
-  background: #e6eeff;
-  box-shadow: inset 0 0 0 1px #b2c5f6;
+  background: var(--tree-row-active-solid-bg);
+  box-shadow: inset 0 0 0 1px var(--tree-row-active-solid-border);
 }
 
 .sidebar-tree-row--active-solid:hover {
-  background: #dee8ff;
-  box-shadow: inset 0 0 0 1px #a4baf1;
+  background: var(--tree-row-active-solid-hover-bg);
+  box-shadow: inset 0 0 0 1px var(--tree-row-active-solid-hover-border);
 }
 
 .sidebar-tree-row--active-file {
-  background: #e8f0ff;
-  box-shadow: inset 0 0 0 1px #a8c0ff;
+  background: var(--tree-row-active-file-bg);
+  box-shadow: inset 0 0 0 1px var(--tree-row-active-file-border);
 }
 
 .sidebar-tree-row--active-file:hover {
-  background: #e3edff;
-  box-shadow: inset 0 0 0 1px #9fb9ff;
+  background: var(--tree-row-active-file-hover-bg);
+  box-shadow: inset 0 0 0 1px var(--tree-row-active-file-hover-border);
 }
 
 .sidebar-tree-row--active-context {
-  background: #f5f8fd;
-  box-shadow: inset 0 0 0 1px #d7e0f1;
+  background: var(--tree-row-active-context-bg);
+  box-shadow: inset 0 0 0 1px var(--tree-row-active-context-border);
 }
 
 .sidebar-tree-row--active-context:hover {
-  background: #eff4fc;
-  box-shadow: inset 0 0 0 1px #cad6eb;
+  background: var(--tree-row-active-context-hover-bg);
+  box-shadow: inset 0 0 0 1px var(--tree-row-active-context-hover-border);
 }
 
 .sidebar-tree-row--drop-valid {
-  background: #eaf7ed;
+  background: var(--state-success-bg);
 }
 
 .sidebar-tree-row--drop-warning {
-  background: #fff8db;
+  background: var(--state-warning-bg);
 }
 
 .sidebar-tree-row--drop-invalid {
-  background: #fff1f1;
+  background: var(--state-danger-bg);
 }
 
 .sidebar-tree-row--dragging {

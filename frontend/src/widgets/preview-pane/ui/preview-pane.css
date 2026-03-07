@@ -55,7 +55,7 @@
 }
 
 .preview-pane__resizer:hover::after {
-  background: #d7dde8;
+  background: var(--border-soft);
 }
 
 .preview-pane__header {

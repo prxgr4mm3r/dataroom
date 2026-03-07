@@ -211,7 +211,7 @@ export const SharedViewPage = () => {
         <Paper className="shared-view-page__error-card" withBorder>
           <Stack gap="sm">
             <Group gap={8}>
-              <IconAlertTriangle size={18} color="#dc2626" />
+              <IconAlertTriangle size={18} color="var(--state-danger-icon)" />
               <Title order={3}>Shared link unavailable</Title>
             </Group>
             <Text size="sm" c="dimmed">
