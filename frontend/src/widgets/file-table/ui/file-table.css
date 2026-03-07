@@ -27,6 +27,16 @@
   text-align: right;
 }
 
+.file-table__th--size,
+.file-table__td--size {
+  white-space: nowrap;
+  min-width: 96px;
+}
+
+.file-table__td--size {
+  font-variant-numeric: tabular-nums;
+}
+
 .file-table__td {
   border-bottom: 1px solid var(--separator-soft);
   padding-top: 11px;
@@ -35,6 +45,55 @@
 
 .file-table__td--name {
   cursor: pointer;
+}
+
+.file-table__td--name .mantine-Group-root {
+  min-width: 0;
+}
+
+.file-table__item-icon {
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  flex: 0 0 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.file-table__item-icon > svg {
+  width: 16px;
+  height: 16px;
+}
+
+.file-table__name-text {
+  min-width: 0;
+  max-width: 100%;
+  display: inline-flex;
+  align-items: baseline;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.file-table__name-base {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-table__name-ext {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.file-table__th--updated,
+.file-table__td--updated {
+  white-space: nowrap;
+}
+
+.file-table__td--updated-compact {
+  font-variant-numeric: tabular-nums;
 }
 
 .file-table__td--actions .mantine-ActionIcon-root {

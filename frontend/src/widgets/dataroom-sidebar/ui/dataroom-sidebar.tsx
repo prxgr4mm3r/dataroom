@@ -2,7 +2,6 @@ import {
   IconChevronDown,
   IconChevronRight,
   IconDotsVertical,
-  IconFile,
   IconFolder,
   IconFolderPlus,
   IconHome2,
@@ -17,8 +16,10 @@ import { isFileItem } from '@/entities/content-item'
 import type { UserProfile } from '@/entities/user'
 import { useListContentItemsQuery } from '@/features/list-content-items'
 import { t } from '@/shared/i18n/messages'
+import { getFileTypePresentation } from '@/shared/lib/file/file-type-presentation'
+import { splitFileName } from '@/shared/lib/file/split-file-name'
 import { normalizeFolderId } from '@/shared/routes/dataroom-routes'
-import { ActionIcon, Box, Button, Group, Menu, ScrollArea, Text, Title, Tooltip } from '@/shared/ui'
+import { ActionIcon, Box, Button, FileTypeIcon, Group, Menu, ScrollArea, Text, Title, Tooltip } from '@/shared/ui'
 import './dataroom-sidebar.css'
 
 type DropState = 'none' | 'valid' | 'warning' | 'invalid'
@@ -225,6 +226,7 @@ const TreeRow = ({
   activeVariant = 'solid',
   isFile,
   name,
+  mimeType,
   onClick,
   expanded,
   canExpand,
@@ -243,6 +245,7 @@ const TreeRow = ({
   activeVariant?: ActiveVariant
   isFile: boolean
   name: string
+  mimeType?: string | null
   onClick: () => void
   expanded?: boolean
   canExpand?: boolean
@@ -256,6 +259,14 @@ const TreeRow = ({
   onDrop?: (event: DragEvent<HTMLElement>) => void
   onDragLeave?: (event: DragEvent<HTMLElement>) => void
 }) => {
+  const nameParts = isFile
+    ? splitFileName(name)
+    : {
+        base: name,
+        extension: '',
+      }
+  const fileTypePresentation = isFile ? getFileTypePresentation(name, mimeType) : null
+
   const dropClass =
     dropState === 'valid'
       ? 'sidebar-tree-row--drop-valid'
@@ -306,7 +317,11 @@ const TreeRow = ({
         ) : null}
 
         <Box className="sidebar-tree-row__icon">
-          {isFile ? <IconFile size={16} color="#667085" /> : <IconFolder size={16} color="#2f6fed" />}
+          {isFile ? (
+            <FileTypeIcon iconKey={fileTypePresentation?.iconKey ?? 'default'} size={16} />
+          ) : (
+            <IconFolder size={16} color="#2f6fed" />
+          )}
         </Box>
 
         <Text
@@ -314,9 +329,10 @@ const TreeRow = ({
           size="sm"
           fw={active ? 600 : 500}
           c={labelColor}
-          truncate="end"
+          title={name}
         >
-          {name}
+          <span className="sidebar-tree-row__name-base">{nameParts.base}</span>
+          {nameParts.extension ? <span className="sidebar-tree-row__name-ext">{nameParts.extension}</span> : null}
         </Text>
       </Group>
     </Box>
@@ -381,6 +397,7 @@ const FolderChildren = ({
               activeVariant={fileActiveVariant}
               isFile
               name={item.name}
+              mimeType={item.mimeType}
               draggable
               isDragging={isDraggingItem(item.id)}
               onDragStart={(event) => onDragStartItem(item, event)}

@@ -310,11 +310,37 @@
 }
 
 .sidebar-tree-row__icon {
-  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
   display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar-tree-row__icon > svg {
+  width: 16px;
+  height: 16px;
 }
 
 .sidebar-tree-row__label {
   min-width: 0;
   flex: 1 1 auto;
+  max-width: 100%;
+  display: inline-flex;
+  align-items: baseline;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.sidebar-tree-row__name-base {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-tree-row__name-ext {
+  flex: 0 0 auto;
+  white-space: nowrap;
 }

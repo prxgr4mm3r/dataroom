@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState, type MouseEvent as ReactMouseEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { IconDownload, IconExternalLink, IconX } from '@tabler/icons-react'
 
 import { useCloseFilePreview } from '@/features/open-file-preview'
 import { useItemContentQuery, useItemQuery } from '@/features/load-item-content'
 import { t } from '@/shared/i18n/messages'
 import { downloadBlob } from '@/shared/lib/file/download-blob'
+import { getFileTypePresentation } from '@/shared/lib/file/file-type-presentation'
 import { isInlinePreviewableMime } from '@/shared/lib/file/is-previewable-file'
 import { toApiError } from '@/shared/api'
 import {
@@ -19,6 +20,7 @@ import {
   Title,
   Tooltip,
 } from '@/shared/ui'
+import './preview-pane.css'
 
 type PreviewPaneProps = {
   folderId: string
@@ -27,15 +29,120 @@ type PreviewPaneProps = {
 
 const PREVIEW_MIN_WIDTH = 320
 const PREVIEW_MAX_WIDTH = 760
+const PREVIEW_ANIMATION_MS = 220
 
 const clamp = (value: number, min: number, max: number): number => Math.min(Math.max(value, min), max)
 
 export const PreviewPane = ({ folderId, previewItemId }: PreviewPaneProps) => {
   const [width, setWidth] = useState(420)
+  const [isRendered, setIsRendered] = useState(Boolean(previewItemId))
+  const [isOpen, setIsOpen] = useState(Boolean(previewItemId))
+  const [isResizing, setIsResizing] = useState(false)
+  const [displayPreviewItemId, setDisplayPreviewItemId] = useState<string | null>(previewItemId)
+  const closeTimerRef = useRef<number | null>(null)
+  const animationFrameRef = useRef<number | null>(null)
+  const dragStartRef = useRef<{ startX: number; startWidth: number } | null>(null)
   const closePreview = useCloseFilePreview(folderId)
 
-  const itemQuery = useItemQuery(previewItemId)
-  const itemContentQuery = useItemContentQuery(previewItemId)
+  const itemQuery = useItemQuery(displayPreviewItemId)
+  const itemContentQuery = useItemContentQuery(displayPreviewItemId)
+
+  const cancelScheduledFrame = () => {
+    if (animationFrameRef.current !== null) {
+      window.cancelAnimationFrame(animationFrameRef.current)
+      animationFrameRef.current = null
+    }
+  }
+
+  useEffect(
+    () => () => {
+      cancelScheduledFrame()
+      if (closeTimerRef.current !== null) {
+        window.clearTimeout(closeTimerRef.current)
+      }
+    },
+    [],
+  )
+
+  useEffect(() => {
+    cancelScheduledFrame()
+
+    if (previewItemId) {
+      if (closeTimerRef.current !== null) {
+        window.clearTimeout(closeTimerRef.current)
+        closeTimerRef.current = null
+      }
+
+      animationFrameRef.current = window.requestAnimationFrame(() => {
+        setDisplayPreviewItemId(previewItemId)
+        setIsRendered(true)
+        animationFrameRef.current = window.requestAnimationFrame(() => {
+          setIsOpen(true)
+          animationFrameRef.current = null
+        })
+      })
+      return
+    }
+
+    if (!isRendered) {
+      return
+    }
+
+    animationFrameRef.current = window.requestAnimationFrame(() => {
+      setIsOpen(false)
+      animationFrameRef.current = null
+    })
+    if (closeTimerRef.current !== null) {
+      window.clearTimeout(closeTimerRef.current)
+    }
+    closeTimerRef.current = window.setTimeout(() => {
+      setIsRendered(false)
+      setDisplayPreviewItemId(null)
+      closeTimerRef.current = null
+    }, PREVIEW_ANIMATION_MS)
+  }, [isRendered, previewItemId])
+
+  useEffect(() => {
+    if (!isResizing || !isOpen) {
+      return
+    }
+
+    const handlePointerMove = (event: PointerEvent) => {
+      if (!dragStartRef.current) {
+        return
+      }
+
+      const deltaX = dragStartRef.current.startX - event.clientX
+      setWidth(clamp(dragStartRef.current.startWidth + deltaX, PREVIEW_MIN_WIDTH, PREVIEW_MAX_WIDTH))
+    }
+
+    const stopResizing = () => {
+      setIsResizing(false)
+      dragStartRef.current = null
+    }
+
+    window.addEventListener('pointermove', handlePointerMove)
+    window.addEventListener('pointerup', stopResizing)
+    window.addEventListener('pointercancel', stopResizing)
+
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove)
+      window.removeEventListener('pointerup', stopResizing)
+      window.removeEventListener('pointercancel', stopResizing)
+    }
+  }, [isOpen, isResizing])
+
+  useEffect(() => {
+    if (!isResizing) {
+      return
+    }
+
+    document.body.classList.add('preview-pane-resizing')
+
+    return () => {
+      document.body.classList.remove('preview-pane-resizing')
+    }
+  }, [isResizing])
 
   useEffect(() => {
     const objectUrl = itemContentQuery.data?.objectUrl
@@ -47,12 +154,8 @@ export const PreviewPane = ({ folderId, previewItemId }: PreviewPaneProps) => {
   }, [itemContentQuery.data?.objectUrl])
 
   const previewBody = useMemo(() => {
-    if (!previewItemId) {
-      return (
-        <Paper h="100%" p="md" radius={0}>
-          <Text c="dimmed">{t('previewEmpty')}</Text>
-        </Paper>
-      )
+    if (!displayPreviewItemId) {
+      return null
     }
 
     if (itemQuery.isPending) {
@@ -75,6 +178,7 @@ export const PreviewPane = ({ folderId, previewItemId }: PreviewPaneProps) => {
     }
 
     const item = itemQuery.data
+    const fileTypePresentation = getFileTypePresentation(item.name, item.mimeType)
 
     if (item.kind === 'folder') {
       return (
@@ -129,7 +233,7 @@ export const PreviewPane = ({ folderId, previewItemId }: PreviewPaneProps) => {
             <div>
               <Title order={5}>{item.name}</Title>
               <Text size="xs" c="dimmed">
-                {item.mimeType || 'Unknown type'}
+                {fileTypePresentation.label}
               </Text>
             </div>
             <Group gap={6}>
@@ -172,65 +276,70 @@ export const PreviewPane = ({ folderId, previewItemId }: PreviewPaneProps) => {
         </Stack>
       </Paper>
     )
-  }, [itemContentQuery.data, itemContentQuery.error, itemContentQuery.isPending, itemQuery.data, itemQuery.error, itemQuery.isPending, previewItemId])
+  }, [
+    displayPreviewItemId,
+    itemContentQuery.data,
+    itemContentQuery.error,
+    itemContentQuery.isPending,
+    itemQuery.data,
+    itemQuery.error,
+    itemQuery.isPending,
+  ])
 
-  const onResizeStart = (event: ReactMouseEvent<HTMLDivElement>) => {
-    const startX = event.clientX
-    const startWidth = width
-
-    const onMove = (moveEvent: globalThis.MouseEvent) => {
-      const delta = startX - moveEvent.clientX
-      setWidth(clamp(startWidth + delta, PREVIEW_MIN_WIDTH, PREVIEW_MAX_WIDTH))
+  const onResizeStart = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!isOpen || event.button !== 0) {
+      return
     }
 
-    const onUp = () => {
-      window.removeEventListener('mousemove', onMove)
-      window.removeEventListener('mouseup', onUp)
+    event.preventDefault()
+    dragStartRef.current = {
+      startX: event.clientX,
+      startWidth: width,
     }
-
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onUp)
+    setIsResizing(true)
   }
+
+  if (!isRendered) {
+    return null
+  }
+
+  const paneClassName = [
+    'preview-pane',
+    isOpen ? 'preview-pane--open' : 'preview-pane--closed',
+    isResizing ? 'preview-pane--resizing' : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
 
   return (
     <Box
+      className={paneClassName}
       style={{
-        width: previewItemId ? width : 280,
-        borderLeft: '1px solid var(--border-soft)',
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        position: 'relative',
-        background: 'var(--bg-surface)',
+        width: isOpen ? width : 0,
       }}
     >
-      {previewItemId ? (
+      {isOpen ? (
         <Box
-          onMouseDown={onResizeStart}
-          style={{
-            position: 'absolute',
-            left: -2,
-            top: 0,
-            width: 4,
-            height: '100%',
-            cursor: 'col-resize',
-            zIndex: 20,
-          }}
+          className="preview-pane__resizer"
+          onPointerDown={onResizeStart}
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize preview panel"
         />
       ) : null}
 
-      <Group justify="space-between" px="sm" py={8} style={{ borderBottom: '1px solid var(--border-soft)' }}>
+      <Group className="preview-pane__header" justify="space-between" px="sm" py={8}>
         <Text size="sm" fw={600}>
           Preview
         </Text>
-        {previewItemId ? (
+        {displayPreviewItemId ? (
           <Button size="compact-sm" variant="subtle" onClick={() => closePreview()}>
             <IconX size={14} />
           </Button>
         ) : null}
       </Group>
 
-      <Box style={{ flex: 1, minHeight: 0 }}>{previewBody}</Box>
+      <Box className="preview-pane__body">{previewBody}</Box>
     </Box>
   )
 }

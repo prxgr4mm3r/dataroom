@@ -4,7 +4,6 @@ import {
   IconCopy,
   IconDownload,
   IconDotsVertical,
-  IconFile,
   IconFolder,
   IconTrash,
   IconUpload,
@@ -14,10 +13,12 @@ import type { DragEvent } from 'react'
 import type { ContentItem } from '@/entities/content-item'
 import { isFileItem } from '@/entities/content-item'
 import type { DragImportOverlayState } from '@/features/drag-import-files'
-import { formatDate } from '@/shared/lib/date/format-date'
+import { formatDate, formatDateCompact } from '@/shared/lib/date/format-date'
 import { formatFileSize } from '@/shared/lib/file/format-file-size'
+import { getFileTypePresentation } from '@/shared/lib/file/file-type-presentation'
 import { MAX_IMPORT_FILE_SIZE_BYTES } from '@/shared/lib/file/import-file-size-limit'
-import { ActionIcon, Box, Checkbox, Group, Loader, Menu, ScrollArea, Table, Text } from '@/shared/ui'
+import { splitFileName } from '@/shared/lib/file/split-file-name'
+import { ActionIcon, Box, Checkbox, FileTypeIcon, Group, Loader, Menu, ScrollArea, Table, Text } from '@/shared/ui'
 import type { SortBy, SortOrder } from '@/shared/types/common'
 import './file-table.css'
 
@@ -66,13 +67,22 @@ const SortableHeader = ({
   active,
   order,
   onClick,
+  width,
+  className,
 }: {
   label: string
   active: boolean
   order: SortOrder
   onClick: () => void
+  width?: number
+  className?: string
 }) => (
-  <Table.Th className="file-table__th file-table__th--sortable" style={{ whiteSpace: 'nowrap' }} onClick={onClick}>
+  <Table.Th
+    className={['file-table__th', 'file-table__th--sortable', className].filter(Boolean).join(' ')}
+    style={{ whiteSpace: 'nowrap' }}
+    onClick={onClick}
+    w={width}
+  >
     <Group gap={4} wrap="nowrap">
       <Text size="sm" fw={600}>
         {label}
@@ -108,6 +118,8 @@ export const FileTable = ({
   isDraggingItem,
 }: FileTableProps) => {
   const currentFolderDropState = getFolderDropState(currentFolderId)
+  const compactUpdatedAt = Boolean(openedPreviewId)
+  const sizeColumnWidth = compactUpdatedAt ? 112 : 98
   const isImportOverlayActive = importOverlayState.mode !== 'none'
   const draggedFileCountLabel =
     importOverlayState.mode === 'none' ? '' : formatDraggedFileCount(importOverlayState.fileCount)
@@ -280,8 +292,16 @@ export const FileTable = ({
                 active={sortBy === 'size'}
                 order={sortOrder}
                 onClick={() => onToggleSort('size')}
+                width={sizeColumnWidth}
+                className="file-table__th--size"
               />
-              <Table.Th className="file-table__th">Updated at</Table.Th>
+              <Table.Th
+                className="file-table__th file-table__th--updated"
+                style={{ whiteSpace: 'nowrap' }}
+                w={compactUpdatedAt ? 122 : undefined}
+              >
+                {compactUpdatedAt ? 'Updated' : 'Updated at'}
+              </Table.Th>
               <Table.Th className="file-table__th file-table__th--actions" w={56} />
             </Table.Tr>
           </Table.Thead>
@@ -293,6 +313,15 @@ export const FileTable = ({
               const isFolder = !isFileItem(item)
               const dropState = isFolder ? getFolderDropState(item.id) : 'none'
               const isDragging = isDraggingItem(item.id)
+              const fileTypePresentation = isFileItem(item)
+                ? getFileTypePresentation(item.name, item.mimeType)
+                : null
+              const nameParts = isFileItem(item)
+                ? splitFileName(item.name)
+                : {
+                    base: item.name,
+                    extension: '',
+                  }
 
               let rowBackground: string | undefined
               if (dropState === 'valid') {
@@ -353,21 +382,33 @@ export const FileTable = ({
                     onClick={() => (isFileItem(item) ? onOpenFile(item.id) : onOpenFolder(item.id))}
                   >
                     <Group gap={8} wrap="nowrap">
-                      {isFileItem(item) ? (
-                        <IconFile size={16} color="#667085" />
-                      ) : (
-                        <IconFolder size={16} color="#2f6fed" />
-                      )}
-                      <Text size="sm" fw={item.kind === 'folder' ? 600 : 500}>
-                        {item.name}
+                      <span className="file-table__item-icon" aria-hidden="true">
+                        {isFileItem(item) ? (
+                          <FileTypeIcon iconKey={fileTypePresentation?.iconKey ?? 'default'} size={16} />
+                        ) : (
+                          <IconFolder size={16} color="#2f6fed" />
+                        )}
+                      </span>
+                      <Text size="sm" fw={item.kind === 'folder' ? 600 : 500} className="file-table__name-text" title={item.name}>
+                        <span className="file-table__name-base">{nameParts.base}</span>
+                        {nameParts.extension ? <span className="file-table__name-ext">{nameParts.extension}</span> : null}
                       </Text>
                     </Group>
                   </Table.Td>
-                  <Table.Td className="file-table__td">
-                    {item.kind === 'folder' ? 'Folder' : item.mimeType || '-'}
+                  <Table.Td className="file-table__td">{item.kind === 'folder' ? 'Folder' : fileTypePresentation?.label}</Table.Td>
+                  <Table.Td className="file-table__td file-table__td--size">{formatFileSize(item.sizeBytes)}</Table.Td>
+                  <Table.Td
+                    className={[
+                      'file-table__td',
+                      'file-table__td--updated',
+                      compactUpdatedAt ? 'file-table__td--updated-compact' : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
+                    title={compactUpdatedAt ? formatDate(item.updatedAt) : undefined}
+                  >
+                    {compactUpdatedAt ? formatDateCompact(item.updatedAt) : formatDate(item.updatedAt)}
                   </Table.Td>
-                  <Table.Td className="file-table__td">{formatFileSize(item.sizeBytes)}</Table.Td>
-                  <Table.Td className="file-table__td">{formatDate(item.updatedAt)}</Table.Td>
                   <Table.Td className="file-table__td file-table__td--actions">
                     <Menu withinPortal position="bottom-end">
                       <Menu.Target>
