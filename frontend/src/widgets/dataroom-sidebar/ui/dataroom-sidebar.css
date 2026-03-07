@@ -9,7 +9,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: calc(8px + 36px + 12px) 6px 20px;
+  padding: 52px 6px 8px;
 }
 
 .dataroom-sidebar-rail__actions {
@@ -23,13 +23,20 @@
   min-width: 34px;
   height: 34px;
   min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .dataroom-sidebar-rail__account {
   margin-top: auto;
+  margin-bottom: 7px;
   border: none;
   background: transparent;
   padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   border-radius: 999px;
 }
@@ -110,7 +117,7 @@
 .dataroom-sidebar__account {
   margin-top: auto;
   border-top: 1px solid var(--separator-soft);
-  padding: 10px 8px 0;
+  padding: 8px;
 }
 
 .dataroom-sidebar__account-card {

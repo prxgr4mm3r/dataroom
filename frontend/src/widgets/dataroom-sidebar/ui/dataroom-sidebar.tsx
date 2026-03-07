@@ -501,7 +501,7 @@ export const DataroomSidebar = ({
   const showPhotoAvatar = Boolean(currentUser.photoUrl) && failedPhotoUrl !== currentUser.photoUrl
 
   return (
-    <Box h="100%" p="sm" className="dataroom-sidebar">
+    <Box h="100%" p="sm" pb={0} className="dataroom-sidebar">
       <Title order={5} px="xs" className="dataroom-sidebar__title">
         Data Room
       </Title>
