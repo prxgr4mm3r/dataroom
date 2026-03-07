@@ -63,7 +63,7 @@ export const createDragPreview = ({
   container.style.boxShadow = palette.shadow
   container.style.minWidth = '220px'
   container.style.maxWidth = '320px'
-  container.style.fontFamily = 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+  container.style.fontFamily = 'Manrope, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
 
   const badge = document.createElement('span')
   badge.style.display = 'inline-flex'

@@ -4,7 +4,7 @@ import type { PropsWithChildren } from 'react'
 
 const theme = createTheme({
   primaryColor: 'gray',
-  fontFamily: 'IBM Plex Sans, system-ui, sans-serif',
+  fontFamily: 'Manrope, system-ui, sans-serif',
   defaultRadius: 'md',
 })
 

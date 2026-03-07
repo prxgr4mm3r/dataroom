@@ -38,7 +38,7 @@
 }
 
 .file-table__td--size {
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: proportional-nums;
 }
 
 .file-table__td {
@@ -119,7 +119,7 @@
 }
 
 .file-table__td--updated-compact {
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: proportional-nums;
 }
 
 .file-table__td--actions .mantine-ActionIcon-root {
