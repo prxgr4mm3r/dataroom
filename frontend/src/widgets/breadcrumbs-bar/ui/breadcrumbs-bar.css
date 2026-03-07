@@ -1,0 +1,110 @@
+.breadcrumbs-bar {
+  min-width: 0;
+}
+
+.breadcrumbs-bar__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: min(42vw, 280px);
+  font: inherit;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  padding: 5px 10px;
+  appearance: none;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.breadcrumbs-bar__item:hover {
+  background: var(--bg-hover-soft);
+  color: var(--text-primary);
+}
+
+.breadcrumbs-bar__item:focus-visible {
+  outline: none;
+  background: var(--accent-soft);
+  color: var(--text-primary);
+}
+
+.breadcrumbs-bar__item--root {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.breadcrumbs-bar__label {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.breadcrumbs-bar__home-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  flex: 0 0 auto;
+}
+
+.breadcrumbs-bar__separator-icon {
+  color: var(--text-muted);
+  flex: 0 0 auto;
+}
+
+.breadcrumbs-bar__menu-target,
+.breadcrumbs-bar__current-menu-target {
+  font: inherit;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--icon-strong);
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  appearance: none;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.breadcrumbs-bar__menu-target:hover,
+.breadcrumbs-bar__current-menu-target:hover {
+  background: var(--bg-hover-soft);
+  color: var(--text-primary);
+}
+
+.breadcrumbs-bar__menu-target:focus-visible,
+.breadcrumbs-bar__current-menu-target:focus-visible {
+  outline: none;
+  background: var(--accent-soft);
+  color: var(--text-primary);
+}
+
+.breadcrumbs-bar__item--drop-valid,
+.breadcrumbs-bar__item--drop-valid:hover {
+  background: var(--state-success-bg-soft);
+  color: var(--state-success-text);
+}
+
+.breadcrumbs-bar__item--drop-warning,
+.breadcrumbs-bar__item--drop-warning:hover {
+  background: var(--state-warning-bg-soft);
+  color: var(--state-warning-text);
+}
+
+.breadcrumbs-bar__item--drop-invalid,
+.breadcrumbs-bar__item--drop-invalid:hover {
+  background: var(--state-danger-bg-soft);
+  color: var(--state-danger-text);
+}

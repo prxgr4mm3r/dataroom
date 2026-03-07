@@ -30,7 +30,17 @@
   background: var(--checkbox-checked);
 }
 
+.selection-checkbox[data-state='indeterminate'] {
+  border-color: var(--checkbox-checked);
+  background: var(--checkbox-checked);
+}
+
 .selection-checkbox[data-state='checked']:hover {
+  border-color: var(--checkbox-checked-hover);
+  background: var(--checkbox-checked-hover);
+}
+
+.selection-checkbox[data-state='indeterminate']:hover {
   border-color: var(--checkbox-checked-hover);
   background: var(--checkbox-checked-hover);
 }

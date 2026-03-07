@@ -107,12 +107,33 @@
   flex: 0 0 auto;
 }
 
+.dataroom-sidebar__quick-actions-title {
+  padding-inline: 6px;
+  letter-spacing: 0.01em;
+}
+
 .dataroom-sidebar__quick-action-button {
   --button-height: 34px;
+  border: 1px solid var(--border-soft);
+  background: var(--bg-subtle);
+  color: var(--text-primary);
   justify-content: flex-start;
   border-radius: 10px;
   min-height: var(--button-height);
   height: var(--button-height);
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease;
+}
+
+.dataroom-sidebar__quick-action-button:hover {
+  border-color: var(--border-muted);
+  background: var(--bg-hover-soft);
+}
+
+.dataroom-sidebar__quick-action-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
 .dataroom-sidebar__quick-action-button .mantine-Button-inner {
@@ -120,8 +141,19 @@
   min-height: var(--button-height);
 }
 
+.dataroom-sidebar__quick-action-button .mantine-Button-section[data-position='left'] {
+  margin-inline-end: 6px;
+  color: var(--accent);
+}
+
 .dataroom-sidebar__quick-action-button .mantine-Button-label {
   text-align: left;
+  font-weight: 600;
+}
+
+.dataroom-sidebar__tree-title {
+  padding: 0 14px 4px;
+  letter-spacing: 0.01em;
 }
 
 .dataroom-sidebar__tree {

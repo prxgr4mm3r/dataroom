@@ -9,7 +9,7 @@ import { normalizeFolderId } from '@/shared/routes/dataroom-routes'
 
 import { validateMoveTarget } from './validators'
 
-type DropState = 'none' | 'valid' | 'invalid'
+type DropState = 'none' | 'valid' | 'warning' | 'invalid'
 
 type UseDragMoveControllerParams = {
   items: ContentItem[]
@@ -111,8 +111,8 @@ export const useDragMoveController = ({
 
     if (!validation.valid && validation.reason === 'same_parent') {
       event.dataTransfer.dropEffect = 'none'
-      setHoveredFolderId(null)
-      setHoverValidation(null)
+      setHoveredFolderId(normalizedTarget)
+      setHoverValidation(validation)
       return
     }
 
@@ -161,6 +161,9 @@ export const useDragMoveController = ({
     const normalized = normalizeFolderId(folderId)
     if (!hoveredFolderId || hoveredFolderId !== normalized || !hoverValidation) {
       return 'none'
+    }
+    if (!hoverValidation.valid && hoverValidation.reason === 'same_parent') {
+      return 'warning'
     }
     return hoverValidation.valid ? 'valid' : 'invalid'
   }

@@ -1,4 +1,5 @@
 import { IconMoonStars, IconSun } from '@tabler/icons-react'
+import type { DragEvent } from 'react'
 
 import type { Breadcrumb } from '@/entities/folder'
 import { t } from '@/shared/i18n/messages'
@@ -6,14 +7,34 @@ import { ActionIcon, Box, Group, Tooltip, useComputedColorScheme, useMantineColo
 import { BreadcrumbsBar } from '@/widgets/breadcrumbs-bar'
 import './dataroom-toolbar.css'
 
+type DropState = 'none' | 'valid' | 'warning' | 'invalid'
+
+type CurrentFolderMenuHandlers = {
+  onDownload?: (folder: Breadcrumb) => void
+  onCopy?: (folder: Breadcrumb) => void
+  onShare?: (folder: Breadcrumb) => void
+  onMove?: (folder: Breadcrumb) => void
+  onDelete?: (folder: Breadcrumb) => void
+}
+
 type DataroomToolbarProps = {
   breadcrumbs: Breadcrumb[]
   onNavigate: (folderId: string) => void
+  currentFolderMenu?: CurrentFolderMenuHandlers
+  onFolderDragOver?: (folderId: string, event: DragEvent<HTMLElement>) => void
+  onFolderDragLeave?: (folderId: string) => void
+  onFolderDrop?: (folderId: string, event: DragEvent<HTMLElement>) => void
+  getFolderDropState?: (folderId: string) => DropState
 }
 
 export const DataroomToolbar = ({
   breadcrumbs,
   onNavigate,
+  currentFolderMenu,
+  onFolderDragOver,
+  onFolderDragLeave,
+  onFolderDrop,
+  getFolderDropState,
 }: DataroomToolbarProps) => {
   const { setColorScheme } = useMantineColorScheme()
   const computedColorScheme = useComputedColorScheme('light', { getInitialValueInEffect: true })
@@ -23,7 +44,16 @@ export const DataroomToolbar = ({
   return (
     <Group justify="space-between" align="center" px="md" py="sm" wrap="nowrap" gap="md">
       <Box style={{ flex: '1 1 auto', minWidth: 0 }}>
-        <BreadcrumbsBar breadcrumbs={breadcrumbs} onNavigate={onNavigate} compact />
+        <BreadcrumbsBar
+          breadcrumbs={breadcrumbs}
+          onNavigate={onNavigate}
+          compact
+          currentFolderMenu={currentFolderMenu}
+          onFolderDragOver={onFolderDragOver}
+          onFolderDragLeave={onFolderDragLeave}
+          onFolderDrop={onFolderDrop}
+          getFolderDropState={getFolderDropState}
+        />
       </Box>
 
       <Group gap="xs">

@@ -29,7 +29,6 @@ import {
 import { Alert, Box } from '@/shared/ui'
 import { notifyError, notifySuccess } from '@/shared/ui'
 import { AppShell } from '@/widgets/app-shell'
-import { BulkActionsBar } from '@/widgets/bulk-actions-bar'
 import { CreateFolderDialog } from '@/widgets/create-folder-dialog'
 import { DataroomSidebar, DataroomSidebarRail } from '@/widgets/dataroom-sidebar'
 import { DataroomToolbar } from '@/widgets/dataroom-toolbar'
@@ -66,6 +65,7 @@ type TransferDialogState = {
 }
 
 type DropState = 'none' | 'valid' | 'warning' | 'invalid'
+const SYNTHETIC_FOLDER_TIMESTAMP = '1970-01-01T00:00:00.000Z'
 
 const moveReasonMessage = (reason: ReturnType<typeof validateMoveTarget>['reason']): string | null => {
   if (reason === 'self') {
@@ -151,6 +151,40 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
   const items = useMemo(() => listQuery.data?.items || [], [listQuery.data?.items])
   const itemMap = useMemo(() => new Map(items.map((item) => [item.id, item])), [items])
   const breadcrumbs = useMemo(() => listQuery.data?.breadcrumbs || [], [listQuery.data?.breadcrumbs])
+  const getFolderActionItem = (folderId: string): ContentItem | null => {
+    const existingItem = itemMap.get(folderId)
+    if (existingItem) {
+      return existingItem
+    }
+
+    if (folderId === 'root') {
+      return null
+    }
+
+    const breadcrumbIndex = breadcrumbs.findIndex((crumb) => crumb.id === folderId)
+    if (breadcrumbIndex < 0) {
+      return null
+    }
+
+    const folder = breadcrumbs[breadcrumbIndex]
+    const parent = breadcrumbIndex > 0 ? breadcrumbs[breadcrumbIndex - 1] : null
+
+    return {
+      id: folder.id,
+      kind: 'folder',
+      name: folder.name,
+      parentId: parent && parent.id !== 'root' ? parent.id : null,
+      childrenCount: 0,
+      status: 'active',
+      createdAt: SYNTHETIC_FOLDER_TIMESTAMP,
+      updatedAt: SYNTHETIC_FOLDER_TIMESTAMP,
+      mimeType: null,
+      sizeBytes: null,
+      importedAt: null,
+      origin: null,
+      googleFileId: null,
+    }
+  }
   const expandedPathIds = useMemo(() => breadcrumbs.map((crumb) => crumb.id), [breadcrumbs])
   const treeBrowser = useContentTreeBrowser({
     activeFolderId: normalizedFolderId,
@@ -313,7 +347,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
   }
 
   const getMovingItems = (itemIds: string[]): ContentItem[] =>
-    itemIds.map((id) => itemMap.get(id)).filter((item): item is ContentItem => Boolean(item))
+    itemIds.map((id) => getFolderActionItem(id)).filter((item): item is ContentItem => Boolean(item))
 
   const getTargetError = (mode: TransferMode, itemIds: string[], folderIdCandidate: string): string | null => {
     const normalizedTarget = normalizeFolderId(folderIdCandidate)
@@ -557,6 +591,46 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
     setShareDialogItem(item)
   }
 
+  const openCurrentFolderCopyDialog = (folderId: string) => {
+    const folderItem = getFolderActionItem(folderId)
+    if (!folderItem || folderItem.kind !== 'folder') {
+      return
+    }
+    openSingleCopyDialog(folderItem)
+  }
+
+  const openCurrentFolderMoveDialog = (folderId: string) => {
+    const folderItem = getFolderActionItem(folderId)
+    if (!folderItem || folderItem.kind !== 'folder') {
+      return
+    }
+    openSingleMoveDialog(folderItem)
+  }
+
+  const openCurrentFolderDeleteDialog = (folderId: string) => {
+    const folderItem = getFolderActionItem(folderId)
+    if (!folderItem || folderItem.kind !== 'folder') {
+      return
+    }
+    openSingleDeleteDialog(folderItem)
+  }
+
+  const openCurrentFolderShareDialog = (folderId: string) => {
+    const folderItem = getFolderActionItem(folderId)
+    if (!folderItem || folderItem.kind !== 'folder') {
+      return
+    }
+    openSingleShareDialog(folderItem)
+  }
+
+  const downloadCurrentFolder = (folderId: string) => {
+    const folderItem = getFolderActionItem(folderId)
+    if (!folderItem || folderItem.kind !== 'folder') {
+      return
+    }
+    downloadSingleItem(folderItem)
+  }
+
   const openBulkDeleteDialog = () => {
     if (!selectedIds.length) {
       return
@@ -660,7 +734,6 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
             activeFolderId={normalizedFolderId}
             activePreviewId={previewId}
             expandedIds={treeBrowser.expandedIds}
-            onGoRoot={() => openFolder('root')}
             onNewFolder={() => setCreateFolderOpened(true)}
             onImportFromGoogle={openGoogleImportDialog}
             onImportFromComputer={openComputerImportPicker}
@@ -682,7 +755,6 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
         collapsedSidebar={
           <DataroomSidebarRail
             currentUser={currentUser}
-            onGoRoot={() => openFolder('root')}
             onNewFolder={() => setCreateFolderOpened(true)}
             onImportFromGoogle={openGoogleImportDialog}
             onImportFromComputer={openComputerImportPicker}
@@ -693,6 +765,23 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
           <DataroomToolbar
             breadcrumbs={breadcrumbs}
             onNavigate={openFolder}
+            currentFolderMenu={
+              normalizedFolderId === 'root'
+                ? undefined
+                : {
+                    onDownload: (folder) => downloadCurrentFolder(folder.id),
+                    onCopy: (folder) => openCurrentFolderCopyDialog(folder.id),
+                    onShare: (folder) => openCurrentFolderShareDialog(folder.id),
+                    onMove: (folder) => openCurrentFolderMoveDialog(folder.id),
+                    onDelete: (folder) => openCurrentFolderDeleteDialog(folder.id),
+                  }
+            }
+            onFolderDragOver={handleFolderDragOver}
+            onFolderDragLeave={handleFolderDragLeave}
+            onFolderDrop={(folderId, event) => {
+              void handleFolderDrop(folderId, event)
+            }}
+            getFolderDropState={getFolderDropState}
           />
         }
         content={
@@ -713,6 +802,13 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
                   sortOrder={sortOrder}
                   onToggleSort={toggleSort}
                   onToggleSelect={toggleSelected}
+                  onToggleSelectAll={(checked) => {
+                    if (!checked) {
+                      clearSelection()
+                      return
+                    }
+                    setSelected(items.map((item) => item.id))
+                  }}
                   onOpenFile={openFilePreview}
                   onOpenFolder={openFolder}
                   onDownloadItem={downloadSingleItem}
@@ -720,6 +816,19 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
                   onMoveItem={openSingleMoveDialog}
                   onDeleteItem={openSingleDeleteDialog}
                   onShareItem={openSingleShareDialog}
+                  onClearSelection={clearSelection}
+                  onDownloadSelected={downloadSelectedItems}
+                  onCopySelected={openBulkCopyDialog}
+                  onMoveSelected={openBulkMoveDialog}
+                  onDeleteSelected={openBulkDeleteDialog}
+                  downloadPending={downloadItemsMutation.isPending}
+                  copyPending={Boolean(
+                    transferDialog?.mode === 'copy' && transferDialog.scope === 'bulk' && transferPending,
+                  )}
+                  movePending={Boolean(
+                    transferDialog?.mode === 'move' && transferDialog.scope === 'bulk' && transferPending,
+                  )}
+                  deletePending={deleteDialog?.mode === 'bulk' && bulkDeleteMutation.isPending}
                   onDragStartItem={dragMoveController.startDragFromTable}
                   onDragEnd={dragMoveController.endDrag}
                   onFolderDragOver={handleFolderDragOver}
@@ -735,24 +844,6 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
             </Box>
             <PreviewPane folderId={normalizedFolderId} previewItemId={previewId} />
           </div>
-        }
-        bulkActions={
-          <BulkActionsBar
-            selectedCount={selectedIds.length}
-            onClearSelection={clearSelection}
-            onDownloadSelected={downloadSelectedItems}
-            onCopySelected={openBulkCopyDialog}
-            onMoveSelected={openBulkMoveDialog}
-            onDeleteSelected={openBulkDeleteDialog}
-            downloadPending={downloadItemsMutation.isPending}
-            copyPending={Boolean(
-              transferDialog?.mode === 'copy' && transferDialog.scope === 'bulk' && transferPending,
-            )}
-            movePending={Boolean(
-              transferDialog?.mode === 'move' && transferDialog.scope === 'bulk' && transferPending,
-            )}
-            deletePending={deleteDialog?.mode === 'bulk' && bulkDeleteMutation.isPending}
-          />
         }
       />
 

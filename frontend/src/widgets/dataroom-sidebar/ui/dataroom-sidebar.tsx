@@ -4,7 +4,6 @@ import {
   IconDotsVertical,
   IconFolder,
   IconFolderPlus,
-  IconHome2,
   IconLogout,
   IconUpload,
 } from '@tabler/icons-react'
@@ -30,7 +29,6 @@ type DataroomSidebarProps = {
   activeFolderId: string
   activePreviewId: string | null
   expandedIds: Set<string>
-  onGoRoot: () => void
   onNewFolder: () => void
   onImportFromGoogle: () => void
   onImportFromComputer: () => void
@@ -70,7 +68,6 @@ type ActiveVariant = 'solid' | 'file' | 'context'
 
 type DataroomSidebarRailProps = {
   currentUser: UserProfile
-  onGoRoot: () => void
   onNewFolder: () => void
   onImportFromGoogle: () => void
   onImportFromComputer: () => void
@@ -107,7 +104,6 @@ const pickAvatarColor = (seed: string): string => {
 
 export const DataroomSidebarRail = ({
   currentUser,
-  onGoRoot,
   onNewFolder,
   onImportFromGoogle,
   onImportFromComputer,
@@ -122,19 +118,6 @@ export const DataroomSidebarRail = ({
   return (
     <Box className="dataroom-sidebar-rail">
       <Group className="dataroom-sidebar-rail__actions" gap={4}>
-        <Tooltip label={t('goToRoot')} position="right">
-          <ActionIcon
-            className="dataroom-sidebar-rail__action-icon"
-            variant="subtle"
-            size="lg"
-            radius="md"
-            aria-label={t('goToRoot')}
-            onClick={onGoRoot}
-          >
-            <IconHome2 size={18} />
-          </ActionIcon>
-        </Tooltip>
-
         <Tooltip label={t('newFolder')} position="right">
           <ActionIcon
             className="dataroom-sidebar-rail__action-icon"
@@ -508,7 +491,6 @@ export const DataroomSidebar = ({
   activeFolderId,
   activePreviewId,
   expandedIds,
-  onGoRoot,
   onNewFolder,
   onImportFromGoogle,
   onImportFromComputer,
@@ -543,16 +525,9 @@ export const DataroomSidebar = ({
       </Title>
 
       <Box className="dataroom-sidebar__quick-actions">
-        <Button
-          variant="subtle"
-          size="xs"
-          fullWidth
-          className="dataroom-sidebar__quick-action-button"
-          leftSection={<IconHome2 size={18} />}
-          onClick={onGoRoot}
-        >
-          {t('goToRoot')}
-        </Button>
+        <Text size="xs" fw={600} c="var(--text-secondary)" className="dataroom-sidebar__quick-actions-title">
+          {t('quickActions')}
+        </Text>
         <Button
           variant="subtle"
           size="xs"
@@ -580,6 +555,10 @@ export const DataroomSidebar = ({
           </Button>
         </ImportSourceMenu>
       </Box>
+
+      <Text size="xs" fw={600} c="var(--text-secondary)" className="dataroom-sidebar__tree-title">
+        Documents
+      </Text>
 
       <ScrollArea
         className="dataroom-sidebar__tree"

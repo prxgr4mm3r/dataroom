@@ -6,6 +6,7 @@ export const messages = {
   importFile: 'Import file',
   newFolder: 'New folder',
   goToRoot: 'Go to root',
+  quickActions: 'Quick actions',
   accountMember: 'Workspace member',
   signedInAs: 'Signed in as',
   signOut: 'Sign out',

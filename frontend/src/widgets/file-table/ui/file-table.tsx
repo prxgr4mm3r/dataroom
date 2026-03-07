@@ -8,18 +8,32 @@ import {
   IconLink,
   IconTrash,
   IconUpload,
+  IconX,
 } from '@tabler/icons-react'
 import type { DragEvent } from 'react'
 
 import type { ContentItem } from '@/entities/content-item'
 import { isFileItem } from '@/entities/content-item'
 import type { DragImportOverlayState } from '@/features/drag-import-files'
+import { t } from '@/shared/i18n/messages'
 import { formatDate, formatDateCompact } from '@/shared/lib/date/format-date'
 import { formatFileSize } from '@/shared/lib/file/format-file-size'
 import { getFileTypePresentation } from '@/shared/lib/file/file-type-presentation'
 import { MAX_IMPORT_FILE_SIZE_BYTES } from '@/shared/lib/file/import-file-size-limit'
 import { splitFileName } from '@/shared/lib/file/split-file-name'
-import { ActionIcon, Box, FileTypeIcon, Group, Loader, Menu, ScrollArea, SelectionCheckbox, Table, Text } from '@/shared/ui'
+import {
+  ActionIcon,
+  Box,
+  Button,
+  FileTypeIcon,
+  Group,
+  Loader,
+  Menu,
+  ScrollArea,
+  SelectionCheckbox,
+  Table,
+  Text,
+} from '@/shared/ui'
 import type { SortBy, SortOrder } from '@/shared/types/common'
 import './file-table.css'
 
@@ -36,6 +50,7 @@ type FileTableProps = {
   sortOrder: SortOrder
   onToggleSort: (sortBy: SortBy) => void
   onToggleSelect: (itemId: string) => void
+  onToggleSelectAll?: (checked: boolean) => void
   onOpenFile: (itemId: string) => void
   onOpenFolder: (folderId: string) => void
   onDownloadItem: (item: ContentItem) => void
@@ -43,6 +58,15 @@ type FileTableProps = {
   onMoveItem?: (item: ContentItem) => void
   onDeleteItem?: (item: ContentItem) => void
   onShareItem?: (item: ContentItem) => void
+  onClearSelection?: () => void
+  onDownloadSelected?: () => void
+  onCopySelected?: () => void
+  onMoveSelected?: () => void
+  onDeleteSelected?: () => void
+  downloadPending?: boolean
+  copyPending?: boolean
+  movePending?: boolean
+  deletePending?: boolean
   onDragStartItem?: (itemId: string, event: DragEvent<HTMLTableRowElement>) => void
   onDragEnd?: () => void
   onFolderDragOver?: (folderId: string, event: DragEvent<HTMLElement>) => void
@@ -115,6 +139,7 @@ export const FileTable = ({
   sortOrder,
   onToggleSort,
   onToggleSelect,
+  onToggleSelectAll,
   onOpenFile,
   onOpenFolder,
   onDownloadItem,
@@ -122,6 +147,15 @@ export const FileTable = ({
   onMoveItem,
   onDeleteItem,
   onShareItem,
+  onClearSelection,
+  onDownloadSelected,
+  onCopySelected,
+  onMoveSelected,
+  onDeleteSelected,
+  downloadPending = false,
+  copyPending = false,
+  movePending = false,
+  deletePending = false,
   onDragStartItem = NOOP_ROW_DRAG_START,
   onDragEnd = NOOP_DRAG_END,
   onFolderDragOver = NOOP_FOLDER_DRAG_OVER,
@@ -134,6 +168,12 @@ export const FileTable = ({
   const currentFolderDropState = readOnly ? 'none' : getFolderDropState(currentFolderId)
   const compactUpdatedAt = Boolean(openedPreviewId)
   const sizeColumnWidth = compactUpdatedAt ? 112 : 98
+  const selectedIdSet = new Set(selectedIds)
+  const visibleSelectedCount = items.reduce((count, item) => count + (selectedIdSet.has(item.id) ? 1 : 0), 0)
+  const allVisibleSelected = items.length > 0 && visibleSelectedCount === items.length
+  const partiallyVisibleSelected = visibleSelectedCount > 0 && !allVisibleSelected
+  const selectedCount = selectedIds.length
+  const showBulkHeaderActions = selectedCount > 0 && Boolean(onClearSelection) && Boolean(onDownloadSelected)
   const isImportOverlayActive = !readOnly && importOverlayState.mode !== 'none'
   const draggedFileCountLabel =
     importOverlayState.mode === 'none' ? '' : formatDraggedFileCount(importOverlayState.fileCount)
@@ -274,15 +314,6 @@ export const FileTable = ({
     )
   }
 
-  let tableBodyBackground: string | undefined
-  if (!isImportOverlayActive) {
-    if (currentFolderDropState === 'valid') {
-      tableBodyBackground = 'var(--state-success-bg-soft)'
-    } else if (currentFolderDropState === 'invalid') {
-      tableBodyBackground = 'var(--state-danger-bg-soft)'
-    }
-  }
-
   return (
     <Box
       className="file-table__container"
@@ -295,7 +326,18 @@ export const FileTable = ({
         <Table className="file-table" stickyHeader highlightOnHover withColumnBorders={false}>
           <Table.Thead>
             <Table.Tr>
-              <Table.Th className="file-table__th file-table__th--select" w={44} />
+              <Table.Th className="file-table__th file-table__th--select" w={44}>
+                <span className="file-table__select-control">
+                  <SelectionCheckbox
+                    checked={allVisibleSelected}
+                    indeterminate={partiallyVisibleSelected}
+                    disabled={!onToggleSelectAll || !items.length}
+                    ariaLabel={allVisibleSelected ? 'Clear selection for all items' : 'Select all items'}
+                    onCheckedChange={(checked) => onToggleSelectAll?.(checked)}
+                    onClick={(event) => event.stopPropagation()}
+                  />
+                </span>
+              </Table.Th>
               <SortableHeader
                 label="Name"
                 active={sortBy === 'name'}
@@ -307,6 +349,7 @@ export const FileTable = ({
                 active={sortBy === 'type'}
                 order={sortOrder}
                 onClick={() => onToggleSort('type')}
+                className={showBulkHeaderActions ? 'file-table__th--bulk-hidden' : undefined}
               />
               <SortableHeader
                 label="Size"
@@ -314,20 +357,94 @@ export const FileTable = ({
                 order={sortOrder}
                 onClick={() => onToggleSort('size')}
                 width={sizeColumnWidth}
-                className="file-table__th--size"
+                className={['file-table__th--size', showBulkHeaderActions ? 'file-table__th--bulk-hidden' : '']
+                  .filter(Boolean)
+                  .join(' ')}
               />
               <Table.Th
-                className="file-table__th file-table__th--updated"
+                className={[
+                  'file-table__th',
+                  'file-table__th--updated',
+                  showBulkHeaderActions ? 'file-table__th--bulk-hidden' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
                 style={{ whiteSpace: 'nowrap' }}
                 w={compactUpdatedAt ? 122 : undefined}
               >
                 {compactUpdatedAt ? 'Updated' : 'Updated at'}
               </Table.Th>
-              <Table.Th className="file-table__th file-table__th--actions" w={56} />
+              <Table.Th className="file-table__th file-table__th--actions file-table__th--actions-anchor" w={56}>
+                {showBulkHeaderActions ? (
+                  <div className="file-table__bulk-header-overlay">
+                    <Text size="sm" fw={600} className="file-table__bulk-count">
+                      {selectedCount === 1 ? '1 item selected' : `${selectedCount} items selected`}
+                    </Text>
+                    <Group gap="xs" wrap="nowrap" className="file-table__bulk-actions">
+                      <Button
+                        variant="subtle"
+                        size="xs"
+                        leftSection={<IconX size={14} />}
+                        onClick={onClearSelection}
+                        className="file-table__bulk-button"
+                      >
+                        <span className="file-table__bulk-button-label">{t('clearSelection')}</span>
+                      </Button>
+                      <Button
+                        variant="default"
+                        size="xs"
+                        leftSection={<IconDownload size={14} />}
+                        onClick={onDownloadSelected}
+                        loading={downloadPending}
+                        className="file-table__bulk-button"
+                      >
+                        <span className="file-table__bulk-button-label">{t('download')}</span>
+                      </Button>
+                      {onCopySelected ? (
+                        <Button
+                          variant="default"
+                          size="xs"
+                          leftSection={<IconCopy size={14} />}
+                          onClick={onCopySelected}
+                          loading={copyPending}
+                          className="file-table__bulk-button"
+                        >
+                          <span className="file-table__bulk-button-label">{t('copy')}</span>
+                        </Button>
+                      ) : null}
+                      {onMoveSelected ? (
+                        <Button
+                          variant="default"
+                          size="xs"
+                          leftSection={<IconArrowsMove size={14} />}
+                          onClick={onMoveSelected}
+                          loading={movePending}
+                          className="file-table__bulk-button"
+                        >
+                          <span className="file-table__bulk-button-label">{t('move')}</span>
+                        </Button>
+                      ) : null}
+                      {onDeleteSelected ? (
+                        <Button
+                          color="red"
+                          variant="light"
+                          size="xs"
+                          leftSection={<IconTrash size={14} />}
+                          onClick={onDeleteSelected}
+                          loading={deletePending}
+                          className="file-table__bulk-button"
+                        >
+                          <span className="file-table__bulk-button-label">{t('deleteSelected')}</span>
+                        </Button>
+                      ) : null}
+                    </Group>
+                  </div>
+                ) : null}
+              </Table.Th>
             </Table.Tr>
           </Table.Thead>
 
-          <Table.Tbody bg={tableBodyBackground}>
+          <Table.Tbody>
             {items.map((item) => {
               const isSelected = selectedIds.includes(item.id)
               const isOpened = openedPreviewId === item.id

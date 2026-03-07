@@ -13,7 +13,6 @@ import { useSortState } from '@/features/sort-content-items'
 import type { SortBy, SortOrder } from '@/shared/types/common'
 import { Alert, Badge, Box, Center, Group, Loader, Paper, Stack, Text, TextInput, Title } from '@/shared/ui'
 import { notifyError } from '@/shared/ui'
-import { BulkActionsBar } from '@/widgets/bulk-actions-bar'
 import { BreadcrumbsBar } from '@/widgets/breadcrumbs-bar'
 import { FileTable } from '@/widgets/file-table'
 import { SharedPreviewPane } from '@/widgets/shared-preview-pane'
@@ -268,8 +267,16 @@ export const SharedViewPage = () => {
                 sortOrder={sortOrder}
                 onToggleSort={toggleSort}
                 onToggleSelect={toggleSelected}
+                onToggleSelectAll={(checked) => {
+                  setSelectedIds(checked ? filteredItems.map((item) => item.id) : [])
+                }}
                 onOpenFile={setPreviewItemId}
                 onOpenFolder={setFolderId}
+                onClearSelection={() => setSelectedIds([])}
+                onDownloadSelected={() => {
+                  void downloadItems(selectedIds)
+                }}
+                downloadPending={downloadPending}
                 onDownloadItem={(item) => {
                   void downloadItems([item.id])
                 }}
@@ -283,18 +290,6 @@ export const SharedViewPage = () => {
           />
         </div>
       </main>
-
-      <footer className="shared-view-page__bulk">
-        <BulkActionsBar
-          mode="download_only"
-          selectedCount={selectedIds.length}
-          onClearSelection={() => setSelectedIds([])}
-          onDownloadSelected={() => {
-            void downloadItems(selectedIds)
-          }}
-          downloadPending={downloadPending}
-        />
-      </footer>
     </Box>
   )
 }

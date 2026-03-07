@@ -11,7 +11,7 @@ type AppShellProps = {
   collapsedSidebar?: ReactNode
   header: ReactNode
   content: ReactNode
-  bulkActions: ReactNode
+  bulkActions?: ReactNode
 }
 
 const DEFAULT_SIDEBAR_WIDTH = 260
@@ -78,6 +78,7 @@ export const AppShell = ({ sidebar, collapsedSidebar, header, content, bulkActio
   const toggleLabel = isSidebarCollapsed ? t('expandSidebar') : t('collapseSidebar')
   const sidebarColumnWidth = isSidebarCollapsed ? COLLAPSED_RAIL_WIDTH : sidebarWidth
   const hasCollapsedSidebar = Boolean(collapsedSidebar)
+  const hasBulkActions = Boolean(bulkActions)
 
   return (
     <div className="dataroom-shell">
@@ -85,6 +86,7 @@ export const AppShell = ({ sidebar, collapsedSidebar, header, content, bulkActio
         className={[
           'dataroom-shell__frame',
           isSidebarCollapsed ? 'dataroom-shell__frame--sidebar-collapsed' : '',
+          hasBulkActions ? 'dataroom-shell__frame--with-bulk' : '',
           isResizing ? 'dataroom-shell__frame--resizing' : '',
         ]
           .filter(Boolean)
@@ -152,7 +154,7 @@ export const AppShell = ({ sidebar, collapsedSidebar, header, content, bulkActio
         </aside>
         <header className="dataroom-shell__header">{header}</header>
         <main className="dataroom-shell__body">{content}</main>
-        <footer className="dataroom-shell__bulk">{bulkActions}</footer>
+        {hasBulkActions ? <footer className="dataroom-shell__bulk">{bulkActions}</footer> : null}
       </div>
     </div>
   )
