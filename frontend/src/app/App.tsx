@@ -6,6 +6,7 @@ import { useAuth } from '@/app/providers'
 import { routes } from '@/shared/config/routes'
 import { DataroomPage } from '@/pages/dataroom-page'
 import { OAuthCallbackPage } from '@/pages/oauth-callback-page'
+import { SharedViewPage } from '@/pages/shared-view-page'
 import { Navigate, Route, Routes } from 'react-router-dom'
 
 const SignInScreen = () => {
@@ -71,6 +72,7 @@ const RequireAuth = () => {
 export const App = () => (
   <Routes>
     <Route path={routes.oauthCallback} element={<OAuthCallbackPage />} />
+    <Route path={routes.shareView} element={<SharedViewPage />} />
     <Route path={routes.dataroomRoot} element={<RequireAuth />} />
     <Route path={routes.dataroomFolder} element={<RequireAuth />} />
     <Route path="*" element={<Navigate to={routes.dataroomRoot} replace />} />

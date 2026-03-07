@@ -56,6 +56,11 @@ def build_config(overrides: dict[str, Any] | None = None) -> dict[str, Any]:
             4 * 1024 * 1024,
         ),
         "REQUEST_TIMEOUT_SECONDS": _as_int(os.getenv("REQUEST_TIMEOUT_SECONDS"), 20),
+        "SHARE_TOKEN_PEPPER": os.getenv("SHARE_TOKEN_PEPPER", os.getenv("SECRET_KEY", "change-me")),
+        "SHARE_TOKEN_KID_BYTES": _as_int(os.getenv("SHARE_TOKEN_KID_BYTES"), 9),
+        "SHARE_TOKEN_SECRET_BYTES": _as_int(os.getenv("SHARE_TOKEN_SECRET_BYTES"), 32),
+        "SHARE_DEFAULT_TTL_DAYS": _as_int(os.getenv("SHARE_DEFAULT_TTL_DAYS"), 30),
+        "SHARE_MAX_TTL_DAYS": _as_int(os.getenv("SHARE_MAX_TTL_DAYS"), 365),
     }
 
     if overrides:

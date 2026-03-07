@@ -1,0 +1,32 @@
+.shared-view-page {
+  min-height: 100vh;
+  padding: 24px;
+  background: var(--bg-subtle);
+}
+
+.shared-view-page__card {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 18px;
+  background: var(--bg-surface);
+}
+
+.shared-view-page__crumb {
+  padding-inline: 0;
+}
+
+.shared-view-page__table-wrap {
+  overflow: auto;
+}
+
+.shared-view-page__actions-col {
+  width: 130px;
+}
+
+.shared-view-page__name {
+  min-width: 0;
+  max-width: 460px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

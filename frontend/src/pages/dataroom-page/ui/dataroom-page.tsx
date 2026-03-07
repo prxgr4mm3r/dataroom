@@ -39,6 +39,7 @@ import { FolderPickerDialog } from '@/widgets/folder-picker-dialog'
 import { ImportFileDialog } from '@/widgets/import-file-dialog'
 import { ImportResultsDialog } from '@/widgets/import-results-dialog'
 import { PreviewPane } from '@/widgets/preview-pane'
+import { ShareLinksDialog } from '@/widgets/share-links-dialog'
 
 import './dataroom-page.css'
 
@@ -95,6 +96,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
   const [createFolderOpened, setCreateFolderOpened] = useState(false)
   const [deleteDialog, setDeleteDialog] = useState<DeleteDialogState | null>(null)
   const [transferDialog, setTransferDialog] = useState<TransferDialogState | null>(null)
+  const [shareDialogItem, setShareDialogItem] = useState<ContentItem | null>(null)
   const [dragImportResultDialog, setDragImportResultDialog] = useState<DragImportResult | null>(null)
   const [targetFolderId, setTargetFolderId] = useState<string>('root')
 
@@ -551,6 +553,10 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
     setDeleteDialog({ mode: 'single', item })
   }
 
+  const openSingleShareDialog = (item: ContentItem) => {
+    setShareDialogItem(item)
+  }
+
   const openBulkDeleteDialog = () => {
     if (!selectedIds.length) {
       return
@@ -716,6 +722,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
                   onCopyItem={openSingleCopyDialog}
                   onMoveItem={openSingleMoveDialog}
                   onDeleteItem={openSingleDeleteDialog}
+                  onShareItem={openSingleShareDialog}
                   onDragStartItem={dragMoveController.startDragFromTable}
                   onDragEnd={dragMoveController.endDrag}
                   onFolderDragOver={handleFolderDragOver}
@@ -812,6 +819,12 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
         uploadedFiles={dragImportResultDialog?.uploadedFiles ?? []}
         failedFiles={dragImportResultDialog?.failedFiles ?? []}
         onClose={() => setDragImportResultDialog(null)}
+      />
+
+      <ShareLinksDialog
+        opened={Boolean(shareDialogItem)}
+        item={shareDialogItem}
+        onClose={() => setShareDialogItem(null)}
       />
     </>
   )

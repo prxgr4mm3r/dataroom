@@ -5,6 +5,7 @@ import {
   IconDownload,
   IconDotsVertical,
   IconFolder,
+  IconLink,
   IconTrash,
   IconUpload,
 } from '@tabler/icons-react'
@@ -40,6 +41,7 @@ type FileTableProps = {
   onCopyItem: (item: ContentItem) => void
   onMoveItem: (item: ContentItem) => void
   onDeleteItem: (item: ContentItem) => void
+  onShareItem: (item: ContentItem) => void
   onDragStartItem: (itemId: string, event: DragEvent<HTMLTableRowElement>) => void
   onDragEnd: () => void
   onFolderDragOver: (folderId: string, event: DragEvent<HTMLElement>) => void
@@ -108,6 +110,7 @@ export const FileTable = ({
   onCopyItem,
   onMoveItem,
   onDeleteItem,
+  onShareItem,
   onDragStartItem,
   onDragEnd,
   onFolderDragOver,
@@ -424,6 +427,9 @@ export const FileTable = ({
                         </Menu.Item>
                         <Menu.Item leftSection={<IconCopy size={14} />} onClick={() => onCopyItem(item)}>
                           Copy
+                        </Menu.Item>
+                        <Menu.Item leftSection={<IconLink size={14} />} onClick={() => onShareItem(item)}>
+                          Share
                         </Menu.Item>
                         <Menu.Item leftSection={<IconArrowsMove size={14} />} onClick={() => onMoveItem(item)}>
                           Move

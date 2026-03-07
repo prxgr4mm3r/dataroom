@@ -10,4 +10,6 @@ export const queryKeys = {
     ['dataroom', 'items', folderId, sortBy, sortOrder] as const,
   item: (itemId: string) => ['dataroom', 'item', itemId] as const,
   itemContent: (itemId: string) => ['dataroom', 'item-content', itemId] as const,
+  shares: ['dataroom', 'shares'] as const,
+  sharesByItem: (itemId: string) => ['dataroom', 'shares', itemId] as const,
 } as const
