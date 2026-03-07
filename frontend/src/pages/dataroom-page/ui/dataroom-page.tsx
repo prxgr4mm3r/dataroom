@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 
 import { useAuth } from '@/app/providers'
@@ -8,6 +8,7 @@ import { useContentTreeBrowser } from '@/features/browse-content-tree'
 import { useBulkCopyItems, useCopyItem } from '@/features/copy-content-items'
 import { useBulkDeleteItems, useDeleteItem } from '@/features/delete-content-items'
 import { useDownloadContentItems } from '@/features/download-content-items'
+import { useDragImportController } from '@/features/drag-import-files'
 import { useDragMoveController, validateMoveTarget } from '@/features/drag-move-items'
 import { useListContentItemsQuery } from '@/features/list-content-items'
 import { useBulkMoveItems, useMoveItem } from '@/features/move-content-items'
@@ -59,6 +60,8 @@ type TransferDialogState = {
   itemIds: string[]
   label: string
 }
+
+type DropState = 'none' | 'valid' | 'invalid'
 
 const moveReasonMessage = (reason: ReturnType<typeof validateMoveTarget>['reason']): string | null => {
   if (reason === 'self') {
@@ -358,6 +361,53 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
       }
     },
   })
+  const dragImportController = useDragImportController()
+
+  const handleFolderDragOver = (folderId: string, event: DragEvent<HTMLElement>) => {
+    const handledByImport = dragImportController.dragOverFolder(folderId, event)
+    if (handledByImport) {
+      return
+    }
+    dragMoveController.dragOverFolder(folderId, event)
+  }
+
+  const handleFolderDragLeave = (folderId: string) => {
+    dragImportController.dragLeaveFolder(folderId)
+    dragMoveController.dragLeaveFolder(folderId)
+  }
+
+  const handleFolderDrop = async (folderId: string, event: DragEvent<HTMLElement>) => {
+    if (dragImportController.isExternalFilesDrag(event)) {
+      const result = await dragImportController.dropOnFolder(folderId, event)
+      if (result) {
+        if (result.uploadedCount > 0) {
+          if (result.uploadedCount === 1) {
+            notifySuccess(t('fileUploadedSuccess'))
+          } else {
+            notifySuccess(`${result.uploadedCount} files uploaded successfully.`)
+          }
+        }
+        if (result.failedCount > 0) {
+          const summary =
+            result.failedCount === 1
+              ? '1 file failed to upload.'
+              : `${result.failedCount} files failed to upload.`
+          notifyError(result.firstErrorMessage ? `${summary} ${result.firstErrorMessage}` : summary)
+        }
+      }
+      return
+    }
+
+    await dragMoveController.dropOnFolder(folderId, event)
+  }
+
+  const getFolderDropState = (folderId: string): DropState => {
+    const importDropState = dragImportController.getFolderDropState(folderId)
+    if (importDropState !== 'none') {
+      return importDropState
+    }
+    return dragMoveController.getFolderDropState(folderId)
+  }
 
   const openSingleDeleteDialog = (item: ContentItem) => {
     deleteItemMutation.reset()
@@ -477,12 +527,12 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
             onSignOut={() => void signOutUser()}
             onDragStartItem={dragMoveController.startDragFromTree}
             onDragEnd={dragMoveController.endDrag}
-            onFolderDragOver={dragMoveController.dragOverFolder}
+            onFolderDragOver={handleFolderDragOver}
             onFolderDrop={(folderId, event) => {
-              void dragMoveController.dropOnFolder(folderId, event)
+              void handleFolderDrop(folderId, event)
             }}
-            onFolderDragLeave={dragMoveController.dragLeaveFolder}
-            getFolderDropState={dragMoveController.getFolderDropState}
+            onFolderDragLeave={handleFolderDragLeave}
+            getFolderDropState={getFolderDropState}
             isDraggingItem={dragMoveController.isDraggingItem}
           />
         }
@@ -529,12 +579,12 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
                   onDeleteItem={openSingleDeleteDialog}
                   onDragStartItem={dragMoveController.startDragFromTable}
                   onDragEnd={dragMoveController.endDrag}
-                  onFolderDragOver={dragMoveController.dragOverFolder}
-                  onFolderDragLeave={dragMoveController.dragLeaveFolder}
+                  onFolderDragOver={handleFolderDragOver}
+                  onFolderDragLeave={handleFolderDragLeave}
                   onFolderDrop={(folderId, event) => {
-                    void dragMoveController.dropOnFolder(folderId, event)
+                    void handleFolderDrop(folderId, event)
                   }}
-                  getFolderDropState={dragMoveController.getFolderDropState}
+                  getFolderDropState={getFolderDropState}
                   isDraggingItem={dragMoveController.isDraggingItem}
                 />
               )}

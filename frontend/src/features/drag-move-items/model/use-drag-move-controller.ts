@@ -4,6 +4,7 @@ import type { ContentItem } from '@/entities/content-item'
 import type { FolderNode } from '@/entities/folder'
 import { t } from '@/shared/i18n/messages'
 import { createDragPreview } from '@/shared/lib/dnd/create-drag-preview'
+import { INTERNAL_DND_ITEMS_TYPE } from '@/shared/lib/dnd/drag-types'
 import { normalizeFolderId } from '@/shared/routes/dataroom-routes'
 
 import { validateMoveTarget } from './validators'
@@ -62,6 +63,7 @@ export const useDragMoveController = ({
 
     event.dataTransfer.effectAllowed = 'move'
     event.dataTransfer.setData('text/plain', draggedIds.join(','))
+    event.dataTransfer.setData(INTERNAL_DND_ITEMS_TYPE, '1')
 
     const previewTitle = movingItems.length === 1 ? movingItems[0].name : `${movingItems.length} items`
     const preview = createDragPreview({
