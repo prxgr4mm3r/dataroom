@@ -26,6 +26,7 @@ import './file-table.css'
 type DropState = 'none' | 'valid' | 'warning' | 'invalid'
 
 type FileTableProps = {
+  readOnly?: boolean
   items: ContentItem[]
   loading: boolean
   currentFolderId: string
@@ -38,18 +39,18 @@ type FileTableProps = {
   onOpenFile: (itemId: string) => void
   onOpenFolder: (folderId: string) => void
   onDownloadItem: (item: ContentItem) => void
-  onCopyItem: (item: ContentItem) => void
-  onMoveItem: (item: ContentItem) => void
-  onDeleteItem: (item: ContentItem) => void
-  onShareItem: (item: ContentItem) => void
-  onDragStartItem: (itemId: string, event: DragEvent<HTMLTableRowElement>) => void
-  onDragEnd: () => void
-  onFolderDragOver: (folderId: string, event: DragEvent<HTMLElement>) => void
-  onFolderDragLeave: (folderId: string) => void
-  onFolderDrop: (folderId: string, event: DragEvent<HTMLElement>) => void
-  getFolderDropState: (folderId: string) => DropState
-  importOverlayState: DragImportOverlayState
-  isDraggingItem: (itemId: string) => boolean
+  onCopyItem?: (item: ContentItem) => void
+  onMoveItem?: (item: ContentItem) => void
+  onDeleteItem?: (item: ContentItem) => void
+  onShareItem?: (item: ContentItem) => void
+  onDragStartItem?: (itemId: string, event: DragEvent<HTMLTableRowElement>) => void
+  onDragEnd?: () => void
+  onFolderDragOver?: (folderId: string, event: DragEvent<HTMLElement>) => void
+  onFolderDragLeave?: (folderId: string) => void
+  onFolderDrop?: (folderId: string, event: DragEvent<HTMLElement>) => void
+  getFolderDropState?: (folderId: string) => DropState
+  importOverlayState?: DragImportOverlayState
+  isDraggingItem?: (itemId: string) => boolean
 }
 
 const formatDraggedFileCount = (count: number): string => {
@@ -63,6 +64,15 @@ const formatDraggedFileCount = (count: number): string => {
 
   return `${count} files`
 }
+
+const EMPTY_IMPORT_OVERLAY: DragImportOverlayState = { mode: 'none' }
+const NOOP_DROP_STATE = (): DropState => 'none'
+const NOOP_IS_DRAGGING = (): boolean => false
+const NOOP_DRAG_END = (): void => {}
+const NOOP_FOLDER_DRAG_LEAVE = (): void => {}
+const NOOP_ROW_DRAG_START = (): void => {}
+const NOOP_FOLDER_DRAG_OVER = (): void => {}
+const NOOP_FOLDER_DROP = (): void => {}
 
 const SortableHeader = ({
   label,
@@ -95,6 +105,7 @@ const SortableHeader = ({
 )
 
 export const FileTable = ({
+  readOnly = false,
   items,
   loading,
   currentFolderId,
@@ -111,23 +122,27 @@ export const FileTable = ({
   onMoveItem,
   onDeleteItem,
   onShareItem,
-  onDragStartItem,
-  onDragEnd,
-  onFolderDragOver,
-  onFolderDragLeave,
-  onFolderDrop,
-  getFolderDropState,
-  importOverlayState,
-  isDraggingItem,
+  onDragStartItem = NOOP_ROW_DRAG_START,
+  onDragEnd = NOOP_DRAG_END,
+  onFolderDragOver = NOOP_FOLDER_DRAG_OVER,
+  onFolderDragLeave = NOOP_FOLDER_DRAG_LEAVE,
+  onFolderDrop = NOOP_FOLDER_DROP,
+  getFolderDropState = NOOP_DROP_STATE,
+  importOverlayState = EMPTY_IMPORT_OVERLAY,
+  isDraggingItem = NOOP_IS_DRAGGING,
 }: FileTableProps) => {
-  const currentFolderDropState = getFolderDropState(currentFolderId)
+  const currentFolderDropState = readOnly ? 'none' : getFolderDropState(currentFolderId)
   const compactUpdatedAt = Boolean(openedPreviewId)
   const sizeColumnWidth = compactUpdatedAt ? 112 : 98
-  const isImportOverlayActive = importOverlayState.mode !== 'none'
+  const isImportOverlayActive = !readOnly && importOverlayState.mode !== 'none'
   const draggedFileCountLabel =
     importOverlayState.mode === 'none' ? '' : formatDraggedFileCount(importOverlayState.fileCount)
 
   const renderImportOverlay = () => {
+    if (readOnly) {
+      return null
+    }
+
     if (importOverlayState.mode === 'none') {
       return null
     }
@@ -215,6 +230,9 @@ export const FileTable = ({
   }
 
   const handleRootDragLeave = (event: DragEvent<HTMLElement>) => {
+    if (readOnly) {
+      return
+    }
     const relatedTarget = event.relatedTarget
     if (relatedTarget instanceof Node && event.currentTarget.contains(relatedTarget)) {
       return
@@ -246,9 +264,9 @@ export const FileTable = ({
         p="md"
         bg={emptyBackground}
         style={{ minHeight: 120 }}
-        onDragOver={(event) => onFolderDragOver(currentFolderId, event)}
-        onDrop={(event) => onFolderDrop(currentFolderId, event)}
-        onDragLeave={handleRootDragLeave}
+        onDragOver={readOnly ? undefined : (event) => onFolderDragOver(currentFolderId, event)}
+        onDrop={readOnly ? undefined : (event) => onFolderDrop(currentFolderId, event)}
+        onDragLeave={readOnly ? undefined : handleRootDragLeave}
       >
         <Text c="dimmed">This folder is empty.</Text>
         {renderImportOverlay()}
@@ -269,9 +287,9 @@ export const FileTable = ({
     <Box
       className="file-table__container"
       h="100%"
-      onDragOver={(event) => onFolderDragOver(currentFolderId, event)}
-      onDrop={(event) => onFolderDrop(currentFolderId, event)}
-      onDragLeave={handleRootDragLeave}
+      onDragOver={readOnly ? undefined : (event) => onFolderDragOver(currentFolderId, event)}
+      onDrop={readOnly ? undefined : (event) => onFolderDrop(currentFolderId, event)}
+      onDragLeave={readOnly ? undefined : handleRootDragLeave}
     >
       <ScrollArea h="100%">
         <Table className="file-table" stickyHeader highlightOnHover withColumnBorders={false}>
@@ -314,8 +332,8 @@ export const FileTable = ({
               const isSelected = selectedIds.includes(item.id)
               const isOpened = openedPreviewId === item.id
               const isFolder = !isFileItem(item)
-              const dropState = isFolder ? getFolderDropState(item.id) : 'none'
-              const isDragging = isDraggingItem(item.id)
+              const dropState = !readOnly && isFolder ? getFolderDropState(item.id) : 'none'
+              const isDragging = !readOnly && isDraggingItem(item.id)
               const fileTypePresentation = isFileItem(item)
                 ? getFileTypePresentation(item.name, item.mimeType)
                 : null
@@ -342,11 +360,11 @@ export const FileTable = ({
                   key={item.id}
                   className="file-table__row"
                   bg={rowBackground}
-                  draggable
-                  onDragStart={(event) => onDragStartItem(item.id, event)}
-                  onDragEnd={onDragEnd}
+                  draggable={!readOnly}
+                  onDragStart={readOnly ? undefined : (event) => onDragStartItem(item.id, event)}
+                  onDragEnd={readOnly ? undefined : onDragEnd}
                   onDragOver={
-                    isFolder
+                    !readOnly && isFolder
                       ? (event) => {
                           event.stopPropagation()
                           onFolderDragOver(item.id, event)
@@ -354,7 +372,7 @@ export const FileTable = ({
                       : undefined
                   }
                   onDragLeave={
-                    isFolder
+                    !readOnly && isFolder
                       ? (event) => {
                           event.stopPropagation()
                           onFolderDragLeave(item.id)
@@ -362,7 +380,7 @@ export const FileTable = ({
                       : undefined
                   }
                   onDrop={
-                    isFolder
+                    !readOnly && isFolder
                       ? (event) => {
                           event.stopPropagation()
                           onFolderDrop(item.id, event)
@@ -415,34 +433,53 @@ export const FileTable = ({
                     {compactUpdatedAt ? formatDateCompact(item.updatedAt) : formatDate(item.updatedAt)}
                   </Table.Td>
                   <Table.Td className="file-table__td file-table__td--actions">
-                    <Menu withinPortal position="bottom-end">
-                      <Menu.Target>
-                        <ActionIcon variant="subtle" color="gray" aria-label={`Actions for ${item.name}`}>
-                          <IconDotsVertical size={14} />
-                        </ActionIcon>
-                      </Menu.Target>
-                      <Menu.Dropdown>
-                        <Menu.Item leftSection={<IconDownload size={14} />} onClick={() => onDownloadItem(item)}>
-                          Download
-                        </Menu.Item>
-                        <Menu.Item leftSection={<IconCopy size={14} />} onClick={() => onCopyItem(item)}>
-                          Copy
-                        </Menu.Item>
-                        <Menu.Item leftSection={<IconLink size={14} />} onClick={() => onShareItem(item)}>
-                          Share
-                        </Menu.Item>
-                        <Menu.Item leftSection={<IconArrowsMove size={14} />} onClick={() => onMoveItem(item)}>
-                          Move
-                        </Menu.Item>
-                        <Menu.Item
-                          color="red"
-                          leftSection={<IconTrash size={14} />}
-                          onClick={() => onDeleteItem(item)}
-                        >
-                          Delete
-                        </Menu.Item>
-                      </Menu.Dropdown>
-                    </Menu>
+                    {readOnly ? (
+                      <ActionIcon
+                        variant="subtle"
+                        color="gray"
+                        aria-label={`Download ${item.name}`}
+                        onClick={() => onDownloadItem(item)}
+                      >
+                        <IconDownload size={14} />
+                      </ActionIcon>
+                    ) : (
+                      <Menu withinPortal position="bottom-end">
+                        <Menu.Target>
+                          <ActionIcon variant="subtle" color="gray" aria-label={`Actions for ${item.name}`}>
+                            <IconDotsVertical size={14} />
+                          </ActionIcon>
+                        </Menu.Target>
+                        <Menu.Dropdown>
+                          <Menu.Item leftSection={<IconDownload size={14} />} onClick={() => onDownloadItem(item)}>
+                            Download
+                          </Menu.Item>
+                          {onCopyItem ? (
+                            <Menu.Item leftSection={<IconCopy size={14} />} onClick={() => onCopyItem(item)}>
+                              Copy
+                            </Menu.Item>
+                          ) : null}
+                          {onShareItem ? (
+                            <Menu.Item leftSection={<IconLink size={14} />} onClick={() => onShareItem(item)}>
+                              Share
+                            </Menu.Item>
+                          ) : null}
+                          {onMoveItem ? (
+                            <Menu.Item leftSection={<IconArrowsMove size={14} />} onClick={() => onMoveItem(item)}>
+                              Move
+                            </Menu.Item>
+                          ) : null}
+                          {onDeleteItem ? (
+                            <Menu.Item
+                              color="red"
+                              leftSection={<IconTrash size={14} />}
+                              onClick={() => onDeleteItem(item)}
+                            >
+                              Delete
+                            </Menu.Item>
+                          ) : null}
+                        </Menu.Dropdown>
+                      </Menu>
+                    )}
                   </Table.Td>
                 </Table.Tr>
               )

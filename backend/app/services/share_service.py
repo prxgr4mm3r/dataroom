@@ -427,6 +427,16 @@ class ShareService:
             raise ApiError(410, "file_content_missing", "File content is no longer available.")
         return item, asset
 
+    def resolve_item(self, raw_token: str, item_id: str) -> dict[str, Any]:
+        scope = self._resolve_scope(raw_token)
+        item = self.items.get_for_user(scope.owner_user_id, item_id)
+        if item is None or not self._is_item_in_scope(scope, item):
+            raise self._share_not_found()
+
+        asset = self.assets.get_for_item(item.id) if item.kind == ItemKind.FILE.value else None
+        children_count = self.items.count_children(scope.owner_user_id, item.id) if item.kind == ItemKind.FOLDER.value else 0
+        return self.serializer.as_resource(item, asset, children_count=children_count)
+
     def prepare_download(self, raw_token: str, item_ids: list[str]) -> DownloadPayload:
         scope = self._resolve_scope(raw_token)
         normalized_ids = self._sanitize_item_ids(item_ids)

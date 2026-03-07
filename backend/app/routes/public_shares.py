@@ -46,6 +46,14 @@ def get_shared_tree(raw_token: str):
     return jsonify(response)
 
 
+@bp.get("/<raw_token>/items/<item_id>")
+def get_shared_item(raw_token: str, item_id: str):
+    service = _build_service()
+    response = service.resolve_item(raw_token, item_id)
+    g.db.commit()
+    return jsonify(response)
+
+
 @bp.get("/<raw_token>/items/<item_id>/content")
 def get_shared_content(raw_token: str, item_id: str):
     service = _build_service()

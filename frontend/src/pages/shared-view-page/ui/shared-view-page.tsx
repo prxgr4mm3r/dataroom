@@ -1,4 +1,4 @@
-import { IconDownload, IconFolder } from '@tabler/icons-react'
+import { IconAlertTriangle, IconSearch } from '@tabler/icons-react'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useMemo, useState } from 'react'
 import { Navigate, useParams } from 'react-router-dom'
@@ -9,11 +9,14 @@ import type { ItemResourceDto, ListItemsDto } from '@/shared/api'
 import { routes } from '@/shared/config/routes'
 import { formatDate } from '@/shared/lib/date/format-date'
 import { downloadBlob } from '@/shared/lib/file/download-blob'
-import { formatFileSize } from '@/shared/lib/file/format-file-size'
-import { getFileTypePresentation } from '@/shared/lib/file/file-type-presentation'
+import { useSortState } from '@/features/sort-content-items'
 import type { SortBy, SortOrder } from '@/shared/types/common'
-import { Alert, Badge, Box, Button, Center, FileTypeIcon, Group, Loader, Paper, Stack, Table, Text, Title } from '@/shared/ui'
+import { Alert, Badge, Box, Center, Group, Loader, Paper, Stack, Text, TextInput, Title } from '@/shared/ui'
 import { notifyError } from '@/shared/ui'
+import { BulkActionsBar } from '@/widgets/bulk-actions-bar'
+import { BreadcrumbsBar } from '@/widgets/breadcrumbs-bar'
+import { FileTable } from '@/widgets/file-table'
+import { SharedPreviewPane } from '@/widgets/shared-preview-pane'
 
 import './shared-view-page.css'
 
@@ -40,6 +43,25 @@ type SharedListResult = {
 }
 
 const normalizeFolderParentId = (folderId: string): string | null => (folderId === 'root' ? 'root' : folderId)
+const DOWNLOAD_FALLBACK_NAME = 'shared-download.zip'
+
+const parseFilename = (headerValue: unknown): string | null => {
+  if (!headerValue || typeof headerValue !== 'string') {
+    return null
+  }
+
+  const utf8Match = headerValue.match(/filename\*=UTF-8''([^;]+)/i)
+  if (utf8Match?.[1]) {
+    try {
+      return decodeURIComponent(utf8Match[1].replace(/^"|"$/g, ''))
+    } catch {
+      return utf8Match[1].replace(/^"|"$/g, '')
+    }
+  }
+
+  const plainMatch = headerValue.match(/filename="?([^";]+)"?/i)
+  return plainMatch?.[1] ?? null
+}
 
 const getShareMeta = async (shareToken: string): Promise<ShareMetaDto> => {
   const response = await apiClient.get<ShareMetaDto>(`/api/public/shares/${encodeURIComponent(shareToken)}/meta`)
@@ -74,13 +96,24 @@ const listSharedItems = async (
 export const SharedViewPage = () => {
   const { shareToken } = useParams<{ shareToken: string }>()
   const [folderId, setFolderId] = useState('root')
-  const [sortBy] = useState<SortBy>('name')
-  const [sortOrder] = useState<SortOrder>('asc')
-  const [downloadingItemId, setDownloadingItemId] = useState<string | null>(null)
+  const [previewItemId, setPreviewItemId] = useState<string | null>(null)
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [searchQuery, setSearchQuery] = useState('')
+  const [downloadPending, setDownloadPending] = useState(false)
+  const { sortBy, sortOrder, toggleSort } = useSortState()
 
   useEffect(() => {
     setFolderId('root')
+    setPreviewItemId(null)
+    setSelectedIds([])
+    setSearchQuery('')
   }, [shareToken])
+
+  useEffect(() => {
+    setPreviewItemId(null)
+    setSelectedIds([])
+    setSearchQuery('')
+  }, [folderId])
 
   const metaQuery = useQuery({
     queryKey: ['share-meta', shareToken],
@@ -95,21 +128,68 @@ export const SharedViewPage = () => {
     enabled: Boolean(shareToken) && metaQuery.isSuccess,
   })
 
-  const headerTitle = useMemo(() => metaQuery.data?.root.name || 'Shared Data Room', [metaQuery.data?.root.name])
+  const items = useMemo(() => listQuery.data?.items ?? [], [listQuery.data?.items])
+  const breadcrumbs = useMemo(
+    () => listQuery.data?.breadcrumbs.map((crumb) => ({ id: crumb.id, name: crumb.name })) ?? [],
+    [listQuery.data?.breadcrumbs],
+  )
+  const filteredItems = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase()
+    if (!normalizedQuery) {
+      return items
+    }
+    return items.filter((item) => item.name.toLowerCase().includes(normalizedQuery))
+  }, [items, searchQuery])
   const shareExpiresAt = metaQuery.data?.share.expires_at ?? null
 
-  const downloadItem = async (item: ContentItem) => {
-    setDownloadingItemId(item.id)
+  useEffect(() => {
+    if (!previewItemId) {
+      return
+    }
+
+    const itemStillVisible = items.some((item) => item.id === previewItemId)
+    if (!itemStillVisible) {
+      setPreviewItemId(null)
+    }
+  }, [items, previewItemId])
+
+  useEffect(() => {
+    if (!selectedIds.length) {
+      return
+    }
+    const availableIds = new Set(items.map((item) => item.id))
+    setSelectedIds((current) => current.filter((id) => availableIds.has(id)))
+  }, [items, selectedIds.length])
+
+  const toggleSelected = (itemId: string) => {
+    setSelectedIds((current) =>
+      current.includes(itemId) ? current.filter((id) => id !== itemId) : [...current, itemId],
+    )
+  }
+
+  const downloadItems = async (itemIds: string[]) => {
+    if (!itemIds.length) {
+      return
+    }
+
+    setDownloadPending(true)
     try {
-      const response = await apiClient.get<Blob>(
-        `/api/public/shares/${encodeURIComponent(String(shareToken))}/items/${item.id}/content`,
+      const response = await apiClient.post<Blob>(
+        `/api/public/shares/${encodeURIComponent(String(shareToken))}/download`,
+        { item_ids: itemIds },
         { responseType: 'blob' },
       )
-      downloadBlob(response.data, item.name)
+
+      const fallbackName =
+        itemIds.length === 1
+          ? items.find((item) => item.id === itemIds[0])?.name ?? DOWNLOAD_FALLBACK_NAME
+          : DOWNLOAD_FALLBACK_NAME
+      const filename = parseFilename(response.headers['content-disposition']) ?? fallbackName
+      downloadBlob(response.data, filename)
     } catch (error) {
       notifyError(toApiError(error).message)
     } finally {
-      setDownloadingItemId(null)
+      setDownloadPending(false)
     }
   }
 
@@ -127,10 +207,16 @@ export const SharedViewPage = () => {
 
   if (metaQuery.error) {
     return (
-      <Center mih="100vh" p="md">
-        <Paper withBorder p="lg" maw={640} w="100%">
-          <Stack>
-            <Title order={3}>Shared link unavailable</Title>
+      <Center mih="100vh" className="shared-view-page__error-wrap">
+        <Paper className="shared-view-page__error-card" withBorder>
+          <Stack gap="sm">
+            <Group gap={8}>
+              <IconAlertTriangle size={18} color="#dc2626" />
+              <Title order={3}>Shared link unavailable</Title>
+            </Group>
+            <Text size="sm" c="dimmed">
+              This link is invalid, expired, or no longer available.
+            </Text>
             <Alert color="red">{toApiError(metaQuery.error).message}</Alert>
           </Stack>
         </Paper>
@@ -140,120 +226,75 @@ export const SharedViewPage = () => {
 
   return (
     <Box className="shared-view-page">
-      <Paper className="shared-view-page__card" withBorder shadow="sm">
-        <Stack gap="md">
-          <Group justify="space-between" align="flex-start">
-            <Stack gap={4}>
-              <Group gap="xs">
-                <Title order={2}>{headerTitle}</Title>
-                <Badge color="gray" variant="light">
-                  Read-only
-                </Badge>
-              </Group>
-              <Text size="sm" c="dimmed">
-                {shareExpiresAt ? `Link expires: ${formatDate(shareExpiresAt)}` : 'No expiration'}
-              </Text>
-            </Stack>
+      <header className="shared-view-page__header">
+        <Group justify="space-between" align="center" wrap="nowrap" gap="md">
+          <Box className="shared-view-page__breadcrumbs">
+            <BreadcrumbsBar breadcrumbs={breadcrumbs} onNavigate={setFolderId} compact />
+          </Box>
+          <Group gap="xs" wrap="nowrap">
+            <TextInput
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.currentTarget.value)}
+              placeholder="Search files and folders"
+              leftSection={<IconSearch size={14} />}
+              className="shared-view-page__search"
+            />
+            <Badge color="gray" variant="light">
+              Read-only
+            </Badge>
           </Group>
+        </Group>
+        <Text size="xs" c="dimmed" className="shared-view-page__meta">
+          {shareExpiresAt ? `Link expires: ${formatDate(shareExpiresAt)}` : 'No expiration'}
+        </Text>
+      </header>
 
-          <Group gap={8} wrap="wrap">
-            {(listQuery.data?.breadcrumbs ?? []).map((crumb, index) => (
-              <Group gap={8} key={`${crumb.id}-${index}`} wrap="nowrap">
-                <Button
-                  size="compact-xs"
-                  variant="subtle"
-                  onClick={() => setFolderId(crumb.id)}
-                  className="shared-view-page__crumb"
-                >
-                  {crumb.name}
-                </Button>
-                {index < (listQuery.data?.breadcrumbs.length ?? 0) - 1 ? (
-                  <Text size="sm" c="dimmed">
-                    /
-                  </Text>
-                ) : null}
-              </Group>
-            ))}
-          </Group>
-
-          {listQuery.error ? <Alert color="red">{toApiError(listQuery.error).message}</Alert> : null}
-
-          <Box className="shared-view-page__table-wrap">
-            {listQuery.isPending ? (
-              <Center py="xl">
-                <Loader size="sm" />
-              </Center>
+      <main className="shared-view-page__body">
+        <div className="shared-view-page__content">
+          <Box className="shared-view-page__table">
+            {listQuery.error ? (
+              <Alert color="red" m="md" title="Failed to load items">
+                {toApiError(listQuery.error).message}
+              </Alert>
             ) : (
-              <Table striped highlightOnHover withTableBorder>
-                <Table.Thead>
-                  <Table.Tr>
-                    <Table.Th>Name</Table.Th>
-                    <Table.Th>Type</Table.Th>
-                    <Table.Th>Size</Table.Th>
-                    <Table.Th>Updated</Table.Th>
-                    <Table.Th className="shared-view-page__actions-col">Actions</Table.Th>
-                  </Table.Tr>
-                </Table.Thead>
-                <Table.Tbody>
-                  {(listQuery.data?.items ?? []).map((item) => {
-                    const presentation = getFileTypePresentation(item.name, item.mimeType)
-                    const isFolder = item.kind === 'folder'
-                    return (
-                      <Table.Tr key={item.id}>
-                        <Table.Td>
-                          <Group gap={8} wrap="nowrap">
-                            {isFolder ? (
-                              <IconFolder size={16} color="#1d4ed8" />
-                            ) : (
-                              <FileTypeIcon iconKey={presentation.iconKey} size={16} />
-                            )}
-                            <Text className="shared-view-page__name" title={item.name}>
-                              {item.name}
-                            </Text>
-                          </Group>
-                        </Table.Td>
-                        <Table.Td>
-                          <Text size="sm" c="dimmed">
-                            {isFolder ? 'Folder' : presentation.label}
-                          </Text>
-                        </Table.Td>
-                        <Table.Td>{formatFileSize(item.sizeBytes)}</Table.Td>
-                        <Table.Td>{formatDate(item.updatedAt)}</Table.Td>
-                        <Table.Td>
-                          {isFolder ? (
-                            <Button size="xs" variant="default" onClick={() => setFolderId(item.id)}>
-                              Open
-                            </Button>
-                          ) : (
-                            <Button
-                              size="xs"
-                              variant="default"
-                              leftSection={<IconDownload size={14} />}
-                              loading={downloadingItemId === item.id}
-                              onClick={() => void downloadItem(item)}
-                            >
-                              Download
-                            </Button>
-                          )}
-                        </Table.Td>
-                      </Table.Tr>
-                    )
-                  })}
-                  {!listQuery.isPending && (listQuery.data?.items.length ?? 0) === 0 ? (
-                    <Table.Tr>
-                      <Table.Td colSpan={5}>
-                        <Text c="dimmed" ta="center" py="md">
-                          This folder is empty.
-                        </Text>
-                      </Table.Td>
-                    </Table.Tr>
-                  ) : null}
-                </Table.Tbody>
-              </Table>
+              <FileTable
+                readOnly
+                items={filteredItems}
+                loading={listQuery.isPending}
+                currentFolderId={folderId}
+                openedPreviewId={previewItemId}
+                selectedIds={selectedIds}
+                sortBy={sortBy}
+                sortOrder={sortOrder}
+                onToggleSort={toggleSort}
+                onToggleSelect={toggleSelected}
+                onOpenFile={setPreviewItemId}
+                onOpenFolder={setFolderId}
+                onDownloadItem={(item) => {
+                  void downloadItems([item.id])
+                }}
+              />
             )}
           </Box>
-        </Stack>
-      </Paper>
+          <SharedPreviewPane
+            shareToken={String(shareToken)}
+            previewItemId={previewItemId}
+            onClose={() => setPreviewItemId(null)}
+          />
+        </div>
+      </main>
+
+      <footer className="shared-view-page__bulk">
+        <BulkActionsBar
+          mode="download_only"
+          selectedCount={selectedIds.length}
+          onClearSelection={() => setSelectedIds([])}
+          onDownloadSelected={() => {
+            void downloadItems(selectedIds)
+          }}
+          downloadPending={downloadPending}
+        />
+      </footer>
     </Box>
   )
 }
