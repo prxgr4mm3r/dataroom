@@ -17,6 +17,11 @@
   cursor: pointer;
 }
 
+.file-table__th--actions,
+.file-table__td--actions {
+  text-align: right;
+}
+
 .file-table__td {
   border-bottom: 1px solid var(--separator-soft);
   padding-top: 11px;
@@ -25,6 +30,10 @@
 
 .file-table__td--name {
   cursor: pointer;
+}
+
+.file-table__td--actions .mantine-ActionIcon-root {
+  margin-left: auto;
 }
 
 .file-table__row:last-child .file-table__td {

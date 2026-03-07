@@ -154,6 +154,7 @@ class BackendApiTests(unittest.TestCase):
         self.assertEqual("root", root_items.json["folder"]["id"])
         self.assertEqual("Contracts", root_items.json["items"][0]["name"])
         self.assertEqual(1, root_items.json["items"][0]["children_count"])
+        self.assertEqual(0, root_items.json["items"][0]["size_bytes"])
 
         nested_items = self.client.get(f"/api/items?parent_id={nested_id}", headers=headers)
         self.assertEqual(200, nested_items.status_code)
@@ -204,6 +205,17 @@ class BackendApiTests(unittest.TestCase):
         uploaded_item_id = upload.json["id"]
         self.assertEqual(0, upload.json["children_count"])
 
+        folder_a_listing = self.client.get(f"/api/items?parent_id={folder_a}&sort_by=name&sort_order=asc", headers=headers)
+        self.assertEqual(200, folder_a_listing.status_code)
+        folder_a_sizes = {item["name"]: item["size_bytes"] for item in folder_a_listing.json["items"]}
+        self.assertEqual(11, folder_a_sizes["nda.txt"])
+        self.assertEqual(14, folder_a_sizes["report.pdf"])
+
+        root_after_upload = self.client.get("/api/items?parent_id=root&sort_by=name&sort_order=asc", headers=headers)
+        root_sizes_after_upload = {item["name"]: item["size_bytes"] for item in root_after_upload.json["items"]}
+        self.assertEqual(25, root_sizes_after_upload["A"])
+        self.assertEqual(0, root_sizes_after_upload["B"])
+
         content = self.client.get(f"/api/items/{imported_item_id}/content", headers=headers)
         self.assertEqual(200, content.status_code)
         self.assertIn(b"hello world", content.data)
@@ -218,6 +230,11 @@ class BackendApiTests(unittest.TestCase):
         self.assertEqual(folder_b, move_resp.json["parent_id"])
         self.assertEqual(0, move_resp.json["children_count"])
 
+        root_after_move = self.client.get("/api/items?parent_id=root&sort_by=name&sort_order=asc", headers=headers)
+        root_sizes_after_move = {item["name"]: item["size_bytes"] for item in root_after_move.json["items"]}
+        self.assertEqual(11, root_sizes_after_move["A"])
+        self.assertEqual(14, root_sizes_after_move["B"])
+
         copy_resp = self.client.post(
             f"/api/items/{uploaded_item_id}/copy",
             headers=headers,
@@ -228,6 +245,11 @@ class BackendApiTests(unittest.TestCase):
         self.assertNotEqual(uploaded_item_id, copied_item_id)
         self.assertEqual(0, copy_resp.json["children_count"])
 
+        root_after_copy = self.client.get("/api/items?parent_id=root&sort_by=name&sort_order=asc", headers=headers)
+        root_sizes_after_copy = {item["name"]: item["size_bytes"] for item in root_after_copy.json["items"]}
+        self.assertEqual(11, root_sizes_after_copy["A"])
+        self.assertEqual(28, root_sizes_after_copy["B"])
+
         bulk_delete = self.client.post(
             "/api/items/bulk-delete",
             headers=headers,
@@ -236,9 +258,19 @@ class BackendApiTests(unittest.TestCase):
         self.assertEqual(200, bulk_delete.status_code)
         self.assertEqual(2, len(bulk_delete.json["items"]))
 
+        root_after_bulk_delete = self.client.get("/api/items?parent_id=root&sort_by=name&sort_order=asc", headers=headers)
+        root_sizes_after_bulk_delete = {item["name"]: item["size_bytes"] for item in root_after_bulk_delete.json["items"]}
+        self.assertEqual(11, root_sizes_after_bulk_delete["A"])
+        self.assertEqual(0, root_sizes_after_bulk_delete["B"])
+
         delete_folder = self.client.delete(f"/api/items/{folder_a}", headers=headers)
         self.assertEqual(200, delete_folder.status_code)
         self.assertEqual("deleted", delete_folder.json["status"])
+
+        root_after_folder_delete = self.client.get("/api/items?parent_id=root&sort_by=name&sort_order=asc", headers=headers)
+        self.assertEqual(1, len(root_after_folder_delete.json["items"]))
+        self.assertEqual("B", root_after_folder_delete.json["items"][0]["name"])
+        self.assertEqual(0, root_after_folder_delete.json["items"][0]["size_bytes"])
 
     def test_folder_content_endpoint_returns_unsupported_item_type(self):
         headers = self._auth_headers("preview-user")

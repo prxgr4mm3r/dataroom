@@ -32,6 +32,9 @@ class SortPolicy:
         item: DataRoomItem = row["item"]
         if sort_by == "name":
             return (item.name.casefold(), item.created_at)
+        if sort_by == "size":
+            size = item.size_bytes if item.size_bytes is not None else 0
+            return (size, item.name.casefold(), item.created_at)
         return (item.name.casefold(), item.created_at)
 
     @staticmethod
@@ -44,7 +47,11 @@ class SortPolicy:
             mime_type = (asset.mime_type if asset else "") or ""
             return (mime_type.casefold(), item.name.casefold(), item.created_at)
         if sort_by == "size":
-            size = asset.size_bytes if asset and asset.size_bytes is not None else -1
+            size = item.size_bytes
+            if size is None and asset and asset.size_bytes is not None:
+                size = asset.size_bytes
+            if size is None:
+                size = -1
             return (size, item.name.casefold(), item.created_at)
         imported_at = asset.imported_at if asset else None
         if imported_at is None:

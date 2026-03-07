@@ -41,6 +41,27 @@ class ItemService:
         return self.items.count_children(user_id, item.id)
 
     @staticmethod
+    def _normalize_size(value: int | None) -> int:
+        if value is None:
+            return 0
+        return max(0, int(value))
+
+    def _apply_size_delta_to_ancestors(self, user_id: str, parent_id: str | None, delta: int) -> None:
+        if delta == 0:
+            return
+
+        cursor_parent_id = parent_id
+        now = datetime.now(timezone.utc)
+        while cursor_parent_id is not None:
+            folder = self.items.get_for_user(user_id, cursor_parent_id)
+            if folder is None or folder.kind != ItemKind.FOLDER.value:
+                break
+            folder.size_bytes = max(0, self._normalize_size(folder.size_bytes) + delta)
+            folder.updated_at = now
+            self.items.save(folder)
+            cursor_parent_id = folder.parent_id
+
+    @staticmethod
     def _normalize_parent_id(parent_id: str | None) -> str | None:
         if parent_id in (None, "", "root", "null"):
             return None
@@ -102,6 +123,7 @@ class ItemService:
             name=resolved_name,
             normalized_name=normalized_name,
             status=ItemStatus.ACTIVE.value,
+            size_bytes=0,
         )
         self.items.save(folder)
         return self.serializer.as_resource(folder, children_count=0)
@@ -230,6 +252,7 @@ class ItemService:
             name=resolved_name,
             normalized_name=normalized_name,
             status=ItemStatus.FAILED.value,
+            size_bytes=self._normalize_size(declared_size),
         )
         self.items.save(item)
         asset = FileAsset(
@@ -262,9 +285,11 @@ class ItemService:
             asset.checksum = checksum
             asset.imported_at = datetime.now(timezone.utc)
             item.status = ItemStatus.ACTIVE.value
+            item.size_bytes = actual_size
 
             self.items.save(item)
             self.assets.save(asset)
+            self._apply_size_delta_to_ancestors(user.id, parent_id, actual_size)
             return self.serializer.as_resource(item, asset, children_count=0)
         except Exception:  # noqa: BLE001
             if saved_path:
@@ -286,6 +311,7 @@ class ItemService:
             name=resolved_name,
             normalized_name=normalized_name,
             status=ItemStatus.FAILED.value,
+            size_bytes=0,
         )
         self.items.save(item)
         asset = FileAsset(
@@ -318,8 +344,10 @@ class ItemService:
             asset.checksum = checksum
             asset.imported_at = datetime.now(timezone.utc)
             item.status = ItemStatus.ACTIVE.value
+            item.size_bytes = actual_size
             self.items.save(item)
             self.assets.save(asset)
+            self._apply_size_delta_to_ancestors(user_id, parent_id, actual_size)
             return self.serializer.as_resource(item, asset, children_count=0)
         except Exception:  # noqa: BLE001
             if saved_path:
@@ -335,6 +363,9 @@ class ItemService:
         if target_folder is not None:
             self.tree_guard.ensure_move_has_no_cycle(user_id, item, target_folder, self.items)
 
+        old_parent_id = item.parent_id
+        moved_size = self._normalize_size(item.size_bytes)
+
         resolved_name, normalized_name = self._resolve_unique_name(
             user_id,
             new_parent_id,
@@ -346,6 +377,9 @@ class ItemService:
         item.normalized_name = normalized_name
         item.updated_at = datetime.now(timezone.utc)
         self.items.save(item)
+        if old_parent_id != new_parent_id:
+            self._apply_size_delta_to_ancestors(user_id, old_parent_id, -moved_size)
+            self._apply_size_delta_to_ancestors(user_id, new_parent_id, moved_size)
         asset = self.assets.get_for_item(item.id) if item.kind == ItemKind.FILE.value else None
         return self.serializer.as_resource(item, asset, self._children_count_for_item(user_id, item))
 
@@ -366,7 +400,8 @@ class ItemService:
 
         created_paths: list[str] = []
         try:
-            copied = self._copy_recursive(user_id, source, target_parent_id, created_paths)
+            copied, copied_size = self._copy_recursive(user_id, source, target_parent_id, created_paths)
+            self._apply_size_delta_to_ancestors(user_id, target_parent_id, copied_size)
             copied_asset = self.assets.get_for_item(copied.id) if copied.kind == ItemKind.FILE.value else None
             if created_paths_sink is not None:
                 created_paths_sink.extend(created_paths)
@@ -386,7 +421,7 @@ class ItemService:
         source: DataRoomItem,
         target_parent_id: str | None,
         created_paths: list[str],
-    ) -> DataRoomItem:
+    ) -> tuple[DataRoomItem, int]:
         resolved_name, normalized_name = self._resolve_unique_name(user_id, target_parent_id, source.name)
         copied = DataRoomItem(
             user_id=user_id,
@@ -395,6 +430,7 @@ class ItemService:
             name=resolved_name,
             normalized_name=normalized_name,
             status=ItemStatus.ACTIVE.value,
+            size_bytes=0,
         )
         self.items.save(copied)
 
@@ -422,19 +458,27 @@ class ItemService:
                 imported_at=datetime.now(timezone.utc),
                 checksum=new_checksum,
             )
+            copied.size_bytes = new_size
+            self.items.save(copied)
             self.assets.save(copied_asset)
-            return copied
+            return copied, new_size
 
         children = self.items.list_children(user_id, source.id)
+        subtree_size = 0
         for child in children:
-            self._copy_recursive(user_id, child, copied.id, created_paths)
-        return copied
+            _, child_size = self._copy_recursive(user_id, child, copied.id, created_paths)
+            subtree_size += child_size
+        copied.size_bytes = subtree_size
+        self.items.save(copied)
+        return copied, subtree_size
 
     def delete_item(self, user_id: str, item_id: str) -> dict:
         root = self.items.get_for_user(user_id, item_id)
         if root is None:
             raise ApiError(404, "item_not_found", "Item not found.")
 
+        removed_size = self._normalize_size(root.size_bytes)
+        root_parent_id = root.parent_id
         subtree = self._collect_subtree(user_id, root)
         now = datetime.now(timezone.utc)
         assets_by_item = {
@@ -443,6 +487,7 @@ class ItemService:
 
         for node in subtree:
             node.status = ItemStatus.DELETED.value
+            node.size_bytes = 0
             node.updated_at = now
             self.items.save(node)
             if node.kind == ItemKind.FILE.value:
@@ -451,7 +496,10 @@ class ItemService:
                     continue
                 self.storage_service.delete_file(asset.storage_path)
                 asset.storage_path = None
+                asset.size_bytes = None
                 self.assets.save(asset)
+
+        self._apply_size_delta_to_ancestors(user_id, root_parent_id, -removed_size)
 
         return {"id": root.id, "status": ItemStatus.DELETED.value}
 

@@ -4,7 +4,6 @@ import {
   IconDotsVertical,
   IconFile,
   IconFolder,
-  IconPointFilled,
   IconTrash,
 } from '@tabler/icons-react'
 import type { DragEvent } from 'react'
@@ -155,14 +154,8 @@ export const FileTable = ({
               order={sortOrder}
               onClick={() => onToggleSort('size')}
             />
-            <SortableHeader
-              label="Imported at"
-              active={sortBy === 'imported_at'}
-              order={sortOrder}
-              onClick={() => onToggleSort('imported_at')}
-            />
-            <Table.Th className="file-table__th">Status</Table.Th>
-            <Table.Th className="file-table__th">Actions</Table.Th>
+            <Table.Th className="file-table__th">Updated at</Table.Th>
+            <Table.Th className="file-table__th file-table__th--actions" w={56} />
           </Table.Tr>
         </Table.Thead>
 
@@ -243,19 +236,8 @@ export const FileTable = ({
                 </Table.Td>
                 <Table.Td className="file-table__td">{item.kind === 'folder' ? 'Folder' : item.mimeType || '-'}</Table.Td>
                 <Table.Td className="file-table__td">{formatFileSize(item.sizeBytes)}</Table.Td>
-                <Table.Td className="file-table__td">{formatDate(item.importedAt)}</Table.Td>
-                <Table.Td className="file-table__td">
-                  <Group gap={6} wrap="nowrap">
-                    <IconPointFilled
-                      size={10}
-                      color={item.status === 'active' ? '#2f9e44' : item.status === 'failed' ? '#e03131' : '#adb5bd'}
-                    />
-                    <Text size="xs" tt="capitalize">
-                      {item.status}
-                    </Text>
-                  </Group>
-                </Table.Td>
-                <Table.Td className="file-table__td">
+                <Table.Td className="file-table__td">{formatDate(item.updatedAt)}</Table.Td>
+                <Table.Td className="file-table__td file-table__td--actions">
                   <Menu withinPortal position="bottom-end">
                     <Menu.Target>
                       <ActionIcon variant="subtle" color="gray" aria-label={`Actions for ${item.name}`}>

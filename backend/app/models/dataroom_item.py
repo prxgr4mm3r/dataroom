@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from enum import Enum
 
-from sqlalchemy import CheckConstraint, ForeignKey, Index, String, text
+from sqlalchemy import CheckConstraint, ForeignKey, Index, Integer, String, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, IdMixin, TimestampMixin
@@ -37,6 +37,7 @@ class DataRoomItem(Base, IdMixin, TimestampMixin):
     name: Mapped[str] = mapped_column(String(512), nullable=False)
     normalized_name: Mapped[str] = mapped_column(String(512), nullable=False)
     status: Mapped[str] = mapped_column(String(16), nullable=False, default=ItemStatus.ACTIVE.value)
+    size_bytes: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     user = relationship("User", back_populates="items")
     parent = relationship("DataRoomItem", remote_side="DataRoomItem.id")
