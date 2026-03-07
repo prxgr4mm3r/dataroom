@@ -125,3 +125,26 @@ class ItemRepository:
         if exclude_item_id:
             query = query.filter(DataRoomItem.id != exclude_item_id)
         return [row[0] for row in query.all()]
+
+    def search_active_for_user(
+        self,
+        user_id: str,
+        normalized_terms: list[str],
+        limit: int,
+    ) -> list[DataRoomItem]:
+        if not normalized_terms:
+            return []
+
+        query = self.db.query(DataRoomItem).filter(
+            DataRoomItem.user_id == user_id,
+            DataRoomItem.status != ItemStatus.DELETED.value,
+        )
+
+        for term in normalized_terms:
+            query = query.filter(DataRoomItem.normalized_name.contains(term))
+
+        return (
+            query.order_by(DataRoomItem.updated_at.desc(), DataRoomItem.created_at.desc())
+            .limit(limit)
+            .all()
+        )

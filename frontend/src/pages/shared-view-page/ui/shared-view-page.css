@@ -13,8 +13,8 @@
 .shared-view-page__header::after {
   content: '';
   position: absolute;
-  left: 14px;
-  right: 14px;
+  left: 0;
+  right: 0;
   bottom: 0;
   height: 1px;
   background: var(--separator-soft);

@@ -6,8 +6,8 @@
 .file-table {
   --table-sticky-header-background-color: var(--table-header-bg);
   --table-highlight-on-hover-color: var(--table-row-hover-bg);
-  width: calc(100% - 24px);
-  margin: 0 12px;
+  width: 100%;
+  margin: 0;
   border: none;
   border-collapse: collapse;
 }
@@ -102,6 +102,50 @@
   align-items: center;
   justify-content: center;
   min-height: 100%;
+}
+
+.file-table__empty-wrap {
+  display: flex;
+}
+
+.file-table__empty-center {
+  width: 100%;
+  min-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.file-table__empty-state {
+  min-height: 180px;
+  border: 1px dashed var(--border-soft);
+  border-radius: 12px;
+  background: var(--bg-subtle);
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 20px;
+  text-align: center;
+}
+
+.file-table__empty-state-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.file-table__empty-state-hint {
+  max-width: 460px;
 }
 
 .file-table__td--name {
@@ -247,6 +291,15 @@
 }
 
 @media (max-width: 980px) {
+  .file-table__empty-state-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .file-table__empty-state-actions .mantine-Button-root {
+    width: 100%;
+  }
+
   .file-table__bulk-count {
     display: none;
   }

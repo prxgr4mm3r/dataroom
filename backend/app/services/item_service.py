@@ -193,6 +193,40 @@ class ItemService:
             ],
         }
 
+    def search_items(
+        self,
+        user_id: str,
+        query: str | None,
+        limit: int,
+    ) -> dict:
+        normalized_query = self.name_resolver.normalize(str(query or ""))
+        normalized_terms = [segment for segment in normalized_query.split(" ") if segment]
+        if not normalized_terms:
+            return {"items": []}
+
+        normalized_limit = max(1, min(int(limit or 50), 100))
+        entries = self.items.search_active_for_user(user_id, normalized_terms, normalized_limit)
+        if not entries:
+            return {"items": []}
+
+        file_item_ids = [entry.id for entry in entries if entry.kind == ItemKind.FILE.value]
+        assets_by_item_id = {
+            asset.item_id: asset for asset in self.assets.list_for_items(file_item_ids)
+        }
+        folder_ids = [entry.id for entry in entries if entry.kind == ItemKind.FOLDER.value]
+        children_count_by_parent_id = self.items.count_children_by_parent_ids(user_id, folder_ids)
+
+        return {
+            "items": [
+                self.serializer.as_resource(
+                    entry,
+                    assets_by_item_id.get(entry.id),
+                    children_count_by_parent_id.get(entry.id, 0),
+                )
+                for entry in entries
+            ],
+        }
+
     def get_item(self, user_id: str, item_id: str) -> tuple[DataRoomItem, FileAsset | None]:
         item = self.items.get_for_user(user_id, item_id)
         if item is None:

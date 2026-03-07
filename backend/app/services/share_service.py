@@ -374,6 +374,67 @@ class ShareService:
             ],
         }
 
+    def search_items(self, raw_token: str, query: str | None, limit: int) -> dict[str, Any]:
+        scope = self._resolve_scope(raw_token)
+        normalized_query = " ".join(str(query or "").casefold().split())
+        normalized_terms = [segment for segment in normalized_query.split(" ") if segment]
+        if not normalized_terms:
+            return {"items": []}
+
+        normalized_limit = max(1, min(int(limit or 50), 100))
+
+        all_items = self.items.list_active_for_user(scope.owner_user_id)
+
+        scoped_ids: set[str] = set()
+        if scope.root_item.kind == ItemKind.FILE.value:
+            scoped_ids.add(scope.root_item.id)
+        else:
+            children_by_parent: dict[str | None, list[DataRoomItem]] = {}
+            for node in all_items:
+                children_by_parent.setdefault(node.parent_id, []).append(node)
+
+            queue = [scope.root_item.id]
+            while queue:
+                parent_id = queue.pop(0)
+                if parent_id in scoped_ids:
+                    continue
+                scoped_ids.add(parent_id)
+                for child in children_by_parent.get(parent_id, []):
+                    if child.kind == ItemKind.FOLDER.value:
+                        queue.append(child.id)
+                    scoped_ids.add(child.id)
+
+        filtered_items = [
+            item
+            for item in all_items
+            if item.id in scoped_ids and all(term in item.normalized_name for term in normalized_terms)
+        ]
+
+        if not filtered_items:
+            return {"items": []}
+
+        filtered_items.sort(key=lambda item: item.updated_at, reverse=True)
+        limited_items = filtered_items[:normalized_limit]
+
+        file_item_ids = [item.id for item in limited_items if item.kind == ItemKind.FILE.value]
+        assets_by_item_id = {
+            asset.item_id: asset for asset in self.assets.list_for_items(file_item_ids)
+        }
+
+        folder_ids = [item.id for item in limited_items if item.kind == ItemKind.FOLDER.value]
+        children_count_by_parent_id = self.items.count_children_by_parent_ids(scope.owner_user_id, folder_ids)
+
+        return {
+            "items": [
+                self.serializer.as_resource(
+                    item,
+                    assets_by_item_id.get(item.id),
+                    children_count_by_parent_id.get(item.id, 0),
+                )
+                for item in limited_items
+            ],
+        }
+
     def get_folder_tree(self, raw_token: str) -> dict[str, Any]:
         scope = self._resolve_scope(raw_token)
         if scope.root_item.kind != ItemKind.FOLDER.value:

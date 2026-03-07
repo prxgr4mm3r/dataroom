@@ -2,6 +2,17 @@
   border: 1px solid transparent;
 }
 
+.dataroom-toolbar__search.mantine-ActionIcon-root {
+  border: 1px solid var(--table-separator);
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+}
+
+.dataroom-toolbar__search.mantine-ActionIcon-root:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .dataroom-toolbar__theme-toggle--sun.mantine-ActionIcon-root {
   background: #f4f8ff;
   border-color: #c7d8f3;

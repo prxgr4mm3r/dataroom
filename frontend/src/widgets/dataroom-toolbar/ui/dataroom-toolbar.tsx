@@ -1,4 +1,4 @@
-import { IconMoonStars, IconSun } from '@tabler/icons-react'
+import { IconMoonStars, IconSearch, IconSun } from '@tabler/icons-react'
 import type { DragEvent } from 'react'
 
 import type { Breadcrumb } from '@/entities/folder'
@@ -20,6 +20,7 @@ type CurrentFolderMenuHandlers = {
 type DataroomToolbarProps = {
   breadcrumbs: Breadcrumb[]
   onNavigate: (folderId: string) => void
+  onOpenSearch?: () => void
   currentFolderMenu?: CurrentFolderMenuHandlers
   onFolderDragOver?: (folderId: string, event: DragEvent<HTMLElement>) => void
   onFolderDragLeave?: (folderId: string) => void
@@ -30,6 +31,7 @@ type DataroomToolbarProps = {
 export const DataroomToolbar = ({
   breadcrumbs,
   onNavigate,
+  onOpenSearch,
   currentFolderMenu,
   onFolderDragOver,
   onFolderDragLeave,
@@ -57,6 +59,18 @@ export const DataroomToolbar = ({
       </Box>
 
       <Group gap="xs">
+        <Tooltip label="Search files and folders">
+          <ActionIcon
+            variant="default"
+            size="lg"
+            radius="md"
+            className="dataroom-toolbar__search"
+            aria-label="Search files and folders"
+            onClick={onOpenSearch}
+          >
+            <IconSearch size={16} />
+          </ActionIcon>
+        </Tooltip>
         <Tooltip label={toggleThemeLabel}>
           <ActionIcon
             variant="default"

@@ -11,10 +11,11 @@ import { formatDate } from '@/shared/lib/date/format-date'
 import { downloadBlob } from '@/shared/lib/file/download-blob'
 import { useSortState } from '@/features/sort-content-items'
 import type { SortBy, SortOrder } from '@/shared/types/common'
-import { Alert, Badge, Box, Center, Group, Loader, Paper, Stack, Text, TextInput, Title } from '@/shared/ui'
+import { ActionIcon, Alert, Badge, Box, Center, Group, Loader, Paper, Stack, Text, Title, Tooltip } from '@/shared/ui'
 import { notifyError } from '@/shared/ui'
 import { BreadcrumbsBar } from '@/widgets/breadcrumbs-bar'
 import { FileTable } from '@/widgets/file-table'
+import { SearchItemsDialog } from '@/widgets/search-items-dialog'
 import { SharedPreviewPane } from '@/widgets/shared-preview-pane'
 
 import './shared-view-page.css'
@@ -97,7 +98,7 @@ export const SharedViewPage = () => {
   const [folderId, setFolderId] = useState('root')
   const [previewItemId, setPreviewItemId] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
-  const [searchQuery, setSearchQuery] = useState('')
+  const [searchDialogOpened, setSearchDialogOpened] = useState(false)
   const [downloadPending, setDownloadPending] = useState(false)
   const { sortBy, sortOrder, toggleSort } = useSortState()
 
@@ -105,13 +106,11 @@ export const SharedViewPage = () => {
     setFolderId('root')
     setPreviewItemId(null)
     setSelectedIds([])
-    setSearchQuery('')
   }, [shareToken])
 
   useEffect(() => {
     setPreviewItemId(null)
     setSelectedIds([])
-    setSearchQuery('')
   }, [folderId])
 
   const metaQuery = useQuery({
@@ -132,13 +131,6 @@ export const SharedViewPage = () => {
     () => listQuery.data?.breadcrumbs.map((crumb) => ({ id: crumb.id, name: crumb.name })) ?? [],
     [listQuery.data?.breadcrumbs],
   )
-  const filteredItems = useMemo(() => {
-    const normalizedQuery = searchQuery.trim().toLowerCase()
-    if (!normalizedQuery) {
-      return items
-    }
-    return items.filter((item) => item.name.toLowerCase().includes(normalizedQuery))
-  }, [items, searchQuery])
   const shareExpiresAt = metaQuery.data?.share.expires_at ?? null
 
   useEffect(() => {
@@ -164,6 +156,16 @@ export const SharedViewPage = () => {
     setSelectedIds((current) =>
       current.includes(itemId) ? current.filter((id) => id !== itemId) : [...current, itemId],
     )
+  }
+
+  const openSharedSearchFolder = (targetFolderId: string) => {
+    setFolderId(targetFolderId || 'root')
+    setPreviewItemId(null)
+  }
+
+  const openSharedSearchFile = (fileId: string, parentFolderId: string | null) => {
+    setFolderId(parentFolderId ?? 'root')
+    setPreviewItemId(fileId)
   }
 
   const downloadItems = async (itemIds: string[]) => {
@@ -231,13 +233,17 @@ export const SharedViewPage = () => {
             <BreadcrumbsBar breadcrumbs={breadcrumbs} onNavigate={setFolderId} compact />
           </Box>
           <Group gap="xs" wrap="nowrap">
-            <TextInput
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.currentTarget.value)}
-              placeholder="Search files and folders"
-              leftSection={<IconSearch size={14} />}
-              className="shared-view-page__search"
-            />
+            <Tooltip label="Search files and folders">
+              <ActionIcon
+                variant="default"
+                size="lg"
+                radius="md"
+                aria-label="Search files and folders"
+                onClick={() => setSearchDialogOpened(true)}
+              >
+                <IconSearch size={16} />
+              </ActionIcon>
+            </Tooltip>
             <Badge color="gray" variant="light">
               Read-only
             </Badge>
@@ -258,7 +264,7 @@ export const SharedViewPage = () => {
             ) : (
               <FileTable
                 readOnly
-                items={filteredItems}
+                items={items}
                 loading={listQuery.isPending}
                 currentFolderId={folderId}
                 openedPreviewId={previewItemId}
@@ -268,7 +274,7 @@ export const SharedViewPage = () => {
                 onToggleSort={toggleSort}
                 onToggleSelect={toggleSelected}
                 onToggleSelectAll={(checked) => {
-                  setSelectedIds(checked ? filteredItems.map((item) => item.id) : [])
+                  setSelectedIds(checked ? items.map((item) => item.id) : [])
                 }}
                 onOpenFile={setPreviewItemId}
                 onOpenFolder={setFolderId}
@@ -290,6 +296,15 @@ export const SharedViewPage = () => {
           />
         </div>
       </main>
+
+      <SearchItemsDialog
+        opened={searchDialogOpened}
+        mode="shared"
+        shareToken={String(shareToken)}
+        onClose={() => setSearchDialogOpened(false)}
+        onOpenFolder={openSharedSearchFolder}
+        onOpenFile={openSharedSearchFile}
+      />
     </Box>
   )
 }

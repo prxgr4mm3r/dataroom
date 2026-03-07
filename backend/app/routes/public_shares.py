@@ -38,6 +38,21 @@ def list_shared_items(raw_token: str):
     return jsonify(response)
 
 
+@bp.get("/<raw_token>/search")
+def search_shared_items(raw_token: str):
+    query = request.args.get("q")
+    raw_limit = request.args.get("limit", "50")
+    try:
+        limit = int(raw_limit)
+    except (TypeError, ValueError):
+        limit = 50
+
+    service = _build_service()
+    response = service.search_items(raw_token, query, limit)
+    g.db.commit()
+    return jsonify(response)
+
+
 @bp.get("/<raw_token>/folders/tree")
 def get_shared_tree(raw_token: str):
     service = _build_service()

@@ -38,6 +38,7 @@ import { FolderPickerDialog } from '@/widgets/folder-picker-dialog'
 import { ImportFileDialog } from '@/widgets/import-file-dialog'
 import { ImportResultsDialog } from '@/widgets/import-results-dialog'
 import { PreviewPane } from '@/widgets/preview-pane'
+import { SearchItemsDialog } from '@/widgets/search-items-dialog'
 import { ShareLinksDialog } from '@/widgets/share-links-dialog'
 
 import './dataroom-page.css'
@@ -98,6 +99,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
   const [transferDialog, setTransferDialog] = useState<TransferDialogState | null>(null)
   const [shareDialogItem, setShareDialogItem] = useState<ContentItem | null>(null)
   const [dragImportResultDialog, setDragImportResultDialog] = useState<DragImportResult | null>(null)
+  const [searchDialogOpened, setSearchDialogOpened] = useState(false)
   const [targetFolderId, setTargetFolderId] = useState<string>('root')
 
   const navigate = useNavigate()
@@ -232,6 +234,10 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
 
   const openFolder = (id: string) => {
     navigate(toFolderPath(id))
+  }
+
+  const openFileFromSearch = (fileId: string, parentFolderId: string | null) => {
+    navigate(`${toFolderPath(parentFolderId)}${withPreviewQuery(fileId)}`)
   }
 
   const openGoogleImportDialog = () => {
@@ -580,6 +586,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
     return dragMoveController.getFolderDropState(folderId)
   }
   const currentFolderImportOverlayState = dragImportController.getFolderImportOverlayState(normalizedFolderId)
+  const currentFolderMoveOverlayCount = dragMoveController.dragPayload?.itemIds.length ?? 0
 
   const openSingleDeleteDialog = (item: ContentItem) => {
     deleteItemMutation.reset()
@@ -765,6 +772,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
           <DataroomToolbar
             breadcrumbs={breadcrumbs}
             onNavigate={openFolder}
+            onOpenSearch={() => setSearchDialogOpened(true)}
             currentFolderMenu={
               normalizedFolderId === 'root'
                 ? undefined
@@ -812,6 +820,9 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
                   onOpenFile={openFilePreview}
                   onOpenFolder={openFolder}
                   onDownloadItem={downloadSingleItem}
+                  onImportFromGoogle={openGoogleImportDialog}
+                  onImportFromComputer={openComputerImportPicker}
+                  importFromComputerPending={uploadFromComputerMutation.isPending}
                   onCopyItem={openSingleCopyDialog}
                   onMoveItem={openSingleMoveDialog}
                   onDeleteItem={openSingleDeleteDialog}
@@ -838,6 +849,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
                   }}
                   getFolderDropState={getFolderDropState}
                   importOverlayState={currentFolderImportOverlayState}
+                  moveOverlayItemCount={currentFolderMoveOverlayCount}
                   isDraggingItem={dragMoveController.isDraggingItem}
                 />
               )}
@@ -913,6 +925,14 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
         opened={Boolean(shareDialogItem)}
         item={shareDialogItem}
         onClose={() => setShareDialogItem(null)}
+      />
+
+      <SearchItemsDialog
+        opened={searchDialogOpened}
+        mode="dataroom"
+        onClose={() => setSearchDialogOpened(false)}
+        onOpenFolder={openFolder}
+        onOpenFile={openFileFromSearch}
       />
     </>
   )

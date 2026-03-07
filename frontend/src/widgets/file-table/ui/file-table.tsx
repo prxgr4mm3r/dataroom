@@ -1,6 +1,8 @@
 import {
   IconArrowsMove,
   IconAlertTriangle,
+  IconBrandGoogleDrive,
+  IconCloudUpload,
   IconCopy,
   IconDownload,
   IconDotsVertical,
@@ -54,6 +56,9 @@ type FileTableProps = {
   onOpenFile: (itemId: string) => void
   onOpenFolder: (folderId: string) => void
   onDownloadItem: (item: ContentItem) => void
+  onImportFromGoogle?: () => void
+  onImportFromComputer?: () => void
+  importFromComputerPending?: boolean
   onCopyItem?: (item: ContentItem) => void
   onMoveItem?: (item: ContentItem) => void
   onDeleteItem?: (item: ContentItem) => void
@@ -74,6 +79,7 @@ type FileTableProps = {
   onFolderDrop?: (folderId: string, event: DragEvent<HTMLElement>) => void
   getFolderDropState?: (folderId: string) => DropState
   importOverlayState?: DragImportOverlayState
+  moveOverlayItemCount?: number
   isDraggingItem?: (itemId: string) => boolean
 }
 
@@ -87,6 +93,18 @@ const formatDraggedFileCount = (count: number): string => {
   }
 
   return `${count} files`
+}
+
+const formatDraggedItemCount = (count: number): string => {
+  if (count <= 0) {
+    return 'items'
+  }
+
+  if (count === 1) {
+    return '1 item'
+  }
+
+  return `${count} items`
 }
 
 const EMPTY_IMPORT_OVERLAY: DragImportOverlayState = { mode: 'none' }
@@ -143,6 +161,9 @@ export const FileTable = ({
   onOpenFile,
   onOpenFolder,
   onDownloadItem,
+  onImportFromGoogle,
+  onImportFromComputer,
+  importFromComputerPending = false,
   onCopyItem,
   onMoveItem,
   onDeleteItem,
@@ -163,6 +184,7 @@ export const FileTable = ({
   onFolderDrop = NOOP_FOLDER_DROP,
   getFolderDropState = NOOP_DROP_STATE,
   importOverlayState = EMPTY_IMPORT_OVERLAY,
+  moveOverlayItemCount = 0,
   isDraggingItem = NOOP_IS_DRAGGING,
 }: FileTableProps) => {
   const currentFolderDropState = readOnly ? 'none' : getFolderDropState(currentFolderId)
@@ -175,8 +197,12 @@ export const FileTable = ({
   const selectedCount = selectedIds.length
   const showBulkHeaderActions = selectedCount > 0 && Boolean(onClearSelection) && Boolean(onDownloadSelected)
   const isImportOverlayActive = !readOnly && importOverlayState.mode !== 'none'
+  const isMoveOverlayActive =
+    !readOnly && !isImportOverlayActive && moveOverlayItemCount > 0 && currentFolderDropState !== 'none'
+  const maxImportSizeLabel = formatFileSize(MAX_IMPORT_FILE_SIZE_BYTES).replace('.0 ', ' ')
   const draggedFileCountLabel =
     importOverlayState.mode === 'none' ? '' : formatDraggedFileCount(importOverlayState.fileCount)
+  const draggedItemCountLabel = formatDraggedItemCount(moveOverlayItemCount)
 
   const renderImportOverlay = () => {
     if (readOnly) {
@@ -269,6 +295,70 @@ export const FileTable = ({
     )
   }
 
+  const renderMoveOverlay = () => {
+    if (!isMoveOverlayActive) {
+      return null
+    }
+
+    if (currentFolderDropState === 'warning') {
+      return (
+        <div className="file-table__drop-overlay file-table__drop-overlay--warning" aria-live="polite">
+          <div className="file-table__drop-overlay-card">
+            <span className="file-table__drop-overlay-icon">
+              <IconAlertTriangle size={18} stroke={2} />
+            </span>
+            <div>
+              <Text size="sm" fw={700}>
+                Items are already in this folder.
+              </Text>
+              <Text size="xs" c="dimmed">
+                Choose another destination folder to move them.
+              </Text>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
+    if (currentFolderDropState === 'invalid') {
+      return (
+        <div className="file-table__drop-overlay file-table__drop-overlay--too-large" aria-live="polite">
+          <div className="file-table__drop-overlay-card">
+            <span className="file-table__drop-overlay-icon">
+              <IconAlertTriangle size={18} stroke={2} />
+            </span>
+            <div>
+              <Text size="sm" fw={700}>
+                This destination is not available.
+              </Text>
+              <Text size="xs" c="dimmed">
+                You can&apos;t move items to this folder.
+              </Text>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
+    return (
+      <div className="file-table__drop-overlay file-table__drop-overlay--ready" aria-live="polite">
+        <div className="file-table__drop-overlay-card">
+          <span className="file-table__drop-overlay-icon">
+            <IconArrowsMove size={18} stroke={2} />
+          </span>
+          <div>
+            <Text size="sm" fw={700}>
+              Drop to move {draggedItemCountLabel}.
+            </Text>
+            <Text size="xs" c="dimmed">
+              Items will be moved to this folder.
+            </Text>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   const handleRootDragLeave = (event: DragEvent<HTMLElement>) => {
     if (readOnly) {
       return
@@ -291,25 +381,61 @@ export const FileTable = ({
   if (!items.length) {
     let emptyBackground: string | undefined
     if (!isImportOverlayActive) {
-      if (currentFolderDropState === 'valid') {
-        emptyBackground = 'var(--state-success-bg)'
-      } else if (currentFolderDropState === 'invalid') {
+      if (currentFolderDropState === 'invalid') {
         emptyBackground = 'var(--state-danger-bg)'
       }
     }
 
     return (
       <Box
-        className="file-table__container"
+        className="file-table__container file-table__empty-wrap"
         p="md"
+        h="100%"
         bg={emptyBackground}
-        style={{ minHeight: 120 }}
+        style={{ minHeight: 220 }}
         onDragOver={readOnly ? undefined : (event) => onFolderDragOver(currentFolderId, event)}
         onDrop={readOnly ? undefined : (event) => onFolderDrop(currentFolderId, event)}
         onDragLeave={readOnly ? undefined : handleRootDragLeave}
       >
-        <Text c="dimmed">This folder is empty.</Text>
-        {renderImportOverlay()}
+        {readOnly ? <Text c="dimmed">This folder is empty.</Text> : null}
+        {!readOnly && !isImportOverlayActive && !isMoveOverlayActive ? (
+          <div className="file-table__empty-center">
+            <div className="file-table__empty-state">
+              <span className="file-table__empty-state-icon" aria-hidden="true">
+                <IconCloudUpload size={22} />
+              </span>
+              <Text size="sm" fw={700}>
+                This folder is empty.
+              </Text>
+              <Text size="xs" c="dimmed" className="file-table__empty-state-hint">
+                Import files up to {maxImportSizeLabel}. Drag and drop files here to upload.
+              </Text>
+              <Group gap="xs" className="file-table__empty-state-actions">
+                <Button
+                  size="xs"
+                  variant="default"
+                  leftSection={<IconBrandGoogleDrive size={14} />}
+                  onClick={onImportFromGoogle}
+                  disabled={!onImportFromGoogle}
+                >
+                  Import from Google Drive
+                </Button>
+                <Button
+                  size="xs"
+                  variant="subtle"
+                  leftSection={<IconUpload size={14} />}
+                  onClick={onImportFromComputer}
+                  disabled={!onImportFromComputer}
+                  loading={importFromComputerPending}
+                >
+                  Upload from computer
+                </Button>
+              </Group>
+            </div>
+          </div>
+        ) : null}
+        {isImportOverlayActive ? renderImportOverlay() : null}
+        {isMoveOverlayActive ? renderMoveOverlay() : null}
       </Box>
     )
   }
@@ -605,6 +731,7 @@ export const FileTable = ({
         </Table>
       </ScrollArea>
       {renderImportOverlay()}
+      {renderMoveOverlay()}
     </Box>
   )
 }

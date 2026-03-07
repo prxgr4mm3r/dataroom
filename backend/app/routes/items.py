@@ -34,6 +34,21 @@ def list_items():
     return jsonify(response)
 
 
+@bp.get("/search")
+@require_auth
+def search_items():
+    query = request.args.get("q")
+    raw_limit = request.args.get("limit", "50")
+    try:
+        limit = int(raw_limit)
+    except (TypeError, ValueError):
+        limit = 50
+
+    service = _build_item_service()
+    response = service.search_items(g.current_user.id, query, limit)
+    return jsonify(response)
+
+
 @bp.get("/<item_id>")
 @require_auth
 def get_item(item_id: str):
