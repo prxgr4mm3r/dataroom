@@ -300,6 +300,11 @@ class ItemService:
         if uploaded_file is None or not uploaded_file.filename:
             raise ApiError(400, "invalid_request", "file is required.")
 
+        max_size = int(self.config["MAX_IMPORT_FILE_SIZE_BYTES"])
+        declared_size = uploaded_file.content_length
+        if declared_size is not None and declared_size > max_size:
+            raise ApiError(413, "file_too_large", "Selected file exceeds size limit.")
+
         target_folder = self._resolve_parent_folder(user_id, target_folder_id)
         parent_id = target_folder.id if target_folder else None
         resolved_name, normalized_name = self._resolve_unique_name(user_id, parent_id, uploaded_file.filename)
@@ -334,7 +339,6 @@ class ItemService:
                 item.name,
                 uploaded_file.stream,
             )
-            max_size = int(self.config["MAX_IMPORT_FILE_SIZE_BYTES"])
             if actual_size > max_size:
                 self.storage_service.delete_file(saved_path)
                 raise ApiError(413, "file_too_large", "Selected file exceeds size limit.")

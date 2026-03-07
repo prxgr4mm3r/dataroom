@@ -1,3 +1,8 @@
+.file-table__container {
+  position: relative;
+  min-height: 0;
+}
+
 .file-table {
   width: calc(100% - 24px);
   margin: 0 12px;
@@ -38,4 +43,79 @@
 
 .file-table__row:last-child .file-table__td {
   border-bottom: none;
+}
+
+.file-table__drop-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed transparent;
+  border-radius: 8px;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(4px);
+  animation: file-table-drop-overlay-in 160ms ease-out forwards;
+}
+
+.file-table__drop-overlay--ready {
+  background: rgba(47, 111, 237, 0.08);
+  border-color: rgba(47, 111, 237, 0.45);
+}
+
+.file-table__drop-overlay--too-large {
+  background: rgba(224, 49, 49, 0.1);
+  border-color: rgba(224, 49, 49, 0.5);
+}
+
+.file-table__drop-overlay--warning {
+  background: rgba(245, 159, 0, 0.12);
+  border-color: rgba(245, 159, 0, 0.55);
+}
+
+.file-table__drop-overlay--uploading {
+  background: rgba(246, 248, 252, 0.95);
+  border-color: rgba(148, 163, 184, 0.5);
+}
+
+.file-table__drop-overlay-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 520px;
+  padding: 14px 18px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08);
+}
+
+.file-table__drop-overlay-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.file-table__drop-overlay--ready .file-table__drop-overlay-icon {
+  color: #1d4ed8;
+}
+
+.file-table__drop-overlay--too-large .file-table__drop-overlay-icon {
+  color: #c92a2a;
+}
+
+.file-table__drop-overlay--warning .file-table__drop-overlay-icon {
+  color: #c87900;
+}
+
+@keyframes file-table-drop-overlay-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

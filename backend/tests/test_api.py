@@ -282,6 +282,22 @@ class BackendApiTests(unittest.TestCase):
         self.assertEqual(400, content.status_code)
         self.assertEqual("unsupported_item_type", content.json["error"]["code"])
 
+    def test_local_upload_rejects_oversized_file(self):
+        headers = self._auth_headers("oversize-user")
+        self.app.config["MAX_IMPORT_FILE_SIZE_BYTES"] = 4
+
+        upload = self.client.post(
+            "/api/files/upload",
+            headers=headers,
+            data={
+                "file": (io.BytesIO(b"12345"), "big.txt"),
+            },
+            content_type="multipart/form-data",
+        )
+
+        self.assertEqual(413, upload.status_code)
+        self.assertEqual("file_too_large", upload.json["error"]["code"])
+
     def test_download_single_file_folder_and_multi_items(self):
         headers = self._auth_headers("download-user")
         docs_folder = self.client.post("/api/folders", headers=headers, json={"name": "Docs"}).json["id"]

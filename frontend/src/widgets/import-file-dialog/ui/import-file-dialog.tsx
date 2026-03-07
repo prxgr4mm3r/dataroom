@@ -8,6 +8,10 @@ import { useUploadFileFromDevice } from '@/features/upload-file-from-device'
 import { toApiError } from '@/shared/api'
 import { t } from '@/shared/i18n/messages'
 import { formatFileSize } from '@/shared/lib/file/format-file-size'
+import {
+  getImportFileTooLargeMessage,
+  isImportFileTooLarge,
+} from '@/shared/lib/file/import-file-size-limit'
 import { toNullableFolderId } from '@/shared/routes/dataroom-routes'
 import {
   Alert,
@@ -67,6 +71,13 @@ export const ImportFileDialog = ({ opened, folderId, onClose }: ImportFileDialog
   const handleLocalUpload = async (file: File | null | undefined) => {
     if (!file) {
       setUploadError(t('uploadNoFile'))
+      return
+    }
+
+    if (isImportFileTooLarge(file)) {
+      const message = getImportFileTooLargeMessage()
+      setUploadError(message)
+      notifyError(message)
       return
     }
 

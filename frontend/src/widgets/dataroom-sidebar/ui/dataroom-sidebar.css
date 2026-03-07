@@ -292,6 +292,10 @@
   background: #eaf7ed;
 }
 
+.sidebar-tree-row--drop-warning {
+  background: #fff8db;
+}
+
 .sidebar-tree-row--drop-invalid {
   background: #fff1f1;
 }

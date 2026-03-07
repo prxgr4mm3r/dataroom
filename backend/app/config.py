@@ -53,7 +53,7 @@ def build_config(overrides: dict[str, Any] | None = None) -> dict[str, Any]:
         "AUTO_CREATE_SCHEMA": _as_bool(os.getenv("AUTO_CREATE_SCHEMA"), False),
         "MAX_IMPORT_FILE_SIZE_BYTES": _as_int(
             os.getenv("MAX_IMPORT_FILE_SIZE_BYTES"),
-            100 * 1024 * 1024,
+            4 * 1024 * 1024,
         ),
         "REQUEST_TIMEOUT_SECONDS": _as_int(os.getenv("REQUEST_TIMEOUT_SECONDS"), 20),
     }

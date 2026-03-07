@@ -8,7 +8,7 @@ import { useContentTreeBrowser } from '@/features/browse-content-tree'
 import { useBulkCopyItems, useCopyItem } from '@/features/copy-content-items'
 import { useBulkDeleteItems, useDeleteItem } from '@/features/delete-content-items'
 import { useDownloadContentItems } from '@/features/download-content-items'
-import { useDragImportController } from '@/features/drag-import-files'
+import { useDragImportController, type DragImportResult } from '@/features/drag-import-files'
 import { useDragMoveController, validateMoveTarget } from '@/features/drag-move-items'
 import { useListContentItemsQuery } from '@/features/list-content-items'
 import { useBulkMoveItems, useMoveItem } from '@/features/move-content-items'
@@ -35,6 +35,7 @@ import { DeleteItemsDialog } from '@/widgets/delete-items-dialog'
 import { FileTable } from '@/widgets/file-table'
 import { FolderPickerDialog } from '@/widgets/folder-picker-dialog'
 import { ImportFileDialog } from '@/widgets/import-file-dialog'
+import { ImportResultsDialog } from '@/widgets/import-results-dialog'
 import { PreviewPane } from '@/widgets/preview-pane'
 
 import './dataroom-page.css'
@@ -61,7 +62,7 @@ type TransferDialogState = {
   label: string
 }
 
-type DropState = 'none' | 'valid' | 'invalid'
+type DropState = 'none' | 'valid' | 'warning' | 'invalid'
 
 const moveReasonMessage = (reason: ReturnType<typeof validateMoveTarget>['reason']): string | null => {
   if (reason === 'self') {
@@ -91,6 +92,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
   const [createFolderOpened, setCreateFolderOpened] = useState(false)
   const [deleteDialog, setDeleteDialog] = useState<DeleteDialogState | null>(null)
   const [transferDialog, setTransferDialog] = useState<TransferDialogState | null>(null)
+  const [dragImportResultDialog, setDragImportResultDialog] = useState<DragImportResult | null>(null)
   const [targetFolderId, setTargetFolderId] = useState<string>('root')
 
   const navigate = useNavigate()
@@ -383,14 +385,20 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
     if (dragImportController.isExternalFilesDrag(event)) {
       const result = await dragImportController.dropOnFolder(folderId, event)
       if (result) {
-        if (result.uploadedCount > 0) {
+        if (result.hasPartialFailures) {
+          setDragImportResultDialog(result)
+          const summary =
+            result.failedCount === 1
+              ? '1 file was not imported.'
+              : `${result.failedCount} files were not imported.`
+          notifyError(summary)
+        } else if (result.uploadedCount > 0) {
           if (result.uploadedCount === 1) {
             notifySuccess(t('fileUploadedSuccess'))
           } else {
             notifySuccess(`${result.uploadedCount} files uploaded successfully.`)
           }
-        }
-        if (result.failedCount > 0) {
+        } else if (result.failedCount > 0) {
           const summary =
             result.failedCount === 1
               ? '1 file failed to upload.'
@@ -411,6 +419,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
     }
     return dragMoveController.getFolderDropState(folderId)
   }
+  const currentFolderImportOverlayState = dragImportController.getFolderImportOverlayState(normalizedFolderId)
 
   const openSingleDeleteDialog = (item: ContentItem) => {
     deleteItemMutation.reset()
@@ -588,6 +597,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
                     void handleFolderDrop(folderId, event)
                   }}
                   getFolderDropState={getFolderDropState}
+                  importOverlayState={currentFolderImportOverlayState}
                   isDraggingItem={dragMoveController.isDraggingItem}
                 />
               )}
@@ -655,6 +665,13 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
         onSelectFolder={setTargetFolderId}
         onConfirm={() => void onConfirmTransfer()}
         onClose={closeTransferDialog}
+      />
+
+      <ImportResultsDialog
+        opened={Boolean(dragImportResultDialog)}
+        uploadedFiles={dragImportResultDialog?.uploadedFiles ?? []}
+        failedFiles={dragImportResultDialog?.failedFiles ?? []}
+        onClose={() => setDragImportResultDialog(null)}
       />
     </>
   )

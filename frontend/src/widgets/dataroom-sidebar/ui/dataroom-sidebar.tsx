@@ -21,7 +21,7 @@ import { normalizeFolderId } from '@/shared/routes/dataroom-routes'
 import { ActionIcon, Box, Button, Group, Menu, ScrollArea, Text, Title, Tooltip } from '@/shared/ui'
 import './dataroom-sidebar.css'
 
-type DropState = 'none' | 'valid' | 'invalid'
+type DropState = 'none' | 'valid' | 'warning' | 'invalid'
 
 type DataroomSidebarProps = {
   currentUser: UserProfile
@@ -259,6 +259,8 @@ const TreeRow = ({
   const dropClass =
     dropState === 'valid'
       ? 'sidebar-tree-row--drop-valid'
+      : dropState === 'warning'
+        ? 'sidebar-tree-row--drop-warning'
       : dropState === 'invalid'
         ? 'sidebar-tree-row--drop-invalid'
         : ''
