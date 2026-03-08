@@ -203,7 +203,6 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
       if (rangeIds.length) {
         setSelectedAndSyncAnchor(options.keepExisting ? [...selectedIds, ...rangeIds] : rangeIds)
       }
-      selectionAnchorIdRef.current = itemId
       return
     }
 

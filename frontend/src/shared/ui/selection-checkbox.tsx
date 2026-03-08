@@ -35,6 +35,10 @@ export const SelectionCheckbox = ({
       tabIndex={tabIndex}
       aria-label={ariaLabel}
       className={rootClassName}
+      onMouseDown={(event) => {
+        // Keep click selection from leaving a persistent focus ring on the last clicked checkbox.
+        event.preventDefault()
+      }}
       onClick={onClick}
       onCheckedChange={(state) => onCheckedChange(state === true)}
     >

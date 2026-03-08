@@ -185,7 +185,6 @@ export const SharedViewPage = () => {
       if (rangeIds.length) {
         setSelectedIds((current) => (options.keepExisting ? [...new Set([...current, ...rangeIds])] : rangeIds))
       }
-      selectionAnchorIdRef.current = itemId
       return
     }
     toggleSelected(itemId)
