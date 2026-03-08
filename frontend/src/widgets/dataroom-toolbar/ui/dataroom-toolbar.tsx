@@ -13,6 +13,7 @@ type CurrentFolderMenuHandlers = {
   onDownload?: (folder: Breadcrumb) => void
   onCopy?: (folder: Breadcrumb) => void
   onShare?: (folder: Breadcrumb) => void
+  onRename?: (folder: Breadcrumb) => void
   onMove?: (folder: Breadcrumb) => void
   onDelete?: (folder: Breadcrumb) => void
 }

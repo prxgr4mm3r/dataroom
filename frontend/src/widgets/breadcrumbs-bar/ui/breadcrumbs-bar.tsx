@@ -5,6 +5,7 @@ import {
   IconCopy,
   IconDots,
   IconDownload,
+  IconEdit,
   IconHome2,
   IconLink,
   IconTrash,
@@ -21,6 +22,7 @@ type CurrentFolderMenuHandlers = {
   onDownload?: (folder: Breadcrumb) => void
   onCopy?: (folder: Breadcrumb) => void
   onShare?: (folder: Breadcrumb) => void
+  onRename?: (folder: Breadcrumb) => void
   onMove?: (folder: Breadcrumb) => void
   onDelete?: (folder: Breadcrumb) => void
 }
@@ -65,6 +67,7 @@ export const BreadcrumbsBar = ({
       currentFolderMenu?.onDownload ||
         currentFolderMenu?.onCopy ||
         currentFolderMenu?.onShare ||
+        currentFolderMenu?.onRename ||
         currentFolderMenu?.onMove ||
         currentFolderMenu?.onDelete,
     )
@@ -121,6 +124,11 @@ export const BreadcrumbsBar = ({
           {currentFolderMenu.onShare ? (
             <Menu.Item leftSection={<IconLink size={14} />} onClick={() => currentFolderMenu.onShare?.(crumb)}>
               Share
+            </Menu.Item>
+          ) : null}
+          {currentFolderMenu.onRename ? (
+            <Menu.Item leftSection={<IconEdit size={14} />} onClick={() => currentFolderMenu.onRename?.(crumb)}>
+              Rename
             </Menu.Item>
           ) : null}
           {currentFolderMenu.onMove ? (

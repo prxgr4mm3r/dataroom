@@ -301,6 +301,7 @@ export const SharedViewPage = () => {
         opened={searchDialogOpened}
         mode="shared"
         shareToken={String(shareToken)}
+        currentFolderId={folderId}
         onClose={() => setSearchDialogOpened(false)}
         onOpenFolder={openSharedSearchFolder}
         onOpenFile={openSharedSearchFile}

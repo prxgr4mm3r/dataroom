@@ -38,6 +38,7 @@ import { FolderPickerDialog } from '@/widgets/folder-picker-dialog'
 import { ImportFileDialog } from '@/widgets/import-file-dialog'
 import { ImportResultsDialog } from '@/widgets/import-results-dialog'
 import { PreviewPane } from '@/widgets/preview-pane'
+import { RenameItemDialog } from '@/widgets/rename-item-dialog'
 import { SearchItemsDialog } from '@/widgets/search-items-dialog'
 import { ShareLinksDialog } from '@/widgets/share-links-dialog'
 
@@ -98,6 +99,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
   const [deleteDialog, setDeleteDialog] = useState<DeleteDialogState | null>(null)
   const [transferDialog, setTransferDialog] = useState<TransferDialogState | null>(null)
   const [shareDialogItem, setShareDialogItem] = useState<ContentItem | null>(null)
+  const [renameDialogItem, setRenameDialogItem] = useState<ContentItem | null>(null)
   const [dragImportResultDialog, setDragImportResultDialog] = useState<DragImportResult | null>(null)
   const [searchDialogOpened, setSearchDialogOpened] = useState(false)
   const [targetFolderId, setTargetFolderId] = useState<string>('root')
@@ -598,6 +600,10 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
     setShareDialogItem(item)
   }
 
+  const openSingleRenameDialog = (item: ContentItem) => {
+    setRenameDialogItem(item)
+  }
+
   const openCurrentFolderCopyDialog = (folderId: string) => {
     const folderItem = getFolderActionItem(folderId)
     if (!folderItem || folderItem.kind !== 'folder') {
@@ -628,6 +634,14 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
       return
     }
     openSingleShareDialog(folderItem)
+  }
+
+  const openCurrentFolderRenameDialog = (folderId: string) => {
+    const folderItem = getFolderActionItem(folderId)
+    if (!folderItem || folderItem.kind !== 'folder') {
+      return
+    }
+    openSingleRenameDialog(folderItem)
   }
 
   const downloadCurrentFolder = (folderId: string) => {
@@ -780,6 +794,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
                     onDownload: (folder) => downloadCurrentFolder(folder.id),
                     onCopy: (folder) => openCurrentFolderCopyDialog(folder.id),
                     onShare: (folder) => openCurrentFolderShareDialog(folder.id),
+                    onRename: (folder) => openCurrentFolderRenameDialog(folder.id),
                     onMove: (folder) => openCurrentFolderMoveDialog(folder.id),
                     onDelete: (folder) => openCurrentFolderDeleteDialog(folder.id),
                   }
@@ -824,6 +839,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
                   onImportFromComputer={openComputerImportPicker}
                   importFromComputerPending={uploadFromComputerMutation.isPending}
                   onCopyItem={openSingleCopyDialog}
+                  onRenameItem={openSingleRenameDialog}
                   onMoveItem={openSingleMoveDialog}
                   onDeleteItem={openSingleDeleteDialog}
                   onShareItem={openSingleShareDialog}
@@ -927,9 +943,16 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
         onClose={() => setShareDialogItem(null)}
       />
 
+      <RenameItemDialog
+        opened={Boolean(renameDialogItem)}
+        item={renameDialogItem}
+        onClose={() => setRenameDialogItem(null)}
+      />
+
       <SearchItemsDialog
         opened={searchDialogOpened}
         mode="dataroom"
+        currentFolderId={normalizedFolderId}
         onClose={() => setSearchDialogOpened(false)}
         onOpenFolder={openFolder}
         onOpenFile={openFileFromSearch}

@@ -286,6 +286,69 @@ class BackendApiTests(unittest.TestCase):
         self.assertEqual("B", root_after_folder_delete.json["items"][0]["name"])
         self.assertEqual(0, root_after_folder_delete.json["items"][0]["size_bytes"])
 
+    def test_rename_file_and_folder(self):
+        headers = self._auth_headers("rename-user")
+        folder_a = self.client.post("/api/folders", headers=headers, json={"name": "A"}).json["id"]
+        folder_b = self.client.post("/api/folders", headers=headers, json={"name": "B"}).json["id"]
+
+        first_file = self.client.post(
+            "/api/files/upload",
+            headers=headers,
+            data={
+                "file": (io.BytesIO(b"alpha"), "report.pdf"),
+                "target_folder_id": folder_a,
+            },
+            content_type="multipart/form-data",
+        )
+        self.assertEqual(201, first_file.status_code)
+
+        second_file = self.client.post(
+            "/api/files/upload",
+            headers=headers,
+            data={
+                "file": (io.BytesIO(b"beta"), "draft.pdf"),
+                "target_folder_id": folder_a,
+            },
+            content_type="multipart/form-data",
+        )
+        self.assertEqual(201, second_file.status_code)
+        second_file_id = second_file.json["id"]
+
+        rename_file = self.client.patch(
+            f"/api/items/{second_file_id}/rename",
+            headers=headers,
+            json={"name": "report.pdf"},
+        )
+        self.assertEqual(200, rename_file.status_code)
+        self.assertEqual("report (1).pdf", rename_file.json["name"])
+
+        folder_a_listing = self.client.get(f"/api/items?parent_id={folder_a}&sort_by=name&sort_order=asc", headers=headers)
+        self.assertEqual(200, folder_a_listing.status_code)
+        self.assertListEqual(
+            ["report (1).pdf", "report.pdf"],
+            [item["name"] for item in folder_a_listing.json["items"]],
+        )
+
+        rename_folder = self.client.patch(
+            f"/api/items/{folder_b}/rename",
+            headers=headers,
+            json={"name": "A"},
+        )
+        self.assertEqual(200, rename_folder.status_code)
+        self.assertEqual("A (1)", rename_folder.json["name"])
+
+        get_folder = self.client.get(f"/api/items/{folder_b}", headers=headers)
+        self.assertEqual(200, get_folder.status_code)
+        self.assertEqual("A (1)", get_folder.json["name"])
+
+        invalid_name = self.client.patch(
+            f"/api/items/{second_file_id}/rename",
+            headers=headers,
+            json={"name": "   "},
+        )
+        self.assertEqual(400, invalid_name.status_code)
+        self.assertEqual("invalid_name", invalid_name.json["error"]["code"])
+
     def test_folder_content_endpoint_returns_unsupported_item_type(self):
         headers = self._auth_headers("preview-user")
         folder = self.client.post("/api/folders", headers=headers, json={"name": "OnlyFolders"})

@@ -103,6 +103,17 @@ def move_item(item_id: str):
     return jsonify(resource)
 
 
+@bp.patch("/<item_id>/rename")
+@require_auth
+def rename_item(item_id: str):
+    payload = request.get_json(silent=True) or {}
+    name = payload.get("name")
+    service = _build_item_service()
+    resource = service.rename_item(g.current_user.id, item_id, name)
+    g.db.commit()
+    return jsonify(resource)
+
+
 @bp.post("/<item_id>/copy")
 @require_auth
 def copy_item(item_id: str):

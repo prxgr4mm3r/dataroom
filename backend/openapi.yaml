@@ -400,6 +400,33 @@ paths:
         '409':
           $ref: '#/components/responses/ConflictError'
 
+  /api/items/{item_id}/rename:
+    patch:
+      tags: [Items]
+      summary: Rename one item
+      operationId: renameItem
+      parameters:
+        - $ref: '#/components/parameters/ItemId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RenameItemRequest'
+      responses:
+        '200':
+          description: Updated item
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemResource'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
   /api/items/{item_id}/copy:
     post:
       tags: [Items]
@@ -879,6 +906,14 @@ components:
         target_folder_id:
           type: [string, 'null']
       required: [target_folder_id]
+
+    RenameItemRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+      required: [name]
 
     CopyItemRequest:
       type: object

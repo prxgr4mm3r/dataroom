@@ -88,7 +88,7 @@ class ItemService:
         existing = set(self.items.list_active_names_in_parent(user_id, parent_id, exclude_item_id=exclude_item_id))
         try:
             resolved = self.name_resolver.resolve_unique(requested_name, existing)
-        except ValueError as exc:
+        except (TypeError, ValueError) as exc:
             raise ApiError(400, "invalid_name", "Item name is invalid.") from exc
         return resolved, self.name_resolver.normalize(resolved)
 
@@ -418,6 +418,25 @@ class ItemService:
         if old_parent_id != new_parent_id:
             self._apply_size_delta_to_ancestors(user_id, old_parent_id, -moved_size)
             self._apply_size_delta_to_ancestors(user_id, new_parent_id, moved_size)
+        asset = self.assets.get_for_item(item.id) if item.kind == ItemKind.FILE.value else None
+        return self.serializer.as_resource(item, asset, self._children_count_for_item(user_id, item))
+
+    def rename_item(self, user_id: str, item_id: str, name: str) -> dict:
+        item = self.items.get_for_user(user_id, item_id)
+        if item is None:
+            raise ApiError(404, "item_not_found", "Item not found.")
+
+        resolved_name, normalized_name = self._resolve_unique_name(
+            user_id,
+            item.parent_id,
+            name,
+            exclude_item_id=item.id,
+        )
+        item.name = resolved_name
+        item.normalized_name = normalized_name
+        item.updated_at = datetime.now(timezone.utc)
+        self.items.save(item)
+
         asset = self.assets.get_for_item(item.id) if item.kind == ItemKind.FILE.value else None
         return self.serializer.as_resource(item, asset, self._children_count_for_item(user_id, item))
 

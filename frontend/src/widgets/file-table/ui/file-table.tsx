@@ -6,6 +6,7 @@ import {
   IconCopy,
   IconDownload,
   IconDotsVertical,
+  IconEdit,
   IconFolder,
   IconLink,
   IconTrash,
@@ -60,6 +61,7 @@ type FileTableProps = {
   onImportFromComputer?: () => void
   importFromComputerPending?: boolean
   onCopyItem?: (item: ContentItem) => void
+  onRenameItem?: (item: ContentItem) => void
   onMoveItem?: (item: ContentItem) => void
   onDeleteItem?: (item: ContentItem) => void
   onShareItem?: (item: ContentItem) => void
@@ -162,6 +164,7 @@ export const FileTable = ({
   onImportFromComputer,
   importFromComputerPending = false,
   onCopyItem,
+  onRenameItem,
   onMoveItem,
   onDeleteItem,
   onShareItem,
@@ -567,7 +570,7 @@ export const FileTable = ({
 
           <Table.Tbody>
             {items.map((item) => {
-              const isSelected = selectedIds.includes(item.id)
+              const isSelected = selectedIdSet.has(item.id)
               const isOpened = openedPreviewId === item.id
               const isFolder = !isFileItem(item)
               const dropState = !readOnly && isFolder ? getFolderDropState(item.id) : 'none'
@@ -699,6 +702,11 @@ export const FileTable = ({
                           {onShareItem ? (
                             <Menu.Item leftSection={<IconLink size={14} />} onClick={() => onShareItem(item)}>
                               Share
+                            </Menu.Item>
+                          ) : null}
+                          {onRenameItem ? (
+                            <Menu.Item leftSection={<IconEdit size={14} />} onClick={() => onRenameItem(item)}>
+                              Rename
                             </Menu.Item>
                           ) : null}
                           {onMoveItem ? (
