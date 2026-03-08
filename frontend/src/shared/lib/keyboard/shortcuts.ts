@@ -3,7 +3,7 @@ const isMacLikePlatform = (): boolean => {
     return false
   }
 
-  const userAgentData = navigator.userAgentData as { platform?: string } | undefined
+  const userAgentData = (navigator as Navigator & { userAgentData?: { platform?: string } }).userAgentData
   const reportedPlatform = userAgentData?.platform ?? navigator.platform ?? ''
   return reportedPlatform.toLowerCase().includes('mac')
 }
