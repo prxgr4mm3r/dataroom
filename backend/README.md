@@ -2,6 +2,7 @@
 
 Flask backend for Data Room MVP with:
 - Firebase ID token verification for app auth
+- Firebase-generated magic link emails sent via SMTP
 - Google Drive OAuth (server-side) with token storage
 - Local disk file storage and hierarchical Data Room filesystem API
 
@@ -19,6 +20,7 @@ pip install -r requirements.txt
 ```
 
 2. Configure env in project root (`.env`) based on `.env.example`.
+   For magic-link email delivery you must configure `MAIL_*` SMTP variables and `MAIL_FROM_EMAIL`.
 
 3. Initialize DB schema:
 

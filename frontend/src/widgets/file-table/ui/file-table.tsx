@@ -121,21 +121,18 @@ const SortableHeader = ({
   active,
   order,
   onClick,
-  width,
   className,
 }: {
   label: string
   active: boolean
   order: SortOrder
   onClick: () => void
-  width?: number
   className?: string
 }) => (
   <Table.Th
     className={['file-table__th', 'file-table__th--sortable', className].filter(Boolean).join(' ')}
     style={{ whiteSpace: 'nowrap' }}
     onClick={onClick}
-    w={width}
   >
     <Group gap={4} wrap="nowrap">
       <Text size="sm" fw={600}>
@@ -189,7 +186,7 @@ export const FileTable = ({
 }: FileTableProps) => {
   const currentFolderDropState = readOnly ? 'none' : getFolderDropState(currentFolderId)
   const compactUpdatedAt = Boolean(openedPreviewId)
-  const sizeColumnWidth = compactUpdatedAt ? 112 : 98
+  const tableClassName = ['file-table', compactUpdatedAt ? 'file-table--preview-open' : ''].filter(Boolean).join(' ')
   const selectedIdSet = new Set(selectedIds)
   const visibleSelectedCount = items.reduce((count, item) => count + (selectedIdSet.has(item.id) ? 1 : 0), 0)
   const allVisibleSelected = items.length > 0 && visibleSelectedCount === items.length
@@ -449,7 +446,7 @@ export const FileTable = ({
       onDragLeave={readOnly ? undefined : handleRootDragLeave}
     >
       <ScrollArea h="100%">
-        <Table className="file-table" stickyHeader highlightOnHover withColumnBorders={false}>
+        <Table className={tableClassName} stickyHeader highlightOnHover withColumnBorders={false}>
           <Table.Thead>
             <Table.Tr>
               <Table.Th className="file-table__th file-table__th--select" w={44}>
@@ -482,7 +479,6 @@ export const FileTable = ({
                 active={sortBy === 'size'}
                 order={sortOrder}
                 onClick={() => onToggleSort('size')}
-                width={sizeColumnWidth}
                 className={['file-table__th--size', showBulkHeaderActions ? 'file-table__th--bulk-hidden' : '']
                   .filter(Boolean)
                   .join(' ')}
@@ -496,7 +492,6 @@ export const FileTable = ({
                   .filter(Boolean)
                   .join(' ')}
                 style={{ whiteSpace: 'nowrap' }}
-                w={compactUpdatedAt ? 122 : undefined}
               >
                 {compactUpdatedAt ? 'Updated' : 'Updated at'}
               </Table.Th>

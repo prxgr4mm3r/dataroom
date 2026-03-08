@@ -107,6 +107,12 @@
   --toolbar-icon-border: #d6dfeb;
   --toolbar-icon-color: #4c5f7b;
 
+  --preview-pane-bg: #f1f5fc;
+  --preview-pane-header-bg: #edf3fc;
+  --preview-pane-content-bg: #ffffff;
+  --preview-pane-resizer-hover: #8ea9cc;
+  --preview-pane-shadow: inset 1px 0 0 #d7e1ef;
+
   --shadow-soft: 0 8px 24px rgb(20 26 44 / 8%);
 }
 
@@ -218,6 +224,12 @@
   --toolbar-icon-hover: #24364d;
   --toolbar-icon-border: #344b66;
   --toolbar-icon-color: #c0d2e8;
+
+  --preview-pane-bg: #0f1c2d;
+  --preview-pane-header-bg: #152437;
+  --preview-pane-content-bg: #111f31;
+  --preview-pane-resizer-hover: #5f84b3;
+  --preview-pane-shadow: inset 1px 0 0 #2b4059;
 
   --shadow-soft: 0 10px 30px rgb(0 0 0 / 28%);
 }

@@ -96,6 +96,19 @@ class BackendApiTests(unittest.TestCase):
         self.assertEqual(401, response.status_code)
         self.assertEqual("unauthorized", response.json["error"]["code"])
 
+    def test_magic_link_rejects_invalid_email(self):
+        response = self.client.post("/api/auth/magic-link", json={"email": "not-an-email"})
+        self.assertEqual(400, response.status_code)
+        self.assertEqual("invalid_request", response.json["error"]["code"])
+
+    def test_magic_link_sends_email_via_service(self):
+        with patch("app.routes.auth.MagicLinkEmailService.send_sign_in_email") as send_mock:
+            response = self.client.post("/api/auth/magic-link", json={"email": "demo@example.com"})
+
+        self.assertEqual(200, response.status_code)
+        self.assertEqual("sent", response.json["status"])
+        send_mock.assert_called_once_with("demo@example.com")
+
     def test_google_connect_returns_auth_url(self):
         response = self.client.post("/api/integrations/google/connect", headers=self._auth_headers("connect-user"))
         self.assertEqual(200, response.status_code)

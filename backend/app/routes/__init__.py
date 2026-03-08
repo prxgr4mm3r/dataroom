@@ -1,5 +1,6 @@
 from flask import Flask
 
+from app.routes.auth import bp as auth_bp
 from app.routes.files import bp as files_bp
 from app.routes.folders import bp as folders_bp
 from app.routes.google_integration import bp as google_bp
@@ -12,6 +13,7 @@ from app.routes.shares import bp as shares_bp
 
 def register_routes(app: Flask) -> None:
     app.register_blueprint(health_bp)
+    app.register_blueprint(auth_bp)
     app.register_blueprint(me_bp)
     app.register_blueprint(google_bp)
     app.register_blueprint(folders_bp)

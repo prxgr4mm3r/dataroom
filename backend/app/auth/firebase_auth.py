@@ -16,25 +16,7 @@ class FirebaseAuthService:
         if current_app.config.get("TESTING") and current_app.config.get("ALLOW_INSECURE_TEST_TOKENS"):
             return self._parse_test_token(token)
 
-        try:
-            import firebase_admin
-            from firebase_admin import auth, credentials
-        except ImportError as exc:
-            raise ApiError(
-                500,
-                "firebase_sdk_missing",
-                "firebase-admin package is required for Firebase token verification.",
-            ) from exc
-
-        if not firebase_admin._apps:
-            project_id = current_app.config.get("FIREBASE_PROJECT_ID") or None
-            credentials_json = current_app.config.get("FIREBASE_CREDENTIALS_JSON") or ""
-
-            if credentials_json.strip():
-                parsed = self._parse_credentials(credentials_json)
-                firebase_admin.initialize_app(parsed, options={"projectId": project_id} if project_id else None)
-            else:
-                firebase_admin.initialize_app(options={"projectId": project_id} if project_id else None)
+        auth = self._get_auth_module()
 
         try:
             return auth.verify_id_token(token, check_revoked=False)
@@ -49,6 +31,41 @@ class FirebaseAuthService:
             }:
                 raise ApiError(401, "unauthorized", "Invalid Firebase ID token.") from exc
             raise ApiError(401, "unauthorized", "Firebase ID token verification failed.") from exc
+
+    def generate_sign_in_link(self, email: str, continue_url: str) -> str:
+        auth = self._get_auth_module()
+        try:
+            settings = auth.ActionCodeSettings(url=continue_url, handle_code_in_app=True)
+            return auth.generate_sign_in_with_email_link(email, settings)
+        except Exception as exc:  # noqa: BLE001
+            raise ApiError(
+                500,
+                "magic_link_generation_failed",
+                "Failed to generate magic link.",
+            ) from exc
+
+    def _get_auth_module(self):
+        try:
+            import firebase_admin
+            from firebase_admin import auth
+        except ImportError as exc:
+            raise ApiError(
+                500,
+                "firebase_sdk_missing",
+                "firebase-admin package is required for Firebase operations.",
+            ) from exc
+
+        if not firebase_admin._apps:
+            project_id = current_app.config.get("FIREBASE_PROJECT_ID") or None
+            credentials_json = current_app.config.get("FIREBASE_CREDENTIALS_JSON") or ""
+
+            if credentials_json.strip():
+                parsed = self._parse_credentials(credentials_json)
+                firebase_admin.initialize_app(parsed, options={"projectId": project_id} if project_id else None)
+            else:
+                firebase_admin.initialize_app(options={"projectId": project_id} if project_id else None)
+
+        return auth
 
     @staticmethod
     def _parse_credentials(raw_value: str):

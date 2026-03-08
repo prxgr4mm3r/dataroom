@@ -10,7 +10,7 @@ export type ItemContentResult = {
   objectUrl: string
 }
 
-export const useItemContentQuery = (itemId: string | null) =>
+export const useItemContentQuery = (itemId: string | null, enabled = true) =>
   useQuery<ItemContentResult>({
     queryKey: queryKeys.itemContent(itemId || 'none'),
     queryFn: async () => {
@@ -20,6 +20,6 @@ export const useItemContentQuery = (itemId: string | null) =>
         objectUrl: URL.createObjectURL(payload.blob),
       }
     },
-    enabled: Boolean(itemId),
+    enabled: Boolean(itemId) && enabled,
     gcTime: 0,
   })
