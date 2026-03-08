@@ -7,7 +7,7 @@
 
 .shared-view-page__header {
   position: relative;
-  padding: 10px 14px 8px;
+  padding: 6px 12px;
 }
 
 .shared-view-page__header::after {
@@ -27,10 +27,6 @@
 
 .shared-view-page__search {
   width: 260px;
-}
-
-.shared-view-page__meta {
-  margin-top: 4px;
 }
 
 .shared-view-page__body {
@@ -73,7 +69,7 @@
 
 @media (max-width: 900px) {
   .shared-view-page__header {
-    padding-bottom: 10px;
+    padding: 6px 10px;
   }
 
   .shared-view-page__search {

@@ -7,7 +7,6 @@ import { mapItemResourceDto, type ContentItem } from '@/entities/content-item'
 import { apiClient, toApiError } from '@/shared/api'
 import type { ItemResourceDto, ListItemsDto } from '@/shared/api'
 import { routes } from '@/shared/config/routes'
-import { formatDate } from '@/shared/lib/date/format-date'
 import { downloadBlob } from '@/shared/lib/file/download-blob'
 import { getSelectionRangeIds } from '@/features/select-content-items'
 import { useSortState } from '@/features/sort-content-items'
@@ -45,6 +44,7 @@ type SharedListResult = {
 
 const normalizeFolderParentId = (folderId: string): string | null => (folderId === 'root' ? 'root' : folderId)
 const DOWNLOAD_FALLBACK_NAME = 'shared-download.zip'
+const ZIP_EXTENSION_PATTERN = /\.zip$/i
 
 const parseFilename = (headerValue: unknown): string | null => {
   if (!headerValue || typeof headerValue !== 'string') {
@@ -62,6 +62,23 @@ const parseFilename = (headerValue: unknown): string | null => {
 
   const plainMatch = headerValue.match(/filename="?([^";]+)"?/i)
   return plainMatch?.[1] ?? null
+}
+
+const resolveFallbackDownloadName = (itemIds: string[], items: ContentItem[]): string => {
+  if (itemIds.length !== 1) {
+    return DOWNLOAD_FALLBACK_NAME
+  }
+
+  const selectedItem = items.find((item) => item.id === itemIds[0])
+  if (!selectedItem) {
+    return DOWNLOAD_FALLBACK_NAME
+  }
+
+  if (selectedItem.kind === 'folder') {
+    return ZIP_EXTENSION_PATTERN.test(selectedItem.name) ? selectedItem.name : `${selectedItem.name}.zip`
+  }
+
+  return selectedItem.name || DOWNLOAD_FALLBACK_NAME
 }
 
 const getShareMeta = async (shareToken: string): Promise<ShareMetaDto> => {
@@ -137,7 +154,6 @@ export const SharedViewPage = () => {
     () => listQuery.data?.breadcrumbs.map((crumb) => ({ id: crumb.id, name: crumb.name })) ?? [],
     [listQuery.data?.breadcrumbs],
   )
-  const shareExpiresAt = metaQuery.data?.share.expires_at ?? null
 
   useEffect(() => {
     if (!previewItemId) {
@@ -203,10 +219,7 @@ export const SharedViewPage = () => {
         { responseType: 'blob' },
       )
 
-      const fallbackName =
-        itemIds.length === 1
-          ? items.find((item) => item.id === itemIds[0])?.name ?? DOWNLOAD_FALLBACK_NAME
-          : DOWNLOAD_FALLBACK_NAME
+      const fallbackName = resolveFallbackDownloadName(itemIds, items)
       const filename = parseFilename(response.headers['content-disposition']) ?? fallbackName
       downloadBlob(response.data, filename)
     } catch (error) {
@@ -268,9 +281,6 @@ export const SharedViewPage = () => {
             </Tooltip>
           </Group>
         </Group>
-        <Text size="xs" c="dimmed" className="shared-view-page__meta">
-          {shareExpiresAt ? `Link expires: ${formatDate(shareExpiresAt)}` : 'No expiration'}
-        </Text>
       </header>
 
       <main className="shared-view-page__body">
