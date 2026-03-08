@@ -1,7 +1,7 @@
 import { IconAlertTriangle, IconSearch } from '@tabler/icons-react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Navigate, useParams } from 'react-router-dom'
+import { Navigate, useParams, useSearchParams } from 'react-router-dom'
 
 import { mapItemResourceDto, type ContentItem } from '@/entities/content-item'
 import { apiClient, toApiError } from '@/shared/api'
@@ -113,8 +113,9 @@ const listSharedItems = async (
 
 export const SharedViewPage = () => {
   const { shareToken } = useParams<{ shareToken: string }>()
-  const [folderId, setFolderId] = useState('root')
-  const [previewItemId, setPreviewItemId] = useState<string | null>(null)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const folderId = searchParams.get('folder') || 'root'
+  const previewItemId = searchParams.get('preview')
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const selectionAnchorIdRef = useRef<string | null>(null)
   const [searchDialogOpened, setSearchDialogOpened] = useState(false)
@@ -122,14 +123,11 @@ export const SharedViewPage = () => {
   const { sortBy, sortOrder, toggleSort } = useSortState()
 
   useEffect(() => {
-    setFolderId('root')
-    setPreviewItemId(null)
     setSelectedIds([])
     selectionAnchorIdRef.current = null
   }, [shareToken])
 
   useEffect(() => {
-    setPreviewItemId(null)
     setSelectedIds([])
     selectionAnchorIdRef.current = null
   }, [folderId])
@@ -162,9 +160,11 @@ export const SharedViewPage = () => {
 
     const itemStillVisible = items.some((item) => item.id === previewItemId)
     if (!itemStillVisible) {
-      setPreviewItemId(null)
+      const nextParams = new URLSearchParams(searchParams)
+      nextParams.delete('preview')
+      setSearchParams(nextParams, { replace: true })
     }
-  }, [items, previewItemId])
+  }, [items, previewItemId, searchParams, setSearchParams])
 
   useEffect(() => {
     if (!selectedIds.length) {
@@ -195,14 +195,43 @@ export const SharedViewPage = () => {
     selectionAnchorIdRef.current = null
   }
 
+  const setSharedLocation = (nextFolderId: string, nextPreviewItemId: string | null) => {
+    const nextParams = new URLSearchParams(searchParams)
+    const normalizedFolderId = nextFolderId || 'root'
+
+    if (normalizedFolderId === 'root') {
+      nextParams.delete('folder')
+    } else {
+      nextParams.set('folder', normalizedFolderId)
+    }
+
+    if (nextPreviewItemId) {
+      nextParams.set('preview', nextPreviewItemId)
+    } else {
+      nextParams.delete('preview')
+    }
+
+    setSearchParams(nextParams)
+  }
+
+  const openSharedFolder = (targetFolderId: string) => {
+    setSharedLocation(targetFolderId, null)
+  }
+
+  const openSharedPreview = (fileId: string) => {
+    setSharedLocation(folderId, fileId)
+  }
+
+  const closeSharedPreview = () => {
+    setSharedLocation(folderId, null)
+  }
+
   const openSharedSearchFolder = (targetFolderId: string) => {
-    setFolderId(targetFolderId || 'root')
-    setPreviewItemId(null)
+    openSharedFolder(targetFolderId || 'root')
   }
 
   const openSharedSearchFile = (fileId: string, parentFolderId: string | null) => {
-    setFolderId(parentFolderId ?? 'root')
-    setPreviewItemId(fileId)
+    setSharedLocation(parentFolderId ?? 'root', fileId)
   }
 
   const downloadItems = async (itemIds: string[]) => {
@@ -264,7 +293,7 @@ export const SharedViewPage = () => {
       <header className="shared-view-page__header">
         <Group justify="space-between" align="center" wrap="nowrap" gap="md">
           <Box className="shared-view-page__breadcrumbs">
-            <BreadcrumbsBar breadcrumbs={breadcrumbs} onNavigate={setFolderId} compact />
+            <BreadcrumbsBar breadcrumbs={breadcrumbs} onNavigate={openSharedFolder} compact />
           </Box>
           <Group gap="xs" wrap="nowrap">
             <Tooltip label="Search files and folders">
@@ -306,8 +335,8 @@ export const SharedViewPage = () => {
                   setSelectedIds(nextIds)
                   selectionAnchorIdRef.current = nextIds[0] ?? null
                 }}
-                onOpenFile={setPreviewItemId}
-                onOpenFolder={setFolderId}
+                onOpenFile={openSharedPreview}
+                onOpenFolder={openSharedFolder}
                 onClearSelection={clearSelection}
                 onDownloadSelected={() => {
                   void downloadItems(selectedIds)
@@ -322,7 +351,7 @@ export const SharedViewPage = () => {
           <SharedPreviewPane
             shareToken={String(shareToken)}
             previewItemId={previewItemId}
-            onClose={() => setPreviewItemId(null)}
+            onClose={closeSharedPreview}
           />
         </div>
       </main>
