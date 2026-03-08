@@ -1,0 +1,21 @@
+services:
+  backend:
+    container_name: dataroom-backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ./.env
+    environment:
+      DATABASE_URL: sqlite:////app/data/app.db
+      UPLOAD_DIR: /app/storage/uploads
+    volumes:
+      - backend_data:/app/data
+      - backend_uploads:/app/storage/uploads
+    ports:
+      - "127.0.0.1:5000:5000"
+
+volumes:
+  backend_data:
+  backend_uploads:
