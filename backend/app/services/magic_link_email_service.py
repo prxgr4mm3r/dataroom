@@ -86,7 +86,10 @@ class MagicLinkEmailService:
         host = str(self.config.get("MAIL_SMTP_HOST", "")).strip()
         port = int(self.config.get("MAIL_SMTP_PORT", 587))
         username = str(self.config.get("MAIL_SMTP_USERNAME", "")).strip()
-        password = str(self.config.get("MAIL_SMTP_PASSWORD", "")).strip()
+        raw_password = str(self.config.get("MAIL_SMTP_PASSWORD", "")).strip()
+        # Gmail app passwords are commonly copied with spaces every 4 chars.
+        # SMTP login expects the compact token without spaces.
+        password = "".join(raw_password.split()) if "gmail.com" in host else raw_password
         use_tls = bool(self.config.get("MAIL_SMTP_USE_TLS", True))
         use_ssl = bool(self.config.get("MAIL_SMTP_USE_SSL", False))
 
@@ -100,12 +103,6 @@ class MagicLinkEmailService:
             )
         if username and not password:
             raise ApiError(500, "mail_not_configured", "MAIL_SMTP_PASSWORD is not configured.")
-        if "gmail.com" in host and " " in password:
-            raise ApiError(
-                500,
-                "mail_not_configured",
-                "Gmail app password must not contain spaces.",
-            )
 
         timeout_seconds = int(self.config.get("REQUEST_TIMEOUT_SECONDS", 20))
         context = ssl.create_default_context()
