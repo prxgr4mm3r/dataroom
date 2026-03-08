@@ -1,5 +1,5 @@
 import { IconAlertTriangle, IconSearch } from '@tabler/icons-react'
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate, useParams } from 'react-router-dom'
 
@@ -128,6 +128,7 @@ export const SharedViewPage = () => {
     queryKey: ['share-items', shareToken, folderId, sortBy, sortOrder],
     queryFn: async () => listSharedItems(String(shareToken), folderId, sortBy, sortOrder),
     enabled: Boolean(shareToken) && metaQuery.isSuccess,
+    placeholderData: keepPreviousData,
   })
 
   const items = useMemo(() => listQuery.data?.items ?? [], [listQuery.data?.items])
@@ -283,7 +284,7 @@ export const SharedViewPage = () => {
               <FileTable
                 readOnly
                 items={items}
-                loading={listQuery.isPending}
+                loading={listQuery.isPending && !listQuery.data}
                 currentFolderId={folderId}
                 openedPreviewId={previewItemId}
                 selectedIds={selectedIds}

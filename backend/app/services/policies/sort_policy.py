@@ -7,7 +7,7 @@ from app.models import DataRoomItem, ItemKind
 
 
 class SortPolicy:
-    ALLOWED_SORT_BY = {"name", "type", "size", "imported_at"}
+    ALLOWED_SORT_BY = {"name", "type", "size", "imported_at", "updated_at"}
     ALLOWED_SORT_ORDER = {"asc", "desc"}
 
     def sort_rows(
@@ -35,6 +35,8 @@ class SortPolicy:
         if sort_by == "size":
             size = item.size_bytes if item.size_bytes is not None else 0
             return (size, item.name.casefold(), item.created_at)
+        if sort_by == "updated_at":
+            return (item.updated_at, item.name.casefold(), item.created_at)
         return (item.name.casefold(), item.created_at)
 
     @staticmethod
@@ -53,6 +55,8 @@ class SortPolicy:
             if size is None:
                 size = -1
             return (size, item.name.casefold(), item.created_at)
+        if sort_by == "updated_at":
+            return (item.updated_at, item.name.casefold(), item.created_at)
         imported_at = asset.imported_at if asset else None
         if imported_at is None:
             imported_at = datetime.fromtimestamp(0, tz=timezone.utc)

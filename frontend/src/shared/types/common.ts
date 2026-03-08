@@ -1,4 +1,4 @@
-export type SortBy = 'name' | 'type' | 'size' | 'imported_at'
+export type SortBy = 'name' | 'type' | 'size' | 'imported_at' | 'updated_at'
 export type SortOrder = 'asc' | 'desc'
 
 export type ApiErrorCode =

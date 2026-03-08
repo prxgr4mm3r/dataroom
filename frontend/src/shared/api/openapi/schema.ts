@@ -772,7 +772,7 @@ export interface operations {
         parameters: {
             query?: {
                 parent_id?: string | null;
-                sort_by?: "name" | "type" | "size" | "imported_at";
+                sort_by?: "name" | "type" | "size" | "imported_at" | "updated_at";
                 sort_order?: "asc" | "desc";
             };
             header?: never;

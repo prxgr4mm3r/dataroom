@@ -517,18 +517,15 @@ export const FileTable = ({
                   .filter(Boolean)
                   .join(' ')}
               />
-              <Table.Th
-                className={[
-                  'file-table__th',
-                  'file-table__th--updated',
-                  showBulkHeaderActions ? 'file-table__th--bulk-hidden' : '',
-                ]
+              <SortableHeader
+                label={compactUpdatedAt ? 'Updated' : 'Updated at'}
+                active={sortBy === 'updated_at'}
+                order={sortOrder}
+                onClick={() => onToggleSort('updated_at')}
+                className={['file-table__th--updated', showBulkHeaderActions ? 'file-table__th--bulk-hidden' : '']
                   .filter(Boolean)
                   .join(' ')}
-                style={{ whiteSpace: 'nowrap' }}
-              >
-                {compactUpdatedAt ? 'Updated' : 'Updated at'}
-              </Table.Th>
+              />
               <Table.Th className="file-table__th file-table__th--actions file-table__th--actions-anchor" w={56}>
                 {showBulkHeaderActions ? (
                   <div className="file-table__bulk-header-overlay">

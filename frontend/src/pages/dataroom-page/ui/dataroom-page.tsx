@@ -933,7 +933,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
               ) : (
                 <FileTable
                   items={items}
-                  loading={listQuery.isPending}
+                  loading={listQuery.isPending && !listQuery.data}
                   currentFolderId={normalizedFolderId}
                   openedPreviewId={previewId}
                   selectedIds={selectedIds}

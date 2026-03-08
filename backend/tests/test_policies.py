@@ -62,6 +62,29 @@ class PolicyTests(unittest.TestCase):
         self.assertEqual("i1", sorted_rows[1]["item"].id)
         self.assertEqual("i2", sorted_rows[2]["item"].id)
 
+    def test_sort_policy_supports_updated_at(self):
+        now = datetime.now(timezone.utc)
+        older = now.replace(year=now.year - 1)
+
+        folder = DataRoomItem(id="f1", user_id="u", parent_id=None, kind="folder", name="folder", normalized_name="folder", status="active")
+        file_old = DataRoomItem(id="i1", user_id="u", parent_id=None, kind="file", name="old", normalized_name="old", status="active")
+        file_new = DataRoomItem(id="i2", user_id="u", parent_id=None, kind="file", name="new", normalized_name="new", status="active")
+
+        folder.updated_at = now
+        file_old.updated_at = older
+        file_new.updated_at = now
+
+        rows = [
+            {"item": file_new, "asset": _Asset()},
+            {"item": folder, "asset": None},
+            {"item": file_old, "asset": _Asset()},
+        ]
+
+        sorted_rows = SortPolicy().sort_rows(rows, sort_by="updated_at", sort_order="asc")
+        self.assertEqual("f1", sorted_rows[0]["item"].id)
+        self.assertEqual("i1", sorted_rows[1]["item"].id)
+        self.assertEqual("i2", sorted_rows[2]["item"].id)
+
 
 if __name__ == "__main__":
     unittest.main()

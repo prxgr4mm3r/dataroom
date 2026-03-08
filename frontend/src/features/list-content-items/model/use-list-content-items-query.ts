@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 
 import { mapItemResourceDto, type ContentItem } from '@/entities/content-item'
 import type { Breadcrumb } from '@/entities/folder'
@@ -25,6 +25,7 @@ const normalizeParentId = (folderId: string): string | null =>
 export const useListContentItemsQuery = (folderId: string, sortBy: SortBy, sortOrder: SortOrder) =>
   useQuery<ListContentItemsResult>({
     queryKey: queryKeys.listItems(folderId, sortBy, sortOrder),
+    placeholderData: keepPreviousData,
     queryFn: async () => {
       const response = await listContentItems({
         parent_id: normalizeParentId(folderId),
