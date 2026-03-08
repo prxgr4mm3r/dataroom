@@ -1,6 +1,6 @@
 import { IconAlertTriangle, IconSearch } from '@tabler/icons-react'
 import { useQuery } from '@tanstack/react-query'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate, useParams } from 'react-router-dom'
 
 import { mapItemResourceDto, type ContentItem } from '@/entities/content-item'
@@ -9,6 +9,7 @@ import type { ItemResourceDto, ListItemsDto } from '@/shared/api'
 import { routes } from '@/shared/config/routes'
 import { formatDate } from '@/shared/lib/date/format-date'
 import { downloadBlob } from '@/shared/lib/file/download-blob'
+import { getSelectionRangeIds } from '@/features/select-content-items'
 import { useSortState } from '@/features/sort-content-items'
 import type { SortBy, SortOrder } from '@/shared/types/common'
 import { ActionIcon, Alert, Badge, Box, Center, Group, Loader, Paper, Stack, Text, Title, Tooltip } from '@/shared/ui'
@@ -98,6 +99,7 @@ export const SharedViewPage = () => {
   const [folderId, setFolderId] = useState('root')
   const [previewItemId, setPreviewItemId] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const selectionAnchorIdRef = useRef<string | null>(null)
   const [searchDialogOpened, setSearchDialogOpened] = useState(false)
   const [downloadPending, setDownloadPending] = useState(false)
   const { sortBy, sortOrder, toggleSort } = useSortState()
@@ -106,11 +108,13 @@ export const SharedViewPage = () => {
     setFolderId('root')
     setPreviewItemId(null)
     setSelectedIds([])
+    selectionAnchorIdRef.current = null
   }, [shareToken])
 
   useEffect(() => {
     setPreviewItemId(null)
     setSelectedIds([])
+    selectionAnchorIdRef.current = null
   }, [folderId])
 
   const metaQuery = useQuery({
@@ -127,6 +131,7 @@ export const SharedViewPage = () => {
   })
 
   const items = useMemo(() => listQuery.data?.items ?? [], [listQuery.data?.items])
+  const orderedItemIds = useMemo(() => items.map((item) => item.id), [items])
   const breadcrumbs = useMemo(
     () => listQuery.data?.breadcrumbs.map((crumb) => ({ id: crumb.id, name: crumb.name })) ?? [],
     [listQuery.data?.breadcrumbs],
@@ -153,9 +158,25 @@ export const SharedViewPage = () => {
   }, [items, selectedIds.length])
 
   const toggleSelected = (itemId: string) => {
-    setSelectedIds((current) =>
-      current.includes(itemId) ? current.filter((id) => id !== itemId) : [...current, itemId],
-    )
+    setSelectedIds((current) => (current.includes(itemId) ? current.filter((id) => id !== itemId) : [...current, itemId]))
+    selectionAnchorIdRef.current = itemId
+  }
+
+  const toggleSelectedWithOptions = (itemId: string, options?: { range?: boolean; keepExisting?: boolean }) => {
+    if (options?.range) {
+      const rangeIds = getSelectionRangeIds(orderedItemIds, selectionAnchorIdRef.current, itemId)
+      if (rangeIds.length) {
+        setSelectedIds((current) => (options.keepExisting ? [...new Set([...current, ...rangeIds])] : rangeIds))
+      }
+      selectionAnchorIdRef.current = itemId
+      return
+    }
+    toggleSelected(itemId)
+  }
+
+  const clearSelection = () => {
+    setSelectedIds([])
+    selectionAnchorIdRef.current = null
   }
 
   const openSharedSearchFolder = (targetFolderId: string) => {
@@ -272,13 +293,15 @@ export const SharedViewPage = () => {
                 sortBy={sortBy}
                 sortOrder={sortOrder}
                 onToggleSort={toggleSort}
-                onToggleSelect={toggleSelected}
+                onToggleSelect={toggleSelectedWithOptions}
                 onToggleSelectAll={(checked) => {
-                  setSelectedIds(checked ? items.map((item) => item.id) : [])
+                  const nextIds = checked ? items.map((item) => item.id) : []
+                  setSelectedIds(nextIds)
+                  selectionAnchorIdRef.current = nextIds[0] ?? null
                 }}
                 onOpenFile={setPreviewItemId}
                 onOpenFolder={setFolderId}
-                onClearSelection={() => setSelectedIds([])}
+                onClearSelection={clearSelection}
                 onDownloadSelected={() => {
                   void downloadItems(selectedIds)
                 }}

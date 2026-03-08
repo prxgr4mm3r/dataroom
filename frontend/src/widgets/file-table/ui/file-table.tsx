@@ -13,7 +13,7 @@ import {
   IconUpload,
   IconX,
 } from '@tabler/icons-react'
-import type { DragEvent } from 'react'
+import { useRef, type DragEvent } from 'react'
 
 import type { ContentItem } from '@/entities/content-item'
 import { isFileItem } from '@/entities/content-item'
@@ -41,6 +41,10 @@ import type { SortBy, SortOrder } from '@/shared/types/common'
 import './file-table.css'
 
 type DropState = 'none' | 'valid' | 'warning' | 'invalid'
+type ToggleSelectOptions = {
+  range?: boolean
+  keepExisting?: boolean
+}
 
 type FileTableProps = {
   readOnly?: boolean
@@ -52,7 +56,7 @@ type FileTableProps = {
   sortBy: SortBy
   sortOrder: SortOrder
   onToggleSort: (sortBy: SortBy) => void
-  onToggleSelect: (itemId: string) => void
+  onToggleSelect: (itemId: string, options?: ToggleSelectOptions) => void
   onToggleSelectAll?: (checked: boolean) => void
   onOpenFile: (itemId: string) => void
   onOpenFolder: (folderId: string) => void
@@ -187,6 +191,7 @@ export const FileTable = ({
   moveOverlayItemCount = 0,
   isDraggingItem = NOOP_IS_DRAGGING,
 }: FileTableProps) => {
+  const pendingToggleOptionsRef = useRef<ToggleSelectOptions | null>(null)
   const currentFolderDropState = readOnly ? 'none' : getFolderDropState(currentFolderId)
   const compactUpdatedAt = Boolean(openedPreviewId)
   const tableClassName = ['file-table', compactUpdatedAt ? 'file-table--preview-open' : ''].filter(Boolean).join(' ')
@@ -645,8 +650,20 @@ export const FileTable = ({
                       <SelectionCheckbox
                         checked={isSelected}
                         ariaLabel={`Select ${item.name}`}
-                        onCheckedChange={() => onToggleSelect(item.id)}
-                        onClick={(event) => event.stopPropagation()}
+                        onCheckedChange={() => {
+                          const options = pendingToggleOptionsRef.current ?? undefined
+                          pendingToggleOptionsRef.current = null
+                          onToggleSelect(item.id, options)
+                        }}
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          pendingToggleOptionsRef.current = event.shiftKey
+                            ? {
+                                range: true,
+                                keepExisting: event.metaKey || event.ctrlKey,
+                              }
+                            : null
+                        }}
                       />
                     </span>
                   </Table.Td>

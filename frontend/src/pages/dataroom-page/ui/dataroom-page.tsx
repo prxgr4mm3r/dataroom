@@ -6,6 +6,7 @@ import type { ContentItem } from '@/entities/content-item'
 import type { UserProfile } from '@/entities/user'
 import { useContentTreeBrowser } from '@/features/browse-content-tree'
 import { useBulkCopyItems, useCopyItem } from '@/features/copy-content-items'
+import { useDataroomShortcuts } from '@/features/dataroom-shortcuts'
 import { useBulkDeleteItems, useDeleteItem } from '@/features/delete-content-items'
 import { useDownloadContentItems } from '@/features/download-content-items'
 import { useDragImportController, type DragImportFailure, type DragImportResult } from '@/features/drag-import-files'
@@ -13,7 +14,7 @@ import { useDragMoveController, validateMoveTarget } from '@/features/drag-move-
 import { useListContentItemsQuery } from '@/features/list-content-items'
 import { useBulkMoveItems, useMoveItem } from '@/features/move-content-items'
 import { useOpenFilePreview } from '@/features/open-file-preview'
-import { useSelectionStore } from '@/features/select-content-items'
+import { getSelectionRangeIds, useSelectionStore } from '@/features/select-content-items'
 import { useSortState } from '@/features/sort-content-items'
 import { useUploadFileFromDevice } from '@/features/upload-file-from-device'
 import { useFolderTreeQuery } from '@/features/load-folder-tree'
@@ -40,6 +41,7 @@ import { ImportResultsDialog } from '@/widgets/import-results-dialog'
 import { PreviewPane } from '@/widgets/preview-pane'
 import { RenameItemDialog } from '@/widgets/rename-item-dialog'
 import { SearchItemsDialog } from '@/widgets/search-items-dialog'
+import { ShortcutsDialog } from '@/widgets/shortcuts-dialog'
 import { ShareLinksDialog } from '@/widgets/share-links-dialog'
 
 import './dataroom-page.css'
@@ -102,7 +104,9 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
   const [renameDialogItem, setRenameDialogItem] = useState<ContentItem | null>(null)
   const [dragImportResultDialog, setDragImportResultDialog] = useState<DragImportResult | null>(null)
   const [searchDialogOpened, setSearchDialogOpened] = useState(false)
+  const [shortcutsDialogOpened, setShortcutsDialogOpened] = useState(false)
   const [targetFolderId, setTargetFolderId] = useState<string>('root')
+  const selectionAnchorIdRef = useRef<string | null>(null)
 
   const navigate = useNavigate()
 
@@ -147,6 +151,10 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
   const toggleSelected = useSelectionStore((state) => state.toggle)
   const clearSelection = useSelectionStore((state) => state.clear)
   const setSelected = useSelectionStore((state) => state.setMany)
+  const clearSelectedItems = () => {
+    clearSelection()
+    selectionAnchorIdRef.current = null
+  }
 
   useEffect(() => {
     clearSelection()
@@ -155,6 +163,89 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
   const items = useMemo(() => listQuery.data?.items || [], [listQuery.data?.items])
   const itemMap = useMemo(() => new Map(items.map((item) => [item.id, item])), [items])
   const breadcrumbs = useMemo(() => listQuery.data?.breadcrumbs || [], [listQuery.data?.breadcrumbs])
+  const orderedItemIds = useMemo(() => items.map((item) => item.id), [items])
+  const setSelectedAndSyncAnchor = (ids: string[]) => {
+    const uniqueIds = [...new Set(ids)]
+    setSelected(uniqueIds)
+    const currentAnchorId = selectionAnchorIdRef.current
+    selectionAnchorIdRef.current = currentAnchorId && uniqueIds.includes(currentAnchorId) ? currentAnchorId : uniqueIds[0] ?? null
+  }
+
+  const getSingleSelectedItem = (): ContentItem | null => {
+    if (selectedIds.length !== 1) {
+      return null
+    }
+    return itemMap.get(selectedIds[0]) ?? null
+  }
+
+  const handleToggleSelect = (itemId: string, options?: { range?: boolean; keepExisting?: boolean }) => {
+    if (options?.range) {
+      const rangeIds = getSelectionRangeIds(orderedItemIds, selectionAnchorIdRef.current, itemId)
+      if (rangeIds.length) {
+        setSelectedAndSyncAnchor(options.keepExisting ? [...selectedIds, ...rangeIds] : rangeIds)
+      }
+      selectionAnchorIdRef.current = itemId
+      return
+    }
+
+    toggleSelected(itemId)
+    selectionAnchorIdRef.current = itemId
+  }
+
+  const selectAllVisibleItems = () => {
+    const nextSelectedIds = items.map((item) => item.id)
+    setSelectedAndSyncAnchor(nextSelectedIds)
+  }
+
+  const openSelectedItem = () => {
+    const selectedItem = getSingleSelectedItem()
+    if (!selectedItem) {
+      return
+    }
+
+    if (selectedItem.kind === 'folder') {
+      openFolder(selectedItem.id)
+      return
+    }
+
+    openFilePreview(selectedItem.id)
+  }
+
+  const openParentFolder = () => {
+    if (normalizedFolderId === 'root') {
+      return
+    }
+
+    const parentFolderId = breadcrumbs[breadcrumbs.length - 2]?.id ?? 'root'
+    openFolder(parentFolderId)
+  }
+
+  const openRenameForSelectedItem = () => {
+    const selectedItem = getSingleSelectedItem()
+    if (!selectedItem) {
+      return
+    }
+    openSingleRenameDialog(selectedItem)
+  }
+
+  const openQuickPreviewForSelectedFile = () => {
+    const selectedItem = getSingleSelectedItem()
+    if (!selectedItem || selectedItem.kind !== 'file') {
+      return
+    }
+    openFilePreview(selectedItem.id)
+  }
+
+  const hasBlockingDialog =
+    importDialogOpened ||
+    createFolderOpened ||
+    Boolean(deleteDialog) ||
+    Boolean(transferDialog) ||
+    Boolean(shareDialogItem) ||
+    Boolean(renameDialogItem) ||
+    Boolean(dragImportResultDialog) ||
+    searchDialogOpened ||
+    shortcutsDialogOpened
   const getFolderActionItem = (folderId: string): ContentItem | null => {
     const existingItem = itemMap.get(folderId)
     if (existingItem) {
@@ -486,7 +577,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
           targetFolderId: targetFolderNullable,
         })
         closePreviewIfMoved(transferDialog.itemIds, targetFolderId)
-        setSelected(selectedIds.filter((id) => !transferDialog.itemIds.includes(id)))
+        setSelectedAndSyncAnchor(selectedIds.filter((id) => !transferDialog.itemIds.includes(id)))
         notifySuccess(t('moveItemSuccess'))
       } else {
         await bulkMoveMutation.mutateAsync({
@@ -494,7 +585,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
           targetFolderId: targetFolderNullable,
         })
         closePreviewIfMoved(transferDialog.itemIds, targetFolderId)
-        setSelected(selectedIds.filter((id) => !transferDialog.itemIds.includes(id)))
+        setSelectedAndSyncAnchor(selectedIds.filter((id) => !transferDialog.itemIds.includes(id)))
         notifySuccess(t('moveItemsSuccess'))
       }
 
@@ -528,7 +619,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
         }
 
         closePreviewIfMoved(itemIds, destinationFolderId)
-        setSelected(selectedIds.filter((id) => !itemIds.includes(id)))
+        setSelectedAndSyncAnchor(selectedIds.filter((id) => !itemIds.includes(id)))
       } catch (error) {
         notifyError(toApiError(error).message)
       }
@@ -705,12 +796,12 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
       if (deleteDialog.mode === 'single') {
         await deleteItemMutation.mutateAsync(deleteDialog.item.id)
         closePreviewIfMoved([deleteDialog.item.id], normalizedFolderId)
-        setSelected(selectedIds.filter((id) => id !== deleteDialog.item.id))
+        setSelectedAndSyncAnchor(selectedIds.filter((id) => id !== deleteDialog.item.id))
         notifySuccess(t('deleteItemSuccess'))
       } else {
         await bulkDeleteMutation.mutateAsync(selectedIds)
         closePreviewIfMoved(selectedIds, normalizedFolderId)
-        clearSelection()
+        clearSelectedItems()
         notifySuccess(t('deleteItemsSuccess'))
       }
 
@@ -745,6 +836,29 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
   })()
 
   const transferConfirmLabel = transferDialog?.mode === 'copy' ? t('copyConfirm') : t('moveConfirm')
+
+  useDataroomShortcuts({
+    suspended: hasBlockingDialog,
+    onOpenSearch: () => setSearchDialogOpened(true),
+    onCreateFolder: () => setCreateFolderOpened(true),
+    onImportFromComputer: openComputerImportPicker,
+    onSelectAll: selectAllVisibleItems,
+    onOpenSelected: openSelectedItem,
+    onOpenParentFolder: openParentFolder,
+    onDeleteSelected: openBulkDeleteDialog,
+    onRenameSelected: openRenameForSelectedItem,
+    onQuickPreview: openQuickPreviewForSelectedFile,
+    onEscape: () => {
+      if (hasBlockingDialog) {
+        return
+      }
+      if (!selectedIds.length) {
+        return
+      }
+      clearSelectedItems()
+    },
+    onOpenShortcutsHelp: () => setShortcutsDialogOpened(true),
+  })
 
   return (
     <>
@@ -825,13 +939,13 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
                   sortBy={sortBy}
                   sortOrder={sortOrder}
                   onToggleSort={toggleSort}
-                  onToggleSelect={toggleSelected}
+                  onToggleSelect={handleToggleSelect}
                   onToggleSelectAll={(checked) => {
                     if (!checked) {
-                      clearSelection()
+                      clearSelectedItems()
                       return
                     }
-                    setSelected(items.map((item) => item.id))
+                    selectAllVisibleItems()
                   }}
                   onOpenFile={openFilePreview}
                   onOpenFolder={openFolder}
@@ -844,7 +958,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
                   onMoveItem={openSingleMoveDialog}
                   onDeleteItem={openSingleDeleteDialog}
                   onShareItem={openSingleShareDialog}
-                  onClearSelection={clearSelection}
+                  onClearSelection={clearSelectedItems}
                   onDownloadSelected={downloadSelectedItems}
                   onCopySelected={openBulkCopyDialog}
                   onMoveSelected={openBulkMoveDialog}
@@ -958,6 +1072,8 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
         onOpenFolder={openFolder}
         onOpenFile={openFileFromSearch}
       />
+
+      <ShortcutsDialog opened={shortcutsDialogOpened} onClose={() => setShortcutsDialogOpened(false)} />
     </>
   )
 }
