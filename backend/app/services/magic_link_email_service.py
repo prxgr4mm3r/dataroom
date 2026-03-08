@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import re
+import socket
 import smtplib
 import ssl
 from email.message import EmailMessage
@@ -108,21 +109,42 @@ class MagicLinkEmailService:
         context = ssl.create_default_context()
 
         try:
-            if use_ssl:
-                with smtplib.SMTP_SSL(host=host, port=port, timeout=timeout_seconds, context=context) as smtp:
-                    if username:
-                        smtp.login(username, password)
-                    smtp.send_message(message)
-                return
-
-            with smtplib.SMTP(host=host, port=port, timeout=timeout_seconds) as smtp:
-                smtp.ehlo()
-                if use_tls:
-                    smtp.starttls(context=context)
-                    smtp.ehlo()
-                if username:
-                    smtp.login(username, password)
-                smtp.send_message(message)
+            self._send_message_via_smtp(
+                smtp_host=host,
+                connect_host=host,
+                port=port,
+                timeout_seconds=timeout_seconds,
+                context=context,
+                username=username,
+                password=password,
+                use_tls=use_tls,
+                use_ssl=use_ssl,
+                message=message,
+            )
+        except OSError as exc:
+            # Common on hosts without IPv6 default route when resolver prefers AAAA first.
+            if exc.errno == 101:
+                ipv4_host = self._resolve_first_ipv4(host, port)
+                if ipv4_host:
+                    logger.warning(
+                        "SMTP connect failed with errno=101 for host=%s, retrying via IPv4=%s",
+                        host,
+                        ipv4_host,
+                    )
+                    self._send_message_via_smtp(
+                        smtp_host=host,
+                        connect_host=ipv4_host,
+                        port=port,
+                        timeout_seconds=timeout_seconds,
+                        context=context,
+                        username=username,
+                        password=password,
+                        use_tls=use_tls,
+                        use_ssl=use_ssl,
+                        message=message,
+                    )
+                    return
+            raise
         except smtplib.SMTPAuthenticationError as exc:
             logger.exception(
                 "SMTP authentication failed: host=%s port=%s tls=%s ssl=%s username_set=%s",
@@ -165,6 +187,54 @@ class MagicLinkEmailService:
                 "mail_delivery_failed",
                 "Failed to send sign-in email. Please try again.",
             ) from exc
+
+    @staticmethod
+    def _resolve_first_ipv4(host: str, port: int) -> str | None:
+        try:
+            addresses = socket.getaddrinfo(host, port, family=socket.AF_INET, type=socket.SOCK_STREAM)
+        except OSError:
+            return None
+
+        for _, _, _, _, sockaddr in addresses:
+            if sockaddr and sockaddr[0]:
+                return str(sockaddr[0])
+        return None
+
+    @staticmethod
+    def _send_message_via_smtp(
+        *,
+        smtp_host: str,
+        connect_host: str,
+        port: int,
+        timeout_seconds: int,
+        context: ssl.SSLContext,
+        username: str,
+        password: str,
+        use_tls: bool,
+        use_ssl: bool,
+        message: EmailMessage,
+    ) -> None:
+        if use_ssl:
+            # Preserve TLS hostname validation for smtp_host while connecting to connect_host.
+            with smtplib.SMTP_SSL(timeout=timeout_seconds, context=context) as smtp:
+                smtp._host = smtp_host  # noqa: SLF001
+                smtp.connect(connect_host, port)
+                if username:
+                    smtp.login(username, password)
+                smtp.send_message(message)
+            return
+
+        # Preserve TLS hostname validation for smtp_host while connecting to connect_host.
+        with smtplib.SMTP(timeout=timeout_seconds) as smtp:
+            smtp._host = smtp_host  # noqa: SLF001
+            smtp.connect(connect_host, port)
+            smtp.ehlo()
+            if use_tls:
+                smtp.starttls(context=context)
+                smtp.ehlo()
+            if username:
+                smtp.login(username, password)
+            smtp.send_message(message)
 
     @staticmethod
     def _render_plain_text(sign_in_link: str) -> str:
