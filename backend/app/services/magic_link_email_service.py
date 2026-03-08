@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import re
 import smtplib
 import ssl
@@ -13,6 +14,7 @@ from app.errors import ApiError
 
 
 EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+logger = logging.getLogger(__name__)
 
 
 class MagicLinkEmailService:
@@ -84,7 +86,7 @@ class MagicLinkEmailService:
         host = str(self.config.get("MAIL_SMTP_HOST", "")).strip()
         port = int(self.config.get("MAIL_SMTP_PORT", 587))
         username = str(self.config.get("MAIL_SMTP_USERNAME", "")).strip()
-        password = str(self.config.get("MAIL_SMTP_PASSWORD", ""))
+        password = str(self.config.get("MAIL_SMTP_PASSWORD", "")).strip()
         use_tls = bool(self.config.get("MAIL_SMTP_USE_TLS", True))
         use_ssl = bool(self.config.get("MAIL_SMTP_USE_SSL", False))
 
@@ -98,6 +100,12 @@ class MagicLinkEmailService:
             )
         if username and not password:
             raise ApiError(500, "mail_not_configured", "MAIL_SMTP_PASSWORD is not configured.")
+        if "gmail.com" in host and " " in password:
+            raise ApiError(
+                500,
+                "mail_not_configured",
+                "Gmail app password must not contain spaces.",
+            )
 
         timeout_seconds = int(self.config.get("REQUEST_TIMEOUT_SECONDS", 20))
         context = ssl.create_default_context()
@@ -118,7 +126,43 @@ class MagicLinkEmailService:
                 if username:
                     smtp.login(username, password)
                 smtp.send_message(message)
-        except (smtplib.SMTPException, OSError) as exc:
+        except smtplib.SMTPAuthenticationError as exc:
+            logger.exception(
+                "SMTP authentication failed: host=%s port=%s tls=%s ssl=%s username_set=%s",
+                host,
+                port,
+                use_tls,
+                use_ssl,
+                bool(username),
+            )
+            raise ApiError(
+                502,
+                "mail_auth_failed",
+                "SMTP authentication failed. Check MAIL_SMTP_USERNAME and MAIL_SMTP_PASSWORD.",
+            ) from exc
+        except (smtplib.SMTPConnectError, TimeoutError, OSError) as exc:
+            logger.exception(
+                "SMTP connection failed: host=%s port=%s tls=%s ssl=%s username_set=%s",
+                host,
+                port,
+                use_tls,
+                use_ssl,
+                bool(username),
+            )
+            raise ApiError(
+                502,
+                "mail_connection_failed",
+                "SMTP connection failed. Check host/port/TLS settings and server egress rules.",
+            ) from exc
+        except smtplib.SMTPException as exc:
+            logger.exception(
+                "SMTP delivery failed: host=%s port=%s tls=%s ssl=%s username_set=%s",
+                host,
+                port,
+                use_tls,
+                use_ssl,
+                bool(username),
+            )
             raise ApiError(
                 502,
                 "mail_delivery_failed",
