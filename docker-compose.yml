@@ -13,6 +13,7 @@ services:
     volumes:
       - backend_data:/app/data
       - backend_uploads:/app/storage/uploads
+      - ./.secrets/firebase-service-account.json:/run/secrets/firebase-service-account.json:ro
     ports:
       - "127.0.0.1:5000:5000"
 
