@@ -194,6 +194,7 @@ export const FileTable = ({
   const visibleSelectedCount = items.reduce((count, item) => count + (selectedIdSet.has(item.id) ? 1 : 0), 0)
   const allVisibleSelected = items.length > 0 && visibleSelectedCount === items.length
   const partiallyVisibleSelected = visibleSelectedCount > 0 && !allVisibleSelected
+  const hasVisibleSelection = visibleSelectedCount > 0
   const selectedCount = selectedIds.length
   const showBulkHeaderActions = selectedCount > 0 && Boolean(onClearSelection) && Boolean(onDownloadSelected)
   const isImportOverlayActive = !readOnly && importOverlayState.mode !== 'none'
@@ -458,8 +459,14 @@ export const FileTable = ({
                     checked={allVisibleSelected}
                     indeterminate={partiallyVisibleSelected}
                     disabled={!onToggleSelectAll || !items.length}
-                    ariaLabel={allVisibleSelected ? 'Clear selection for all items' : 'Select all items'}
-                    onCheckedChange={(checked) => onToggleSelectAll?.(checked)}
+                    ariaLabel={hasVisibleSelection ? 'Clear selection for all items' : 'Select all items'}
+                    onCheckedChange={(checked) => {
+                      if (partiallyVisibleSelected) {
+                        onToggleSelectAll?.(false)
+                        return
+                      }
+                      onToggleSelectAll?.(checked)
+                    }}
                     onClick={(event) => event.stopPropagation()}
                   />
                 </span>
