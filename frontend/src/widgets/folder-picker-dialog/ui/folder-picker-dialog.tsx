@@ -31,12 +31,13 @@ const FolderRow = ({
   depth: number
   selected: boolean
   invalid: boolean
-  onClick: () => void
+  onClick?: () => void
 }) => {
   const className = [
     'folder-picker-node',
     selected ? 'folder-picker-node--selected' : '',
     invalid ? 'folder-picker-node--invalid' : '',
+    onClick ? '' : 'folder-picker-node--disabled',
   ]
     .filter(Boolean)
     .join(' ')
@@ -73,7 +74,7 @@ const FolderTree = ({
         depth={depth}
         selected={targetFolderId === node.id}
         invalid={invalid}
-        onClick={() => onSelectFolder(node.id)}
+        onClick={invalid ? undefined : () => onSelectFolder(node.id)}
       />
 
       {node.children.map((child) => (
@@ -107,7 +108,24 @@ export const FolderPickerDialog = ({
   const targetError = getTargetError(targetFolderId)
 
   return (
-    <Modal opened={opened} onClose={onClose} title={title} size="lg">
+    <Modal
+      opened={opened}
+      onClose={onClose}
+      title={title}
+      size="lg"
+      styles={{
+        header: {
+          padding: '10px 14px',
+          minHeight: 0,
+        },
+        body: {
+          paddingTop: '18px',
+        },
+        title: {
+          fontSize: '0.95rem',
+        },
+      }}
+    >
       <Stack>
         <Text size="sm">{description}</Text>
         <Text size="xs" c="dimmed">
@@ -132,7 +150,6 @@ export const FolderPickerDialog = ({
           </ScrollArea>
         </Box>
 
-        {targetError ? <Alert color="orange">{targetError}</Alert> : null}
         {error ? <Alert color="red">{error}</Alert> : null}
 
         <Group grow wrap="nowrap" gap="xs">

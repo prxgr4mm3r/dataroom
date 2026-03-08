@@ -13,5 +13,21 @@
 }
 
 .folder-picker-node--invalid {
-  background: var(--state-danger-bg);
+  background: transparent;
+}
+
+.folder-picker-node--invalid:hover {
+  background: inherit;
+}
+
+.folder-picker-node--invalid.folder-picker-node--selected {
+  background: transparent;
+}
+
+.folder-picker-node--disabled {
+  cursor: not-allowed;
+}
+
+.folder-picker-node--disabled:hover {
+  background: inherit;
 }

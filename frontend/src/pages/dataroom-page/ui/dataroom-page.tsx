@@ -469,17 +469,50 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
 
   const getTargetError = (mode: TransferMode, itemIds: string[], folderIdCandidate: string): string | null => {
     const normalizedTarget = normalizeFolderId(folderIdCandidate)
+    const transferItems = getMovingItems(itemIds)
 
     if (mode === 'copy') {
-      if (normalizedTarget !== 'root' && !folderTreeQuery.data) {
-        return t('invalidMoveTarget')
+      const validation = validateMoveTarget(transferItems, normalizedTarget, folderTreeQuery.data)
+      if (validation.reason === 'none' || validation.reason === 'same_parent') {
+        return null
       }
-      return null
+      return moveReasonMessage(validation.reason)
     }
 
-    const movingItems = getMovingItems(itemIds)
-    const validation = validateMoveTarget(movingItems, normalizedTarget, folderTreeQuery.data)
+    const validation = validateMoveTarget(transferItems, normalizedTarget, folderTreeQuery.data)
     return moveReasonMessage(validation.reason)
+  }
+
+  const resolveInitialTransferTarget = (
+    mode: TransferMode,
+    itemIds: string[],
+    preferredFolderId: string,
+  ): string => {
+    const preferred = normalizeFolderId(preferredFolderId)
+    if (!getTargetError(mode, itemIds, preferred)) {
+      return preferred
+    }
+
+    const folderTree = folderTreeQuery.data
+    if (!folderTree) {
+      return preferred
+    }
+
+    const stack: Array<typeof folderTree> = [folderTree]
+    while (stack.length) {
+      const node = stack.pop()
+      if (!node) {
+        continue
+      }
+      if (!getTargetError(mode, itemIds, node.id)) {
+        return node.id
+      }
+      for (let idx = node.children.length - 1; idx >= 0; idx -= 1) {
+        stack.push(node.children[idx])
+      }
+    }
+
+    return preferred
   }
 
   const resetTransferMutations = () => {
@@ -496,7 +529,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
     label: string,
   ) => {
     resetTransferMutations()
-    setTargetFolderId(normalizedFolderId)
+    setTargetFolderId(resolveInitialTransferTarget(mode, itemIds, normalizedFolderId))
     setTransferDialog({ mode, scope, itemIds, label })
   }
 
@@ -569,7 +602,6 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
 
     const targetError = getTargetError(transferDialog.mode, transferDialog.itemIds, targetFolderId)
     if (targetError) {
-      notifyError(targetError)
       return
     }
 
