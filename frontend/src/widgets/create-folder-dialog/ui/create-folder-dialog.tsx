@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { useCreateFolder } from '@/features/create-folder'
 import { toApiError } from '@/shared/api'
@@ -16,7 +16,25 @@ type CreateFolderDialogProps = {
 export const CreateFolderDialog = ({ opened, folderId, onClose }: CreateFolderDialogProps) => {
   const [name, setName] = useState('')
   const [inlineError, setInlineError] = useState<string | null>(null)
+  const nameInputRef = useRef<HTMLInputElement>(null)
   const createFolderMutation = useCreateFolder()
+
+  useEffect(() => {
+    if (!opened) {
+      return
+    }
+
+    const rafId = window.requestAnimationFrame(() => {
+      const input = nameInputRef.current
+      if (!input) {
+        return
+      }
+      input.focus()
+      input.select()
+    })
+
+    return () => window.cancelAnimationFrame(rafId)
+  }, [opened])
 
   const handleClose = () => {
     setName('')
@@ -51,6 +69,7 @@ export const CreateFolderDialog = ({ opened, folderId, onClose }: CreateFolderDi
     <Modal opened={opened} onClose={handleClose} title={t('createFolderTitle')}>
       <Stack>
         <TextInput
+          ref={nameInputRef}
           label={t('folderNameLabel')}
           placeholder={t('folderNamePlaceholder')}
           value={name}
@@ -59,6 +78,11 @@ export const CreateFolderDialog = ({ opened, folderId, onClose }: CreateFolderDi
             if (event.key === 'Enter') {
               event.preventDefault()
               void onSubmit()
+              return
+            }
+            if (event.key === 'Escape') {
+              event.preventDefault()
+              handleClose()
             }
           }}
           autoFocus
