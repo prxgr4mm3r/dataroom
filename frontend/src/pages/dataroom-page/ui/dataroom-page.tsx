@@ -70,6 +70,8 @@ type TransferDialogState = {
 
 type DropState = 'none' | 'valid' | 'warning' | 'invalid'
 const SYNTHETIC_FOLDER_TIMESTAMP = '1970-01-01T00:00:00.000Z'
+const DOWNLOAD_FALLBACK_NAME = 'dataroom-download.zip'
+const ZIP_EXTENSION_PATTERN = /\.zip$/i
 
 const moveReasonMessage = (reason: ReturnType<typeof validateMoveTarget>['reason']): string | null => {
   if (reason === 'self') {
@@ -85,6 +87,23 @@ const moveReasonMessage = (reason: ReturnType<typeof validateMoveTarget>['reason
     return t('invalidMoveTarget')
   }
   return null
+}
+
+const resolveFallbackDownloadName = (itemIds: string[], items: ContentItem[]): string => {
+  if (itemIds.length !== 1) {
+    return DOWNLOAD_FALLBACK_NAME
+  }
+
+  const selectedItem = items.find((item) => item.id === itemIds[0])
+  if (!selectedItem) {
+    return DOWNLOAD_FALLBACK_NAME
+  }
+
+  if (selectedItem.kind === 'folder') {
+    return ZIP_EXTENSION_PATTERN.test(selectedItem.name) ? selectedItem.name : `${selectedItem.name}.zip`
+  }
+
+  return selectedItem.name || DOWNLOAD_FALLBACK_NAME
 }
 
 export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
@@ -752,23 +771,30 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
     setDeleteDialog({ mode: 'bulk' })
   }
 
-  const downloadItems = async (itemIds: string[]) => {
+  const downloadItems = async (itemIds: string[], fallbackName?: string) => {
     try {
-      await downloadItemsMutation.mutateAsync({ itemIds })
+      await downloadItemsMutation.mutateAsync({ itemIds, fallbackName })
     } catch (error) {
       notifyError(toApiError(error).message)
     }
   }
 
   const downloadSingleItem = (item: ContentItem) => {
-    void downloadItems([item.id])
+    const fallbackName =
+      item.kind === 'folder'
+        ? ZIP_EXTENSION_PATTERN.test(item.name)
+          ? item.name
+          : `${item.name}.zip`
+        : item.name || DOWNLOAD_FALLBACK_NAME
+    void downloadItems([item.id], fallbackName)
   }
 
   const downloadSelectedItems = () => {
     if (!selectedIds.length) {
       return
     }
-    void downloadItems(selectedIds)
+    const fallbackName = resolveFallbackDownloadName(selectedIds, items)
+    void downloadItems(selectedIds, fallbackName)
   }
 
   const deletePending =

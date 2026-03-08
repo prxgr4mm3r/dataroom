@@ -32,27 +32,23 @@
 
 .import-file-dialog__modal-body--compact {
   height: auto;
+  padding: 18px 16px 16px;
 }
 
 .import-file-dialog__modal-shell-header {
-  align-items: flex-start;
+  align-items: center;
   position: relative;
+  padding: 10px 16px;
+  min-height: 0;
 }
 
 .import-file-dialog__modal-shell-header::after {
-  content: '';
-  position: absolute;
-  left: 16px;
-  right: 16px;
-  bottom: 0;
-  height: 1px;
-  background: var(--separator-muted);
-  pointer-events: none;
+  display: none;
 }
 
 .import-file-dialog__modal-close {
-  align-self: flex-start;
-  margin-top: -4px;
+  align-self: center;
+  margin-top: 0;
 }
 
 .import-file-dialog__modal-close:focus,
@@ -62,18 +58,21 @@
 }
 
 .import-file-dialog__modal-header {
-  display: grid;
-  gap: 6px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
   width: 100%;
   padding-right: 0;
 }
 
 .import-file-dialog__modal-header-main {
+  flex: 0 0 auto;
   align-items: center;
 }
 
 .import-file-dialog__modal-title {
-  font-size: 1.125rem;
+  font-size: 0.95rem;
   line-height: 1.2;
   color: var(--text-primary);
 }
@@ -82,9 +81,9 @@
   --status-chip-separator-color: var(--separator-soft);
   display: inline-flex;
   align-items: center;
-  width: fit-content;
+  width: auto;
   min-width: 0;
-  max-width: 100%;
+  max-width: min(42vw, 420px);
   border: 1px solid var(--border-soft);
   border-radius: 999px;
   background: var(--bg-subtle);
@@ -220,6 +219,11 @@
   height: 12px;
 }
 
+.import-file-dialog__drive-glyph--button {
+  width: 16px;
+  height: 14px;
+}
+
 .import-file-dialog__state-card {
   border: 1px solid var(--border-soft);
   border-radius: 10px;
@@ -228,13 +232,18 @@
 }
 
 .import-file-dialog__connect-card {
-  border: 1px solid var(--separator-soft);
-  border-radius: 10px;
-  padding: 12px;
-  margin-top: 14px;
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 8px;
   background: var(--bg-surface);
   display: grid;
-  gap: 12px;
+  gap: 14px;
+}
+
+.import-file-dialog__reconnect-panel {
+  margin-top: 10px;
+  padding: 4px 2px 2px;
 }
 
 .import-file-dialog__connect-logo {
@@ -254,10 +263,23 @@
   background: var(--bg-surface);
   color: var(--text-primary);
   font-weight: 600;
+  min-height: 42px;
 }
 
 .import-file-dialog__connect-button:hover {
   background: var(--bg-subtle);
+}
+
+.import-file-dialog__connect-button.import-file-dialog__connect-button--reconnect {
+  border-color: #63abff;
+  background: #63abff;
+  color: #fff;
+}
+
+.import-file-dialog__connect-button.import-file-dialog__connect-button--reconnect:hover {
+  border-color: #79b8ff;
+  background: #79b8ff;
+  color: #fff;
 }
 
 .import-file-dialog__drive-browser {

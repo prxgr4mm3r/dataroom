@@ -218,6 +218,7 @@ export const ImportFileDialog = ({
         ? 'Connected'
         : 'Not connected'
   const showHeaderStatusLabel = !isGoogleConnected || tokenExpired || googleStatusQuery.isPending || !connectedGoogleEmail
+  const showHeaderStatusRow = googleStatusQuery.isPending || (isGoogleConnected && !tokenExpired)
 
   const handleDisconnect = () => {
     if (googleDisconnect.isPending) {
@@ -259,7 +260,7 @@ export const ImportFileDialog = ({
             </Text>
           </Group>
 
-          {googleStatusQuery.isPending || tokenExpired || isGoogleConnected ? (
+          {showHeaderStatusRow ? (
             <Group
               gap={6}
               wrap="nowrap"
@@ -286,7 +287,7 @@ export const ImportFileDialog = ({
                   {connectedGoogleEmail}
                 </Text>
               ) : null}
-              {isGoogleConnected ? (
+              {isGoogleConnected && !tokenExpired ? (
                 <button
                   type="button"
                   className="import-file-dialog__header-disconnect"
@@ -307,7 +308,7 @@ export const ImportFileDialog = ({
           ) : null}
         </Box>
       }
-      size="xl"
+      size={!canImport ? 'md' : 'xl'}
       centered
       classNames={{
         content: [
@@ -343,33 +344,53 @@ export const ImportFileDialog = ({
           ) : null}
 
           {!canImport ? (
-            <Box className="import-file-dialog__connect-card">
-              <Group gap={12} wrap="nowrap" justify="space-between">
-                <Group gap={10} wrap="nowrap">
-                  <span className="import-file-dialog__connect-logo" aria-hidden="true">
-                    <GoogleDriveLogo className="import-file-dialog__drive-glyph import-file-dialog__drive-glyph--connect" />
-                  </span>
-                  <Stack gap={0}>
-                    <Text size="sm" fw={700}>
-                      {tokenExpired ? 'Reconnect Google Drive' : 'Connect Google Drive'}
-                    </Text>
-                    <Text size="xs" c="dimmed">
-                      {tokenExpired
-                        ? 'Your previous session expired. Reconnect to continue importing files.'
-                        : 'Link your Google account to import files in one click.'}
-                    </Text>
-                  </Stack>
-                </Group>
-              </Group>
-              <Button
-                className="import-file-dialog__connect-button"
-                loading={googleConnect.isPending}
-                variant="default"
-                onClick={() => googleConnect.mutate()}
-              >
-                {tokenExpired ? 'Reconnect Google Drive' : t('connectGoogle')}
-              </Button>
-            </Box>
+            tokenExpired ? (
+              <Stack className="import-file-dialog__reconnect-panel" gap="md">
+                <Stack gap={5}>
+                  <Text size="md" fw={700}>
+                    Reconnect Google Drive
+                  </Text>
+                  <Text size="sm" c="dimmed">
+                    Your session expired. Reconnect to continue importing files.
+                  </Text>
+                </Stack>
+                <Button
+                  className="import-file-dialog__connect-button import-file-dialog__connect-button--reconnect"
+                  loading={googleConnect.isPending}
+                  size="md"
+                  variant="default"
+                  leftSection={
+                    <GoogleDriveLogo className="import-file-dialog__drive-glyph import-file-dialog__drive-glyph--button" />
+                  }
+                  onClick={() => googleConnect.mutate()}
+                >
+                  Reconnect Google Drive
+                </Button>
+              </Stack>
+            ) : (
+              <Box className="import-file-dialog__connect-card">
+                <Stack gap={3}>
+                  <Text size="md" fw={700}>
+                    Connect Google Drive
+                  </Text>
+                  <Text size="sm" c="dimmed">
+                    Link your Google account to import files in one click.
+                  </Text>
+                </Stack>
+                <Button
+                  className="import-file-dialog__connect-button"
+                  loading={googleConnect.isPending}
+                  size="md"
+                  variant="default"
+                  leftSection={
+                    <GoogleDriveLogo className="import-file-dialog__drive-glyph import-file-dialog__drive-glyph--button" />
+                  }
+                  onClick={() => googleConnect.mutate()}
+                >
+                  {t('connectGoogle')}
+                </Button>
+              </Box>
+            )
           ) : (
             <Box className="import-file-dialog__drive-browser">
               <Box className="import-file-dialog__drive-browser-controls">

@@ -2,6 +2,7 @@ import { apiClient } from '@/shared/api'
 
 export type DownloadContentItemsPayload = {
   itemIds: string[]
+  fallbackName?: string
 }
 
 export type DownloadContentItemsResult = {
@@ -31,6 +32,7 @@ const parseFilename = (headerValue: unknown): string | null => {
 
 export const downloadContentItems = async ({
   itemIds,
+  fallbackName,
 }: DownloadContentItemsPayload): Promise<DownloadContentItemsResult> => {
   const response = await apiClient.post<Blob>(
     '/api/items/download',
@@ -38,7 +40,7 @@ export const downloadContentItems = async ({
     { responseType: 'blob' },
   )
 
-  const filename = parseFilename(response.headers['content-disposition']) ?? FALLBACK_NAME
+  const filename = parseFilename(response.headers['content-disposition']) ?? fallbackName ?? FALLBACK_NAME
   return {
     blob: response.data,
     filename,

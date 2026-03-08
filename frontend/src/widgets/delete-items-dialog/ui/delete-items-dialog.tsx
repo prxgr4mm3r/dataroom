@@ -24,7 +24,7 @@ export const DeleteItemsDialog = ({
     <Stack>
       <Text size="sm">{message}</Text>
       {error ? <Alert color="red">{error}</Alert> : null}
-      <Group justify="end" gap="xs">
+      <Group grow wrap="nowrap" gap="xs">
         <Button variant="default" onClick={onClose}>
           {t('cancel')}
         </Button>

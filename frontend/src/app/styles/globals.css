@@ -27,3 +27,66 @@ body {
 a {
   color: inherit;
 }
+
+.mantine-Modal-content .mantine-InputWrapper-label {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.mantine-Modal-content .mantine-Input-input {
+  background: var(--bg-subtle);
+  border-color: var(--border-soft);
+  color: var(--text-primary);
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease,
+    background-color 120ms ease;
+}
+
+.mantine-Modal-content .mantine-Input-input::placeholder {
+  color: var(--text-muted);
+}
+
+.mantine-Modal-content .mantine-Input-input:hover {
+  border-color: var(--border-muted);
+}
+
+.mantine-Modal-content .mantine-Input-input:focus,
+.mantine-Modal-content .mantine-Input-input:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.mantine-Modal-content .mantine-Button-root[data-variant='default'] {
+  background: var(--bg-subtle);
+  border-color: var(--border-soft);
+  color: var(--text-secondary);
+}
+
+.mantine-Modal-content .mantine-Button-root[data-variant='default']:hover {
+  background: var(--bg-hover-soft);
+  border-color: var(--border-muted);
+  color: var(--text-primary);
+}
+
+.app-modal-close {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-soft);
+  color: var(--icon-muted);
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
+}
+
+.app-modal-close:hover {
+  background: var(--bg-hover-soft);
+  border-color: var(--border-muted);
+  color: var(--text-primary);
+}
+
+.app-modal-close:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--focus-ring);
+}

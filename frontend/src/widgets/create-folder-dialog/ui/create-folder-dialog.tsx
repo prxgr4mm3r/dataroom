@@ -48,12 +48,33 @@ export const CreateFolderDialog = ({ opened, folderId, onClose }: CreateFolderDi
   }
 
   return (
-    <Modal opened={opened} onClose={handleClose} title={t('createFolderTitle')}>
+    <Modal
+      opened={opened}
+      onClose={handleClose}
+      title={t('createFolderTitle')}
+      styles={{
+        header: {
+          padding: '10px 14px',
+          minHeight: 0,
+        },
+        body: {
+          paddingTop: '18px',
+        },
+        title: {
+          fontSize: '0.95rem',
+        },
+      }}
+    >
       <Stack>
         <TextInput
           data-autofocus
           label={t('folderNameLabel')}
           placeholder={t('folderNamePlaceholder')}
+          styles={{
+            label: {
+              marginBottom: '6px',
+            },
+          }}
           value={name}
           onChange={(event) => setName(event.currentTarget.value)}
           onKeyDown={(event) => {
@@ -71,7 +92,7 @@ export const CreateFolderDialog = ({ opened, folderId, onClose }: CreateFolderDi
 
         {inlineError ? <Alert color="red">{inlineError}</Alert> : null}
 
-        <Group justify="end" gap="xs">
+        <Group grow wrap="nowrap" gap="xs">
           <Button variant="default" onClick={handleClose}>
             {t('cancel')}
           </Button>

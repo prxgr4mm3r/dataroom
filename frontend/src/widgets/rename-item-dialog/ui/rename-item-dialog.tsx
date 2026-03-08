@@ -90,7 +90,7 @@ export const RenameItemDialog = ({ opened, item, onClose }: RenameItemDialogProp
 
         {inlineError ? <Alert color="red">{inlineError}</Alert> : null}
 
-        <Group justify="end" gap="xs">
+        <Group grow wrap="nowrap" gap="xs">
           <Button variant="default" onClick={handleClose}>
             {t('cancel')}
           </Button>

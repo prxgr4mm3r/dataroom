@@ -7,7 +7,7 @@
 .shortcuts-dialog__table td {
   text-align: left;
   padding: 8px 0;
-  border-bottom: 1px solid var(--mantine-color-gray-2);
+  border-bottom: 1px solid var(--separator-soft);
   vertical-align: top;
 }
 
@@ -16,7 +16,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--mantine-color-dimmed);
+  color: var(--text-muted);
 }
 
 .shortcuts-dialog__table td {
@@ -26,6 +26,6 @@
 .shortcuts-dialog__keys {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
   font-size: 13px;
-  color: var(--mantine-color-text);
+  color: var(--accent);
   white-space: nowrap;
 }
