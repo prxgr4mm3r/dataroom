@@ -1,5 +1,5 @@
 import { IconLogout2, IconSearch } from '@tabler/icons-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { useGoogleFilesQuery } from '@/features/browse-google-files'
 import type { GoogleFilesOrderBy, GoogleFilesSource } from '@/features/browse-google-files/api/get-google-files'
@@ -67,6 +67,7 @@ export const ImportFileDialog = ({
   const [driveTab, setDriveTab] = useState<GoogleFilesSource>('recent')
   const [driveSort, setDriveSort] = useState<GoogleFilesOrderBy>('modified_desc')
   const [selectedGoogleIds, setSelectedGoogleIds] = useState<string[]>([])
+  const searchInputRef = useRef<HTMLInputElement>(null)
 
   const googleStatusQuery = useGoogleStatusQuery(opened)
   const googleConnect = useGoogleConnect()
@@ -234,6 +235,18 @@ export const ImportFileDialog = ({
     })
   }
 
+  useEffect(() => {
+    if (!opened || !canImport) {
+      return
+    }
+
+    const rafId = window.requestAnimationFrame(() => {
+      searchInputRef.current?.focus()
+    })
+
+    return () => window.cancelAnimationFrame(rafId)
+  }, [opened, canImport])
+
   return (
     <Modal
       opened={opened}
@@ -362,6 +375,8 @@ export const ImportFileDialog = ({
               <Box className="import-file-dialog__drive-browser-controls">
                 <Group justify="space-between" wrap="nowrap" className="import-file-dialog__drive-browser-toolbar">
                   <TextInput
+                    ref={searchInputRef}
+                    data-autofocus
                     className="import-file-dialog__drive-browser-search"
                     placeholder="Search in Google Drive"
                     leftSection={<IconSearch size={16} />}

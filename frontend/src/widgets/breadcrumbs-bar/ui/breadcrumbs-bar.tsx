@@ -14,7 +14,8 @@ import {
 import type { DragEvent } from 'react'
 
 import type { Breadcrumb } from '@/entities/folder'
-import { Group, Menu } from '@/shared/ui'
+import { APP_SHORTCUTS } from '@/shared/lib/keyboard/shortcuts'
+import { Group, Menu, Text } from '@/shared/ui'
 import './breadcrumbs-bar.css'
 
 type DropState = 'none' | 'valid' | 'warning' | 'invalid'
@@ -56,6 +57,7 @@ export const BreadcrumbsBar = ({
   onFolderDrop = NOOP_FOLDER_DROP,
   getFolderDropState = NOOP_DROP_STATE,
 }: BreadcrumbsBarProps) => {
+  const createFolderShortcutLabel = APP_SHORTCUTS.createFolder.compactLabel
   const shouldCollapse = breadcrumbs.length >= COLLAPSE_THRESHOLD
   const start = breadcrumbs[0]
   const end = shouldCollapse ? breadcrumbs.slice(-2) : breadcrumbs.slice(1)
@@ -123,6 +125,7 @@ export const BreadcrumbsBar = ({
           {currentFolderMenu.onCreateFolder ? (
             <Menu.Item
               leftSection={<IconFolderPlus size={14} />}
+              rightSection={<Text size="xs" c="dimmed">{createFolderShortcutLabel}</Text>}
               onClick={() => currentFolderMenu.onCreateFolder?.(crumb)}
             >
               Create folder

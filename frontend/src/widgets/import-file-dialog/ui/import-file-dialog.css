@@ -92,21 +92,21 @@
 }
 
 .import-file-dialog__header-status-row--connected {
-  --status-chip-separator-color: var(--state-success-border);
-  border-color: var(--state-success-border);
-  background: var(--state-success-bg-soft);
+  --status-chip-separator-color: var(--separator-soft);
+  border-color: var(--border-soft);
+  background: var(--bg-subtle);
 }
 
 .import-file-dialog__header-status-row--warning {
-  --status-chip-separator-color: var(--state-warning-border);
-  border-color: var(--state-warning-border);
-  background: var(--state-warning-bg-soft);
+  --status-chip-separator-color: var(--separator-soft);
+  border-color: var(--border-soft);
+  background: var(--bg-subtle);
 }
 
 .import-file-dialog__header-status-row--loading {
-  --status-chip-separator-color: var(--state-info-border);
-  border-color: var(--state-info-border);
-  background: var(--state-info-bg);
+  --status-chip-separator-color: var(--separator-soft);
+  border-color: var(--border-soft);
+  background: var(--bg-subtle);
 }
 
 .import-file-dialog__header-status-row--disconnected {
@@ -120,15 +120,15 @@
 }
 
 .import-file-dialog__header-status--connected {
-  color: var(--state-success-text);
+  color: var(--text-secondary);
 }
 
 .import-file-dialog__header-status--warning {
-  color: var(--state-warning-text);
+  color: var(--text-secondary);
 }
 
 .import-file-dialog__header-status--loading {
-  color: var(--state-info-text);
+  color: var(--text-secondary);
 }
 
 .import-file-dialog__header-status--disconnected {
@@ -137,7 +137,7 @@
 
 .import-file-dialog__status-email {
   max-width: min(42vw, 320px);
-  color: var(--state-success-text);
+  color: var(--text-secondary);
   line-height: 1.35;
 }
 
@@ -171,7 +171,7 @@
   min-height: 18px;
   border: 0;
   background: transparent;
-  color: var(--state-danger-text);
+  color: var(--text-secondary);
   font-size: 12px;
   line-height: 1.35;
   font-weight: 600;
@@ -183,7 +183,7 @@
 }
 
 .import-file-dialog__header-disconnect:hover {
-  color: var(--state-danger-icon);
+  color: var(--text-primary);
 }
 
 .import-file-dialog__header-disconnect:disabled {
@@ -228,11 +228,11 @@
 }
 
 .import-file-dialog__connect-card {
-  border: 1px solid var(--border-soft);
+  border: 1px solid var(--separator-soft);
   border-radius: 10px;
   padding: 12px;
   margin-top: 14px;
-  background: var(--bg-subtle);
+  background: var(--bg-surface);
   display: grid;
   gap: 12px;
 }
@@ -315,14 +315,14 @@
 
 .import-file-dialog__drive-browser-tab:hover {
   border-color: var(--border-muted);
-  background: var(--state-info-bg-soft);
+  background: var(--bg-hover-soft);
   color: var(--text-secondary);
 }
 
 .import-file-dialog__drive-browser-tab--active {
-  border-color: var(--state-info-border);
-  background: var(--state-info-bg);
-  color: var(--control-text-active);
+  border-color: var(--border-muted);
+  background: var(--bg-subtle);
+  color: var(--text-primary);
 }
 
 .import-file-dialog__drive-browser-sort {
@@ -352,14 +352,14 @@
 
 .import-file-dialog__drive-browser-sort-button:hover {
   border-color: var(--border-muted);
-  background: var(--state-info-bg-soft);
+  background: var(--bg-hover-soft);
   color: var(--text-secondary);
 }
 
 .import-file-dialog__drive-browser-sort-button--active {
-  border-color: var(--state-info-border);
-  background: var(--state-info-bg);
-  color: var(--control-text-active);
+  border-color: var(--border-muted);
+  background: var(--bg-subtle);
+  color: var(--text-primary);
 }
 
 .import-file-dialog__drive-browser-content {
@@ -392,7 +392,7 @@
   column-gap: 10px;
   padding: 10px 12px;
   border-bottom: 1px solid var(--separator-soft);
-  background: var(--state-info-bg-soft);
+  background: var(--bg-subtle);
   position: sticky;
   top: 0;
   z-index: 1;
@@ -423,11 +423,11 @@
 
 .import-file-dialog__drive-file-row:hover {
   border-bottom-color: var(--border-muted);
-  background: var(--state-info-bg-soft);
+  background: var(--bg-hover-soft);
 }
 
 .import-file-dialog__drive-file-row--selected {
-  background: var(--state-info-bg);
+  background: var(--bg-subtle);
 }
 
 .import-file-dialog__drive-file-row--too-large {
@@ -513,10 +513,10 @@
 }
 
 .import-file-dialog__drive-file-shared-pill {
-  border: 1px solid var(--state-info-border);
+  border: 1px solid var(--border-soft);
   border-radius: 999px;
   padding: 3px 10px;
-  background: var(--state-info-bg);
+  background: var(--bg-subtle);
   color: var(--text-secondary);
   font-weight: 600;
   white-space: nowrap;

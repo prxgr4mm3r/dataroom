@@ -1,4 +1,5 @@
 import { Modal, Text } from '@/shared/ui'
+import { APP_SHORTCUTS } from '@/shared/lib/keyboard/shortcuts'
 
 import './shortcuts-dialog.css'
 
@@ -8,18 +9,19 @@ type ShortcutsDialogProps = {
 }
 
 const shortcuts = [
-  { keys: 'Ctrl/Cmd + F', description: 'Open search' },
-  { keys: 'Ctrl/Cmd + Shift + N', description: 'Create folder' },
-  { keys: 'Ctrl/Cmd + I', description: 'Upload from computer' },
+  { keys: APP_SHORTCUTS.openSearch.label, description: 'Open search' },
+  { keys: APP_SHORTCUTS.createFolder.label, description: 'Create folder' },
+  { keys: APP_SHORTCUTS.importFromComputer.label, description: 'Upload from computer' },
+  { keys: APP_SHORTCUTS.importFromGoogle.label, description: 'Import from Google Drive' },
   { keys: 'Shift + Click', description: 'Select range in table' },
-  { keys: 'Ctrl/Cmd + A', description: 'Select all items in current folder' },
+  { keys: APP_SHORTCUTS.selectAll.label, description: 'Select all items in current folder' },
   { keys: 'Enter', description: 'Open selected item' },
   { keys: 'Backspace or Alt + Left', description: 'Open parent folder' },
   { keys: 'Delete or Cmd + Backspace', description: 'Delete selected items' },
   { keys: 'F2', description: 'Rename selected item' },
   { keys: 'Space', description: 'Quick preview selected file' },
   { keys: 'Esc', description: 'Close dialog or clear selection' },
-  { keys: 'Ctrl/Cmd + /', description: 'Open shortcuts help' },
+  { keys: APP_SHORTCUTS.openShortcutsHelp.label, description: 'Open shortcuts help' },
 ]
 
 export const ShortcutsDialog = ({ opened, onClose }: ShortcutsDialogProps) => (

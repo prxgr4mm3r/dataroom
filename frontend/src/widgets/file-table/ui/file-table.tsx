@@ -24,6 +24,7 @@ import { formatFileSize } from '@/shared/lib/file/format-file-size'
 import { getFileTypePresentation } from '@/shared/lib/file/file-type-presentation'
 import { MAX_IMPORT_FILE_SIZE_BYTES } from '@/shared/lib/file/import-file-size-limit'
 import { splitFileName } from '@/shared/lib/file/split-file-name'
+import { APP_SHORTCUTS, withShortcutHint } from '@/shared/lib/keyboard/shortcuts'
 import {
   ActionIcon,
   Box,
@@ -206,6 +207,10 @@ export const FileTable = ({
   const isMoveOverlayActive =
     !readOnly && !isImportOverlayActive && moveOverlayItemCount > 0 && currentFolderDropState !== 'none'
   const maxImportSizeLabel = formatFileSize(MAX_IMPORT_FILE_SIZE_BYTES).replace('.0 ', ' ')
+  const uploadFromComputerLabelWithShortcut = withShortcutHint('Upload from computer', APP_SHORTCUTS.importFromComputer.label)
+  const importFromGoogleLabelWithShortcut = withShortcutHint('Import from Google Drive', APP_SHORTCUTS.importFromGoogle.label)
+  const uploadFromComputerShortcutLabel = APP_SHORTCUTS.importFromComputer.compactLabel
+  const importFromGoogleShortcutLabel = APP_SHORTCUTS.importFromGoogle.compactLabel
   const draggedFileCountLabel =
     importOverlayState.mode === 'none' ? '' : formatDraggedFileCount(importOverlayState.fileCount)
   const draggedItemCountLabel = formatDraggedItemCount(moveOverlayItemCount)
@@ -421,6 +426,13 @@ export const FileTable = ({
                   size="xs"
                   variant="default"
                   leftSection={<IconBrandGoogleDrive size={14} />}
+                  rightSection={
+                    <Text size="xs" c="dimmed">
+                      {importFromGoogleShortcutLabel}
+                    </Text>
+                  }
+                  title={importFromGoogleLabelWithShortcut}
+                  aria-label={importFromGoogleLabelWithShortcut}
                   onClick={onImportFromGoogle}
                   disabled={!onImportFromGoogle}
                 >
@@ -430,6 +442,13 @@ export const FileTable = ({
                   size="xs"
                   variant="subtle"
                   leftSection={<IconUpload size={14} />}
+                  rightSection={
+                    <Text size="xs" c="dimmed">
+                      {uploadFromComputerShortcutLabel}
+                    </Text>
+                  }
+                  title={uploadFromComputerLabelWithShortcut}
+                  aria-label={uploadFromComputerLabelWithShortcut}
                   onClick={onImportFromComputer}
                   disabled={!onImportFromComputer}
                   loading={importFromComputerPending}

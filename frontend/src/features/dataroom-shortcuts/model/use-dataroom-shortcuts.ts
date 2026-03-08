@@ -1,11 +1,13 @@
 import { useEffect } from 'react'
 
 import { isEditableEventTarget } from '@/shared/lib/keyboard/is-editable-event-target'
+import { APP_SHORTCUTS } from '@/shared/lib/keyboard/shortcuts'
 
 type DataroomShortcutActions = {
   onOpenSearch: () => void
   onCreateFolder: () => void
   onImportFromComputer: () => void
+  onImportFromGoogle: () => void
   onSelectAll: () => void
   onOpenSelected: () => void
   onOpenParentFolder: () => void
@@ -27,6 +29,7 @@ export const useDataroomShortcuts = ({
   onOpenSearch,
   onCreateFolder,
   onImportFromComputer,
+  onImportFromGoogle,
   onSelectAll,
   onOpenSelected,
   onOpenParentFolder,
@@ -42,15 +45,22 @@ export const useDataroomShortcuts = ({
         return
       }
 
-      const isEditableTarget = isEditableEventTarget(event.target)
       const key = event.key
+      const code = event.code
       const isModifier = isModifierPressed(event)
+      const isEditableTarget = isEditableEventTarget(event.target)
+      const isAppModifier = isModifier && event.altKey
+      const isOpenSearchShortcut = isAppModifier && !event.shiftKey && code === APP_SHORTCUTS.openSearch.code
+      const isCreateFolderShortcut = isAppModifier && !event.shiftKey && code === APP_SHORTCUTS.createFolder.code
+      const isImportFromComputerShortcut =
+        isAppModifier && !event.shiftKey && code === APP_SHORTCUTS.importFromComputer.code
+      const isImportFromGoogleShortcut =
+        isAppModifier && !event.shiftKey && code === APP_SHORTCUTS.importFromGoogle.code
+      const isSelectAllShortcut = isAppModifier && !event.shiftKey && code === APP_SHORTCUTS.selectAll.code
+      const isOpenShortcutsHelpShortcut =
+        isAppModifier && !event.shiftKey && code === APP_SHORTCUTS.openShortcutsHelp.code
 
-      if (isEditableTarget) {
-        return
-      }
-
-      if (isModifier && !event.shiftKey && key.toLowerCase() === 'f') {
+      if (isOpenSearchShortcut) {
         event.preventDefault()
         if (!suspended) {
           onOpenSearch()
@@ -58,7 +68,7 @@ export const useDataroomShortcuts = ({
         return
       }
 
-      if (isModifier && event.shiftKey && key.toLowerCase() === 'n') {
+      if (isCreateFolderShortcut) {
         event.preventDefault()
         if (!suspended) {
           onCreateFolder()
@@ -66,7 +76,7 @@ export const useDataroomShortcuts = ({
         return
       }
 
-      if (isModifier && !event.shiftKey && key.toLowerCase() === 'i') {
+      if (isImportFromComputerShortcut) {
         event.preventDefault()
         if (!suspended) {
           onImportFromComputer()
@@ -74,7 +84,18 @@ export const useDataroomShortcuts = ({
         return
       }
 
-      if (isModifier && !event.shiftKey && key.toLowerCase() === 'a') {
+      if (isImportFromGoogleShortcut) {
+        event.preventDefault()
+        if (!suspended) {
+          onImportFromGoogle()
+        }
+        return
+      }
+
+      if (isSelectAllShortcut) {
+        if (isEditableTarget) {
+          return
+        }
         event.preventDefault()
         if (!suspended) {
           onSelectAll()
@@ -82,11 +103,15 @@ export const useDataroomShortcuts = ({
         return
       }
 
-      if (isModifier && !event.shiftKey && key === '/') {
+      if (isOpenShortcutsHelpShortcut) {
         event.preventDefault()
         if (!suspended) {
           onOpenShortcutsHelp()
         }
+        return
+      }
+
+      if (isEditableTarget) {
         return
       }
 
@@ -130,13 +155,14 @@ export const useDataroomShortcuts = ({
       }
     }
 
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
+    window.addEventListener('keydown', onKeyDown, { capture: true })
+    return () => window.removeEventListener('keydown', onKeyDown, { capture: true })
   }, [
     suspended,
     onOpenSearch,
     onCreateFolder,
     onImportFromComputer,
+    onImportFromGoogle,
     onSelectAll,
     onOpenSelected,
     onOpenParentFolder,

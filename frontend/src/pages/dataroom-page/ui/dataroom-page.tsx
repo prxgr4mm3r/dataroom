@@ -842,6 +842,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
     onOpenSearch: () => setSearchDialogOpened(true),
     onCreateFolder: () => setCreateFolderOpened(true),
     onImportFromComputer: openComputerImportPicker,
+    onImportFromGoogle: openGoogleImportDialog,
     onSelectAll: selectAllVisibleItems,
     onOpenSelected: openSelectedItem,
     onOpenParentFolder: openParentFolder,

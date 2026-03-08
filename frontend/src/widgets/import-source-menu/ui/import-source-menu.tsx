@@ -2,7 +2,8 @@ import { IconUpload } from '@tabler/icons-react'
 import type { ReactElement } from 'react'
 
 import { t } from '@/shared/i18n/messages'
-import { Menu } from '@/shared/ui'
+import { APP_SHORTCUTS } from '@/shared/lib/keyboard/shortcuts'
+import { Menu, Text } from '@/shared/ui'
 
 type ImportSourceMenuProps = {
   onImportFromGoogle: () => void
@@ -32,16 +33,29 @@ export const ImportSourceMenu = ({
   children,
   position = 'bottom-end',
   offset = 6,
-}: ImportSourceMenuProps) => (
-  <Menu withinPortal position={position} offset={offset}>
-    <Menu.Target>{children}</Menu.Target>
-    <Menu.Dropdown>
-      <Menu.Item leftSection={<GoogleDriveLogo />} onClick={onImportFromGoogle}>
-        {t('importFromGoogle')}
-      </Menu.Item>
-      <Menu.Item leftSection={<IconUpload size={14} />} onClick={onImportFromComputer}>
-        {t('uploadFromComputer')}
-      </Menu.Item>
-    </Menu.Dropdown>
-  </Menu>
-)
+}: ImportSourceMenuProps) => {
+  const uploadFromComputerShortcutLabel = APP_SHORTCUTS.importFromComputer.compactLabel
+  const importFromGoogleShortcutLabel = APP_SHORTCUTS.importFromGoogle.compactLabel
+
+  return (
+    <Menu withinPortal position={position} offset={offset}>
+      <Menu.Target>{children}</Menu.Target>
+      <Menu.Dropdown>
+        <Menu.Item
+          leftSection={<GoogleDriveLogo />}
+          rightSection={<Text size="xs" c="dimmed">{importFromGoogleShortcutLabel}</Text>}
+          onClick={onImportFromGoogle}
+        >
+          {t('importFromGoogle')}
+        </Menu.Item>
+        <Menu.Item
+          leftSection={<IconUpload size={14} />}
+          rightSection={<Text size="xs" c="dimmed">{uploadFromComputerShortcutLabel}</Text>}
+          onClick={onImportFromComputer}
+        >
+          {t('uploadFromComputer')}
+        </Menu.Item>
+      </Menu.Dropdown>
+    </Menu>
+  )
+}

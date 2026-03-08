@@ -3,6 +3,7 @@ import type { DragEvent } from 'react'
 
 import type { Breadcrumb } from '@/entities/folder'
 import { t } from '@/shared/i18n/messages'
+import { APP_SHORTCUTS, withShortcutHint } from '@/shared/lib/keyboard/shortcuts'
 import { ActionIcon, Box, Group, Tooltip, useComputedColorScheme, useMantineColorScheme } from '@/shared/ui'
 import { BreadcrumbsBar } from '@/widgets/breadcrumbs-bar'
 import './dataroom-toolbar.css'
@@ -44,6 +45,8 @@ export const DataroomToolbar = ({
   const computedColorScheme = useComputedColorScheme('light', { getInitialValueInEffect: true })
   const isDark = computedColorScheme === 'dark'
   const toggleThemeLabel = isDark ? t('switchToLightTheme') : t('switchToDarkTheme')
+  const searchLabel = 'Search files and folders'
+  const searchLabelWithShortcut = withShortcutHint(searchLabel, APP_SHORTCUTS.openSearch.label)
 
   return (
     <Group justify="space-between" align="center" px="md" py="sm" wrap="nowrap" gap="md">
@@ -61,13 +64,14 @@ export const DataroomToolbar = ({
       </Box>
 
       <Group gap="xs">
-        <Tooltip label="Search files and folders">
+        <Tooltip label={searchLabelWithShortcut}>
           <ActionIcon
             variant="default"
             size="lg"
             radius="md"
             className="dataroom-toolbar__search"
-            aria-label="Search files and folders"
+            aria-label={searchLabelWithShortcut}
+            title={searchLabelWithShortcut}
             onClick={onOpenSearch}
           >
             <IconSearch size={16} />

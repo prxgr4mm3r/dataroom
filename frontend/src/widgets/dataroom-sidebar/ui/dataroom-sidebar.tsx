@@ -17,6 +17,7 @@ import { useListContentItemsQuery } from '@/features/list-content-items'
 import { t } from '@/shared/i18n/messages'
 import { getFileTypePresentation } from '@/shared/lib/file/file-type-presentation'
 import { splitFileName } from '@/shared/lib/file/split-file-name'
+import { APP_SHORTCUTS, withShortcutHint } from '@/shared/lib/keyboard/shortcuts'
 import { normalizeFolderId } from '@/shared/routes/dataroom-routes'
 import { ActionIcon, Box, Button, FileTypeIcon, Group, Menu, ScrollArea, Text, Title, Tooltip } from '@/shared/ui'
 import { ImportSourceMenu } from '@/widgets/import-source-menu'
@@ -304,6 +305,8 @@ export const DataroomSidebarRail = ({
   const accountInitials = toInitials(accountName)
   const avatarColor = pickAvatarColor(currentUser.id || currentUser.firebaseUid || accountName)
   const avatarCacheId = currentUser.id || currentUser.firebaseUid || accountName
+  const newFolderLabelWithShortcut = withShortcutHint(t('newFolder'), APP_SHORTCUTS.createFolder.label)
+  const importFileLabelWithShortcut = withShortcutHint(t('importFile'), APP_SHORTCUTS.importFromComputer.label)
   const { avatarSrc, showPhotoAvatar, handleAvatarError, handleAvatarLoad } = useCachedAvatarImage({
     cacheId: avatarCacheId,
     photoUrl: currentUser.photoUrl,
@@ -312,13 +315,14 @@ export const DataroomSidebarRail = ({
   return (
     <Box className="dataroom-sidebar-rail">
       <Group className="dataroom-sidebar-rail__actions" gap={4}>
-        <Tooltip label={t('newFolder')} position="right">
+        <Tooltip label={newFolderLabelWithShortcut} position="right">
           <ActionIcon
             className="dataroom-sidebar-rail__action-icon"
             variant="subtle"
             size="lg"
             radius="md"
-            aria-label={t('newFolder')}
+            aria-label={newFolderLabelWithShortcut}
+            title={newFolderLabelWithShortcut}
             onClick={onNewFolder}
           >
             <IconFolderPlus size={18} />
@@ -332,13 +336,14 @@ export const DataroomSidebarRail = ({
           offset={8}
         >
           <Box>
-            <Tooltip label={t('importFile')} position="right">
+            <Tooltip label={importFileLabelWithShortcut} position="right">
               <ActionIcon
                 className="dataroom-sidebar-rail__action-icon"
                 variant="subtle"
                 size="lg"
                 radius="md"
-                aria-label={t('importFile')}
+                aria-label={importFileLabelWithShortcut}
+                title={importFileLabelWithShortcut}
               >
                 <IconUpload size={18} />
               </ActionIcon>
@@ -711,6 +716,10 @@ export const DataroomSidebar = ({
   const accountInitials = toInitials(accountName)
   const avatarColor = pickAvatarColor(currentUser.id || currentUser.firebaseUid || accountName)
   const avatarCacheId = currentUser.id || currentUser.firebaseUid || accountName
+  const newFolderLabelWithShortcut = withShortcutHint(t('newFolder'), APP_SHORTCUTS.createFolder.label)
+  const importFileLabelWithShortcut = withShortcutHint(t('importFile'), APP_SHORTCUTS.importFromComputer.label)
+  const newFolderShortcutLabel = APP_SHORTCUTS.createFolder.compactLabel
+  const importFromComputerShortcutLabel = APP_SHORTCUTS.importFromComputer.compactLabel
   const { avatarSrc, showPhotoAvatar, handleAvatarError, handleAvatarLoad } = useCachedAvatarImage({
     cacheId: avatarCacheId,
     photoUrl: currentUser.photoUrl,
@@ -732,6 +741,9 @@ export const DataroomSidebar = ({
           fullWidth
           className="dataroom-sidebar__quick-action-button"
           leftSection={<IconFolderPlus size={18} />}
+          rightSection={<Text className="dataroom-sidebar__shortcut-hint">{newFolderShortcutLabel}</Text>}
+          title={newFolderLabelWithShortcut}
+          aria-label={newFolderLabelWithShortcut}
           onClick={onNewFolder}
         >
           {t('newFolder')}
@@ -748,6 +760,9 @@ export const DataroomSidebar = ({
             fullWidth
             className="dataroom-sidebar__quick-action-button"
             leftSection={<IconUpload size={18} />}
+            rightSection={<Text className="dataroom-sidebar__shortcut-hint">{importFromComputerShortcutLabel}</Text>}
+            title={importFileLabelWithShortcut}
+            aria-label={importFileLabelWithShortcut}
           >
             {t('importFile')}
           </Button>

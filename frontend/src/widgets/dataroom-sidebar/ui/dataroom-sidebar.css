@@ -138,6 +138,7 @@
 
 .dataroom-sidebar__quick-action-button .mantine-Button-inner {
   justify-content: flex-start;
+  width: 100%;
   min-height: var(--button-height);
 }
 
@@ -147,8 +148,21 @@
 }
 
 .dataroom-sidebar__quick-action-button .mantine-Button-label {
+  flex: 1 1 auto;
   text-align: left;
   font-weight: 600;
+}
+
+.dataroom-sidebar__quick-action-button .mantine-Button-section[data-position='right'] {
+  margin-inline-start: 8px;
+  margin-inline-end: 0;
+}
+
+.dataroom-sidebar__shortcut-hint {
+  font-size: 10px;
+  line-height: 1.1;
+  color: var(--text-muted);
+  white-space: nowrap;
 }
 
 .dataroom-sidebar__tree-title {
