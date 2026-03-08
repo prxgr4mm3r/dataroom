@@ -121,30 +121,6 @@ class MagicLinkEmailService:
                 use_ssl=use_ssl,
                 message=message,
             )
-        except OSError as exc:
-            # Common on hosts without IPv6 default route when resolver prefers AAAA first.
-            if exc.errno == 101:
-                ipv4_host = self._resolve_first_ipv4(host, port)
-                if ipv4_host:
-                    logger.warning(
-                        "SMTP connect failed with errno=101 for host=%s, retrying via IPv4=%s",
-                        host,
-                        ipv4_host,
-                    )
-                    self._send_message_via_smtp(
-                        smtp_host=host,
-                        connect_host=ipv4_host,
-                        port=port,
-                        timeout_seconds=timeout_seconds,
-                        context=context,
-                        username=username,
-                        password=password,
-                        use_tls=use_tls,
-                        use_ssl=use_ssl,
-                        message=message,
-                    )
-                    return
-            raise
         except smtplib.SMTPAuthenticationError as exc:
             logger.exception(
                 "SMTP authentication failed: host=%s port=%s tls=%s ssl=%s username_set=%s",
@@ -158,20 +134,6 @@ class MagicLinkEmailService:
                 502,
                 "mail_auth_failed",
                 "SMTP authentication failed. Check MAIL_SMTP_USERNAME and MAIL_SMTP_PASSWORD.",
-            ) from exc
-        except (smtplib.SMTPConnectError, TimeoutError, OSError) as exc:
-            logger.exception(
-                "SMTP connection failed: host=%s port=%s tls=%s ssl=%s username_set=%s",
-                host,
-                port,
-                use_tls,
-                use_ssl,
-                bool(username),
-            )
-            raise ApiError(
-                502,
-                "mail_connection_failed",
-                "SMTP connection failed. Check host/port/TLS settings and server egress rules.",
             ) from exc
         except smtplib.SMTPException as exc:
             logger.exception(
@@ -187,18 +149,89 @@ class MagicLinkEmailService:
                 "mail_delivery_failed",
                 "Failed to send sign-in email. Please try again.",
             ) from exc
+        except OSError as exc:
+            ipv4_hosts = self._resolve_ipv4_hosts(host, port)
+            last_exc: Exception = exc
+
+            if exc.errno == 101 and ipv4_hosts:
+                logger.warning(
+                    "SMTP connect failed with errno=101 for host=%s, retrying via IPv4=%s",
+                    host,
+                    ",".join(ipv4_hosts),
+                )
+
+            for ipv4_host in ipv4_hosts:
+                try:
+                    self._send_message_via_smtp(
+                        smtp_host=host,
+                        connect_host=ipv4_host,
+                        port=port,
+                        timeout_seconds=timeout_seconds,
+                        context=context,
+                        username=username,
+                        password=password,
+                        use_tls=use_tls,
+                        use_ssl=use_ssl,
+                        message=message,
+                    )
+                    return
+                except smtplib.SMTPAuthenticationError as retry_exc:
+                    logger.exception(
+                        "SMTP authentication failed on IPv4 retry: host=%s connect_host=%s port=%s tls=%s ssl=%s username_set=%s",
+                        host,
+                        ipv4_host,
+                        port,
+                        use_tls,
+                        use_ssl,
+                        bool(username),
+                    )
+                    raise ApiError(
+                        502,
+                        "mail_auth_failed",
+                        "SMTP authentication failed. Check MAIL_SMTP_USERNAME and MAIL_SMTP_PASSWORD.",
+                    ) from retry_exc
+                except (smtplib.SMTPException, OSError) as retry_exc:
+                    last_exc = retry_exc
+                    logger.warning(
+                        "SMTP IPv4 retry failed: host=%s connect_host=%s port=%s error=%s",
+                        host,
+                        ipv4_host,
+                        port,
+                        retry_exc.__class__.__name__,
+                    )
+
+            logger.exception(
+                "SMTP connection failed: host=%s port=%s tls=%s ssl=%s username_set=%s",
+                host,
+                port,
+                use_tls,
+                use_ssl,
+                bool(username),
+            )
+            raise ApiError(
+                502,
+                "mail_connection_failed",
+                "SMTP connection failed. Check host/port/TLS settings and server egress rules.",
+            ) from last_exc
 
     @staticmethod
-    def _resolve_first_ipv4(host: str, port: int) -> str | None:
+    def _resolve_ipv4_hosts(host: str, port: int) -> list[str]:
         try:
             addresses = socket.getaddrinfo(host, port, family=socket.AF_INET, type=socket.SOCK_STREAM)
         except OSError:
-            return None
+            return []
 
+        result: list[str] = []
+        seen: set[str] = set()
         for _, _, _, _, sockaddr in addresses:
-            if sockaddr and sockaddr[0]:
-                return str(sockaddr[0])
-        return None
+            if not sockaddr or not sockaddr[0]:
+                continue
+            ip = str(sockaddr[0])
+            if ip in seen:
+                continue
+            seen.add(ip)
+            result.append(ip)
+        return result
 
     @staticmethod
     def _send_message_via_smtp(
