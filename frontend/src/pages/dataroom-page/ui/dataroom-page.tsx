@@ -791,6 +791,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
               normalizedFolderId === 'root'
                 ? undefined
                 : {
+                    onCreateFolder: () => setCreateFolderOpened(true),
                     onDownload: (folder) => downloadCurrentFolder(folder.id),
                     onCopy: (folder) => openCurrentFolderCopyDialog(folder.id),
                     onShare: (folder) => openCurrentFolderShareDialog(folder.id),

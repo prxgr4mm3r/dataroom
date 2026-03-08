@@ -36,6 +36,18 @@
 
 .import-file-dialog__modal-shell-header {
   align-items: flex-start;
+  position: relative;
+}
+
+.import-file-dialog__modal-shell-header::after {
+  content: '';
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 0;
+  height: 1px;
+  background: var(--separator-muted);
+  pointer-events: none;
 }
 
 .import-file-dialog__modal-close {
@@ -52,9 +64,8 @@
 .import-file-dialog__modal-header {
   display: grid;
   gap: 6px;
-  padding-right: 12px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--separator-muted);
+  width: 100%;
+  padding-right: 0;
 }
 
 .import-file-dialog__modal-header-main {
@@ -68,6 +79,7 @@
 }
 
 .import-file-dialog__header-status-row {
+  --status-chip-separator-color: var(--separator-soft);
   display: inline-flex;
   align-items: center;
   width: fit-content;
@@ -76,25 +88,29 @@
   border: 1px solid var(--border-soft);
   border-radius: 999px;
   background: var(--bg-subtle);
-  padding: 5px 10px;
+  padding: 4px 10px 4px 8px;
 }
 
 .import-file-dialog__header-status-row--connected {
+  --status-chip-separator-color: var(--state-success-border);
   border-color: var(--state-success-border);
   background: var(--state-success-bg-soft);
 }
 
 .import-file-dialog__header-status-row--warning {
+  --status-chip-separator-color: var(--state-warning-border);
   border-color: var(--state-warning-border);
   background: var(--state-warning-bg-soft);
 }
 
 .import-file-dialog__header-status-row--loading {
+  --status-chip-separator-color: var(--state-info-border);
   border-color: var(--state-info-border);
   background: var(--state-info-bg);
 }
 
 .import-file-dialog__header-status-row--disconnected {
+  --status-chip-separator-color: var(--border-soft);
   border-color: var(--border-soft);
   background: var(--bg-subtle);
 }
@@ -129,14 +145,31 @@
   line-height: 1.35;
 }
 
+.import-file-dialog__header-status + .import-file-dialog__status-email {
+  position: relative;
+  margin-left: 2px;
+  padding-left: 9px;
+}
+
+.import-file-dialog__header-status + .import-file-dialog__status-email::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 1px;
+  height: 14px;
+  background: var(--status-chip-separator-color);
+  transform: translateY(-50%);
+}
+
 .import-file-dialog__header-disconnect {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  margin-left: 2px;
-  padding: 2px 0 2px 10px;
+  margin-left: 4px;
+  padding: 1px 0;
+  min-height: 18px;
   border: 0;
-  border-left: 1px solid var(--state-success-border);
   background: transparent;
   color: var(--state-danger-text);
   font-size: 12px;
@@ -198,6 +231,7 @@
   border: 1px solid var(--border-soft);
   border-radius: 10px;
   padding: 12px;
+  margin-top: 14px;
   background: var(--bg-subtle);
   display: grid;
   gap: 12px;
@@ -242,7 +276,7 @@
   border-bottom: 1px solid var(--separator-muted);
   border-radius: 0;
   background: transparent;
-  padding: 0 0 10px;
+  padding: 6px 0 10px;
 }
 
 .import-file-dialog__drive-browser-toolbar {

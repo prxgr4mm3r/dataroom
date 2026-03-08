@@ -595,6 +595,9 @@ export const FileTable = ({
               } else if (isOpened) {
                 rowBackground = 'var(--accent-soft)'
               }
+              const hasPrimaryMenuActions = Boolean(onRenameItem)
+              const hasSecondaryMenuActions = Boolean(onShareItem || onDownloadItem || onCopyItem || onMoveItem)
+              const hasDeleteMenuAction = Boolean(onDeleteItem)
 
               return (
                 <Table.Tr
@@ -691,6 +694,19 @@ export const FileTable = ({
                           </ActionIcon>
                         </Menu.Target>
                         <Menu.Dropdown>
+                          {onRenameItem ? (
+                            <Menu.Item leftSection={<IconEdit size={14} />} onClick={() => onRenameItem(item)}>
+                              Rename
+                            </Menu.Item>
+                          ) : null}
+                          {hasPrimaryMenuActions && (hasSecondaryMenuActions || hasDeleteMenuAction) ? (
+                            <Menu.Divider />
+                          ) : null}
+                          {onShareItem ? (
+                            <Menu.Item leftSection={<IconLink size={14} />} onClick={() => onShareItem(item)}>
+                              Share
+                            </Menu.Item>
+                          ) : null}
                           <Menu.Item leftSection={<IconDownload size={14} />} onClick={() => onDownloadItem(item)}>
                             Download
                           </Menu.Item>
@@ -699,21 +715,12 @@ export const FileTable = ({
                               Copy
                             </Menu.Item>
                           ) : null}
-                          {onShareItem ? (
-                            <Menu.Item leftSection={<IconLink size={14} />} onClick={() => onShareItem(item)}>
-                              Share
-                            </Menu.Item>
-                          ) : null}
-                          {onRenameItem ? (
-                            <Menu.Item leftSection={<IconEdit size={14} />} onClick={() => onRenameItem(item)}>
-                              Rename
-                            </Menu.Item>
-                          ) : null}
                           {onMoveItem ? (
                             <Menu.Item leftSection={<IconArrowsMove size={14} />} onClick={() => onMoveItem(item)}>
                               Move
                             </Menu.Item>
                           ) : null}
+                          {hasSecondaryMenuActions && hasDeleteMenuAction ? <Menu.Divider /> : null}
                           {onDeleteItem ? (
                             <Menu.Item
                               color="red"

@@ -10,6 +10,7 @@ import './dataroom-toolbar.css'
 type DropState = 'none' | 'valid' | 'warning' | 'invalid'
 
 type CurrentFolderMenuHandlers = {
+  onCreateFolder?: (folder: Breadcrumb) => void
   onDownload?: (folder: Breadcrumb) => void
   onCopy?: (folder: Breadcrumb) => void
   onShare?: (folder: Breadcrumb) => void

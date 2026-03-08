@@ -6,6 +6,7 @@ import unittest
 import zipfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 from unittest.mock import patch
 
 from app import create_app
@@ -114,6 +115,44 @@ class BackendApiTests(unittest.TestCase):
         self.assertEqual(200, response.status_code)
         self.assertIn("accounts.google.com", response.json["auth_url"])
         self.assertIn("state=", response.json["auth_url"])
+
+    def test_google_callback_reconnect_keeps_connection_active_for_same_user(self):
+        headers = self._auth_headers("reconnect-flow-user")
+        self._create_active_google_connection("reconnect-flow-user", expired=True)
+
+        connect_response = self.client.post("/api/integrations/google/connect", headers=headers)
+        self.assertEqual(200, connect_response.status_code)
+        auth_url = connect_response.json["auth_url"]
+        state = parse_qs(urlparse(auth_url).query).get("state", [""])[0]
+        self.assertTrue(state)
+
+        with (
+            patch(
+                "app.services.google_oauth_service.GoogleOAuthService.exchange_code_for_tokens",
+                return_value={
+                    "access_token": "new-access-token",
+                    "refresh_token": "new-refresh-token",
+                    "expires_in": 3600,
+                    "scope": "https://www.googleapis.com/auth/drive.readonly",
+                },
+            ),
+            patch(
+                "app.services.google_oauth_service.GoogleOAuthService.fetch_google_profile",
+                return_value={
+                    "sub": "google-sub-reconnect-flow-user",
+                    "email": "reconnect-flow-user@gmail.com",
+                },
+            ),
+        ):
+            callback_response = self.client.get(f"/api/integrations/google/callback?code=test-code&state={state}")
+
+        self.assertEqual(302, callback_response.status_code)
+        self.assertIn("status=success", callback_response.headers["Location"])
+
+        status_response = self.client.get("/api/integrations/google/status", headers=headers)
+        self.assertEqual(200, status_response.status_code)
+        self.assertTrue(status_response.json["connected"])
+        self.assertFalse(status_response.json["token_expired"])
 
     def test_google_files_requires_connected_account(self):
         response = self.client.get("/api/integrations/google/files", headers=self._auth_headers("no-conn"))

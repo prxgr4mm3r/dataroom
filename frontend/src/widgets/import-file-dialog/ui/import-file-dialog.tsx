@@ -248,7 +248,7 @@ export const ImportFileDialog = ({
 
           {googleStatusQuery.isPending || tokenExpired || isGoogleConnected ? (
             <Group
-              gap={8}
+              gap={6}
               wrap="nowrap"
               className={[
                 'import-file-dialog__header-status-row',
@@ -328,8 +328,6 @@ export const ImportFileDialog = ({
               </Group>
             </Box>
           ) : null}
-
-          {tokenExpired ? <Alert color="orange">{t('googleReconnectRequired')}</Alert> : null}
 
           {!canImport ? (
             <Box className="import-file-dialog__connect-card">

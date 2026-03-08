@@ -6,6 +6,7 @@ import {
   IconDots,
   IconDownload,
   IconEdit,
+  IconFolderPlus,
   IconHome2,
   IconLink,
   IconTrash,
@@ -19,6 +20,7 @@ import './breadcrumbs-bar.css'
 type DropState = 'none' | 'valid' | 'warning' | 'invalid'
 
 type CurrentFolderMenuHandlers = {
+  onCreateFolder?: (folder: Breadcrumb) => void
   onDownload?: (folder: Breadcrumb) => void
   onCopy?: (folder: Breadcrumb) => void
   onShare?: (folder: Breadcrumb) => void
@@ -64,10 +66,11 @@ export const BreadcrumbsBar = ({
     Boolean(currentBreadcrumb) &&
     currentBreadcrumb.id !== 'root' &&
     Boolean(
-      currentFolderMenu?.onDownload ||
-        currentFolderMenu?.onCopy ||
-        currentFolderMenu?.onShare ||
+      currentFolderMenu?.onCreateFolder ||
         currentFolderMenu?.onRename ||
+        currentFolderMenu?.onShare ||
+        currentFolderMenu?.onDownload ||
+        currentFolderMenu?.onCopy ||
         currentFolderMenu?.onMove ||
         currentFolderMenu?.onDelete,
     )
@@ -99,6 +102,12 @@ export const BreadcrumbsBar = ({
       return null
     }
 
+    const hasPrimaryActions = Boolean(currentFolderMenu.onCreateFolder || currentFolderMenu.onRename)
+    const hasMiddleActions = Boolean(
+      currentFolderMenu.onShare || currentFolderMenu.onDownload || currentFolderMenu.onCopy || currentFolderMenu.onMove,
+    )
+    const hasDeleteAction = Boolean(currentFolderMenu.onDelete)
+
     return (
       <Menu withinPortal position="bottom-start">
         <Menu.Target>
@@ -111,6 +120,25 @@ export const BreadcrumbsBar = ({
           </button>
         </Menu.Target>
         <Menu.Dropdown>
+          {currentFolderMenu.onCreateFolder ? (
+            <Menu.Item
+              leftSection={<IconFolderPlus size={14} />}
+              onClick={() => currentFolderMenu.onCreateFolder?.(crumb)}
+            >
+              Create folder
+            </Menu.Item>
+          ) : null}
+          {currentFolderMenu.onRename ? (
+            <Menu.Item leftSection={<IconEdit size={14} />} onClick={() => currentFolderMenu.onRename?.(crumb)}>
+              Rename
+            </Menu.Item>
+          ) : null}
+          {hasPrimaryActions && (hasMiddleActions || hasDeleteAction) ? <Menu.Divider /> : null}
+          {currentFolderMenu.onShare ? (
+            <Menu.Item leftSection={<IconLink size={14} />} onClick={() => currentFolderMenu.onShare?.(crumb)}>
+              Share
+            </Menu.Item>
+          ) : null}
           {currentFolderMenu.onDownload ? (
             <Menu.Item leftSection={<IconDownload size={14} />} onClick={() => currentFolderMenu.onDownload?.(crumb)}>
               Download
@@ -121,21 +149,12 @@ export const BreadcrumbsBar = ({
               Copy
             </Menu.Item>
           ) : null}
-          {currentFolderMenu.onShare ? (
-            <Menu.Item leftSection={<IconLink size={14} />} onClick={() => currentFolderMenu.onShare?.(crumb)}>
-              Share
-            </Menu.Item>
-          ) : null}
-          {currentFolderMenu.onRename ? (
-            <Menu.Item leftSection={<IconEdit size={14} />} onClick={() => currentFolderMenu.onRename?.(crumb)}>
-              Rename
-            </Menu.Item>
-          ) : null}
           {currentFolderMenu.onMove ? (
             <Menu.Item leftSection={<IconArrowsMove size={14} />} onClick={() => currentFolderMenu.onMove?.(crumb)}>
               Move
             </Menu.Item>
           ) : null}
+          {hasMiddleActions && hasDeleteAction ? <Menu.Divider /> : null}
           {currentFolderMenu.onDelete ? (
             <Menu.Item
               color="red"

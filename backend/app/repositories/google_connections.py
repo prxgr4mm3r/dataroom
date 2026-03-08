@@ -33,7 +33,7 @@ class GoogleConnectionRepository:
                 GoogleDriveConnection.user_id == user_id,
                 GoogleDriveConnection.is_active.is_(True),
             )
-            .update({GoogleDriveConnection.is_active: False}, synchronize_session=False)
+            .update({GoogleDriveConnection.is_active: False}, synchronize_session="fetch")
         )
 
     def save(self, connection: GoogleDriveConnection) -> GoogleDriveConnection:

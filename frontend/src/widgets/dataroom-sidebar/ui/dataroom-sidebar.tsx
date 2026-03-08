@@ -91,6 +91,15 @@ const toInitials = (value: string): string => {
 }
 
 const AVATAR_COLORS = ['#5b6fe8', '#2f9e44', '#0f766e', '#7a5af8', '#c2410c', '#b54708', '#2563eb', '#4f46e5']
+const AVATAR_CACHE_PREFIX = 'dataroom:avatar:'
+const AVATAR_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 14
+const AVATAR_CACHE_MAX_BYTES = 128 * 1024
+
+type AvatarCacheRecord = {
+  dataUrl: string
+  photoUrl: string
+  updatedAt: number
+}
 
 const pickAvatarColor = (seed: string): string => {
   let hash = 0
@@ -100,6 +109,188 @@ const pickAvatarColor = (seed: string): string => {
   }
 
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length]
+}
+
+const getAvatarCacheKey = (cacheId: string): string => `${AVATAR_CACHE_PREFIX}${cacheId}`
+
+const readCachedAvatar = (cacheId: string): AvatarCacheRecord | null => {
+  if (typeof window === 'undefined') {
+    return null
+  }
+
+  try {
+    const raw = window.localStorage.getItem(getAvatarCacheKey(cacheId))
+    if (!raw) {
+      return null
+    }
+
+    const parsed = JSON.parse(raw) as Partial<AvatarCacheRecord>
+    if (typeof parsed.dataUrl !== 'string' || typeof parsed.photoUrl !== 'string' || typeof parsed.updatedAt !== 'number') {
+      window.localStorage.removeItem(getAvatarCacheKey(cacheId))
+      return null
+    }
+
+    if (Date.now() - parsed.updatedAt > AVATAR_CACHE_TTL_MS) {
+      window.localStorage.removeItem(getAvatarCacheKey(cacheId))
+      return null
+    }
+
+    return {
+      dataUrl: parsed.dataUrl,
+      photoUrl: parsed.photoUrl,
+      updatedAt: parsed.updatedAt,
+    }
+  } catch {
+    return null
+  }
+}
+
+const writeCachedAvatar = (cacheId: string, payload: AvatarCacheRecord): void => {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  try {
+    window.localStorage.setItem(getAvatarCacheKey(cacheId), JSON.stringify(payload))
+  } catch {
+    // Ignore storage quota/privacy mode errors and keep runtime behavior unchanged.
+  }
+}
+
+const blobToDataUrl = (blob: Blob): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader()
+
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        resolve(reader.result)
+        return
+      }
+      reject(new Error('Avatar cache read failed'))
+    }
+
+    reader.onerror = () => reject(reader.error ?? new Error('Avatar cache read failed'))
+    reader.readAsDataURL(blob)
+  })
+
+const cacheAvatarFromNetwork = async (cacheId: string, photoUrl: string): Promise<string | null> => {
+  try {
+    const response = await fetch(photoUrl, { cache: 'force-cache' })
+    if (!response.ok) {
+      return null
+    }
+
+    const blob = await response.blob()
+    if (!blob.type.startsWith('image/') || blob.size > AVATAR_CACHE_MAX_BYTES) {
+      return null
+    }
+
+    const dataUrl = await blobToDataUrl(blob)
+    writeCachedAvatar(cacheId, {
+      dataUrl,
+      photoUrl,
+      updatedAt: Date.now(),
+    })
+    return dataUrl
+  } catch {
+    return null
+  }
+}
+
+const useCachedAvatarImage = ({
+  cacheId,
+  photoUrl,
+}: {
+  cacheId: string
+  photoUrl: string | null
+}) => {
+  const avatarIdentity = `${cacheId}:${photoUrl ?? ''}`
+  const initialCacheRecord = photoUrl ? readCachedAvatar(cacheId) : null
+  const [cacheState, setCacheState] = useState(() => {
+    return {
+      avatarIdentity,
+      cachedDataUrl: initialCacheRecord?.dataUrl ?? null,
+      cachedPhotoUrl: initialCacheRecord?.photoUrl ?? null,
+    }
+  })
+  const normalizedCacheState =
+    cacheState.avatarIdentity === avatarIdentity
+      ? cacheState
+      : {
+          avatarIdentity,
+          cachedDataUrl: initialCacheRecord?.dataUrl ?? null,
+          cachedPhotoUrl: initialCacheRecord?.photoUrl ?? null,
+        }
+  const cachedDataUrl = normalizedCacheState.cachedDataUrl
+  const [attemptState, setAttemptState] = useState(() => {
+    return {
+      avatarIdentity,
+      useCachedAvatar: false,
+      avatarLoadFailed: false,
+    }
+  })
+  const normalizedAttemptState =
+    attemptState.avatarIdentity === avatarIdentity
+      ? attemptState
+      : {
+          avatarIdentity,
+          useCachedAvatar: false,
+          avatarLoadFailed: false,
+        }
+  const avatarSrc = normalizedAttemptState.useCachedAvatar ? cachedDataUrl : photoUrl
+  const showPhotoAvatar = Boolean(avatarSrc) && !normalizedAttemptState.avatarLoadFailed
+
+  const handleAvatarError = () => {
+    setAttemptState((prev) => {
+      const current =
+        prev.avatarIdentity === avatarIdentity
+          ? prev
+          : {
+              avatarIdentity,
+              useCachedAvatar: false,
+              avatarLoadFailed: false,
+            }
+
+      if (!current.useCachedAvatar && cachedDataUrl) {
+        return {
+          ...current,
+          useCachedAvatar: true,
+        }
+      }
+
+      return {
+        ...current,
+        avatarLoadFailed: true,
+      }
+    })
+  }
+
+  const handleAvatarLoad = () => {
+    if (!photoUrl || normalizedAttemptState.useCachedAvatar) {
+      return
+    }
+
+    if (normalizedCacheState.cachedPhotoUrl === photoUrl) {
+      return
+    }
+
+    void cacheAvatarFromNetwork(cacheId, photoUrl).then((dataUrl) => {
+      if (dataUrl) {
+        setCacheState({
+          avatarIdentity,
+          cachedDataUrl: dataUrl,
+          cachedPhotoUrl: photoUrl,
+        })
+      }
+    })
+  }
+
+  return {
+    avatarSrc: showPhotoAvatar ? avatarSrc : null,
+    showPhotoAvatar,
+    handleAvatarError,
+    handleAvatarLoad,
+  }
 }
 
 export const DataroomSidebarRail = ({
@@ -112,8 +303,11 @@ export const DataroomSidebarRail = ({
   const accountName = currentUser.displayName || currentUser.email || currentUser.firebaseUid
   const accountInitials = toInitials(accountName)
   const avatarColor = pickAvatarColor(currentUser.id || currentUser.firebaseUid || accountName)
-  const [failedPhotoUrl, setFailedPhotoUrl] = useState<string | null>(null)
-  const showPhotoAvatar = Boolean(currentUser.photoUrl) && failedPhotoUrl !== currentUser.photoUrl
+  const avatarCacheId = currentUser.id || currentUser.firebaseUid || accountName
+  const { avatarSrc, showPhotoAvatar, handleAvatarError, handleAvatarLoad } = useCachedAvatarImage({
+    cacheId: avatarCacheId,
+    photoUrl: currentUser.photoUrl,
+  })
 
   return (
     <Box className="dataroom-sidebar-rail">
@@ -162,10 +356,11 @@ export const DataroomSidebarRail = ({
             >
               {showPhotoAvatar ? (
                 <img
-                  src={currentUser.photoUrl ?? undefined}
+                  src={avatarSrc ?? undefined}
                   alt={accountName}
                   className="dataroom-sidebar-rail__avatar-image"
-                  onError={() => setFailedPhotoUrl(currentUser.photoUrl)}
+                  onError={handleAvatarError}
+                  onLoad={handleAvatarLoad}
                 />
               ) : (
                 <span className="dataroom-sidebar-rail__avatar-fallback">{accountInitials}</span>
@@ -515,13 +710,16 @@ export const DataroomSidebar = ({
   const accountSubtitle = currentUser.displayName && currentUser.email ? currentUser.email : t('accountMember')
   const accountInitials = toInitials(accountName)
   const avatarColor = pickAvatarColor(currentUser.id || currentUser.firebaseUid || accountName)
-  const [failedPhotoUrl, setFailedPhotoUrl] = useState<string | null>(null)
-  const showPhotoAvatar = Boolean(currentUser.photoUrl) && failedPhotoUrl !== currentUser.photoUrl
+  const avatarCacheId = currentUser.id || currentUser.firebaseUid || accountName
+  const { avatarSrc, showPhotoAvatar, handleAvatarError, handleAvatarLoad } = useCachedAvatarImage({
+    cacheId: avatarCacheId,
+    photoUrl: currentUser.photoUrl,
+  })
 
   return (
     <Box h="100%" p="sm" pb={0} className="dataroom-sidebar">
       <Title order={5} px="xs" className="dataroom-sidebar__title">
-        Data Room
+        Dataroom.demo
       </Title>
 
       <Box className="dataroom-sidebar__quick-actions">
@@ -645,10 +843,11 @@ export const DataroomSidebar = ({
                 >
                   {showPhotoAvatar ? (
                     <img
-                      src={currentUser.photoUrl ?? undefined}
+                      src={avatarSrc ?? undefined}
                       alt={accountName}
                       className="dataroom-sidebar__account-avatar-image"
-                      onError={() => setFailedPhotoUrl(currentUser.photoUrl)}
+                      onError={handleAvatarError}
+                      onLoad={handleAvatarLoad}
                     />
                   ) : (
                     <span className="dataroom-sidebar__account-avatar-fallback">{accountInitials}</span>

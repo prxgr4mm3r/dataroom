@@ -19,9 +19,9 @@ export const OAuthCallbackPage = () => {
     const provider = searchParams.get('provider')
 
     if (status === 'success') {
-      notifySuccess(t('oauthSuccess'))
+      notifySuccess(t('oauthSuccess'), { id: 'google-oauth-success' })
     } else {
-      notifyError(code ? `${t('oauthError')} (${code})` : t('oauthError'))
+      notifyError(code ? `${t('oauthError')} (${code})` : t('oauthError'), { id: 'google-oauth-error' })
     }
 
     void queryClient.invalidateQueries({ queryKey: queryKeys.googleStatus })
