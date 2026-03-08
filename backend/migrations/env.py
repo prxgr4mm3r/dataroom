@@ -2,9 +2,16 @@ from __future__ import annotations
 
 from logging.config import fileConfig
 import os
+from pathlib import Path
+import sys
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
+
+# Ensure Alembic can import the local `app` package when started as a standalone script.
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 from app.models import Base
 
