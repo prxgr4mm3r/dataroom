@@ -3,9 +3,8 @@ import {
   IconChevronRight,
   IconDotsVertical,
   IconFolder,
-  IconFolderPlus,
   IconLogout,
-  IconUpload,
+  IconPlus,
 } from '@tabler/icons-react'
 import type { CSSProperties, DragEvent } from 'react'
 import { useState } from 'react'
@@ -305,8 +304,7 @@ export const DataroomSidebarRail = ({
   const accountInitials = toInitials(accountName)
   const avatarColor = pickAvatarColor(currentUser.id || currentUser.firebaseUid || accountName)
   const avatarCacheId = currentUser.id || currentUser.firebaseUid || accountName
-  const newFolderLabelWithShortcut = withShortcutHint(t('newFolder'), APP_SHORTCUTS.createFolder.label)
-  const importFileLabelWithShortcut = withShortcutHint(t('importFile'), APP_SHORTCUTS.importFromComputer.label)
+  const createLabel = t('create')
   const { avatarSrc, showPhotoAvatar, handleAvatarError, handleAvatarLoad } = useCachedAvatarImage({
     cacheId: avatarCacheId,
     photoUrl: currentUser.photoUrl,
@@ -315,37 +313,24 @@ export const DataroomSidebarRail = ({
   return (
     <Box className="dataroom-sidebar-rail">
       <Group className="dataroom-sidebar-rail__actions" gap={4}>
-        <Tooltip label={newFolderLabelWithShortcut} position="right">
-          <ActionIcon
-            className="dataroom-sidebar-rail__action-icon"
-            variant="subtle"
-            size="lg"
-            radius="md"
-            aria-label={newFolderLabelWithShortcut}
-            title={newFolderLabelWithShortcut}
-            onClick={onNewFolder}
-          >
-            <IconFolderPlus size={18} />
-          </ActionIcon>
-        </Tooltip>
-
         <ImportSourceMenu
+          onNewFolder={onNewFolder}
           onImportFromGoogle={onImportFromGoogle}
           onImportFromComputer={onImportFromComputer}
           position="right-start"
           offset={8}
         >
           <Box>
-            <Tooltip label={importFileLabelWithShortcut} position="right">
+            <Tooltip label={createLabel} position="right">
               <ActionIcon
                 className="dataroom-sidebar-rail__action-icon"
                 variant="subtle"
                 size="lg"
                 radius="md"
-                aria-label={importFileLabelWithShortcut}
-                title={importFileLabelWithShortcut}
+                aria-label={createLabel}
+                title={createLabel}
               >
-                <IconUpload size={18} />
+                <IconPlus size={18} />
               </ActionIcon>
             </Tooltip>
           </Box>
@@ -716,10 +701,8 @@ export const DataroomSidebar = ({
   const accountInitials = toInitials(accountName)
   const avatarColor = pickAvatarColor(currentUser.id || currentUser.firebaseUid || accountName)
   const avatarCacheId = currentUser.id || currentUser.firebaseUid || accountName
-  const newFolderLabelWithShortcut = withShortcutHint(t('newFolder'), APP_SHORTCUTS.createFolder.label)
-  const importFileLabelWithShortcut = withShortcutHint(t('importFile'), APP_SHORTCUTS.importFromComputer.label)
-  const newFolderShortcutLabel = APP_SHORTCUTS.createFolder.compactLabel
-  const importFromComputerShortcutLabel = APP_SHORTCUTS.importFromComputer.compactLabel
+  const createLabel = t('create')
+  const createLabelWithShortcut = withShortcutHint(createLabel, APP_SHORTCUTS.createFolder.label)
   const { avatarSrc, showPhotoAvatar, handleAvatarError, handleAvatarLoad } = useCachedAvatarImage({
     cacheId: avatarCacheId,
     photoUrl: currentUser.photoUrl,
@@ -727,44 +710,29 @@ export const DataroomSidebar = ({
 
   return (
     <Box h="100%" p="sm" pb={0} className="dataroom-sidebar">
-      <Title order={5} px="xs" className="dataroom-sidebar__title">
+      <Title order={5} className="dataroom-sidebar__title">
         Dataroom.demo
       </Title>
 
       <Box className="dataroom-sidebar__quick-actions">
-        <Text size="xs" fw={600} c="var(--text-secondary)" className="dataroom-sidebar__quick-actions-title">
-          {t('quickActions')}
-        </Text>
-        <Button
-          variant="subtle"
-          size="xs"
-          fullWidth
-          className="dataroom-sidebar__quick-action-button"
-          leftSection={<IconFolderPlus size={18} />}
-          rightSection={<Text className="dataroom-sidebar__shortcut-hint">{newFolderShortcutLabel}</Text>}
-          title={newFolderLabelWithShortcut}
-          aria-label={newFolderLabelWithShortcut}
-          onClick={onNewFolder}
-        >
-          {t('newFolder')}
-        </Button>
         <ImportSourceMenu
+          onNewFolder={onNewFolder}
           onImportFromGoogle={onImportFromGoogle}
           onImportFromComputer={onImportFromComputer}
           position="right-start"
           offset={8}
         >
           <Button
-            variant="subtle"
-            size="xs"
+            variant="filled"
+            size="sm"
             fullWidth
-            className="dataroom-sidebar__quick-action-button"
-            leftSection={<IconUpload size={18} />}
-            rightSection={<Text className="dataroom-sidebar__shortcut-hint">{importFromComputerShortcutLabel}</Text>}
-            title={importFileLabelWithShortcut}
-            aria-label={importFileLabelWithShortcut}
+            className="dataroom-sidebar__create-button"
+            leftSection={<IconPlus size={18} />}
+            rightSection={<IconChevronDown size={14} />}
+            title={createLabelWithShortcut}
+            aria-label={createLabelWithShortcut}
           >
-            {t('importFile')}
+            {createLabel}
           </Button>
         </ImportSourceMenu>
       </Box>

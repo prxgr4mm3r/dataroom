@@ -103,7 +103,7 @@
 .dataroom-sidebar__quick-actions {
   display: grid;
   gap: var(--dataroom-sidebar-stack-gap);
-  padding: 0 8px var(--dataroom-sidebar-stack-gap);
+  padding: 0 0 var(--dataroom-sidebar-stack-gap);
   flex: 0 0 auto;
 }
 
@@ -112,61 +112,65 @@
   letter-spacing: 0.01em;
 }
 
-.dataroom-sidebar__quick-action-button {
-  --button-height: 34px;
-  border: 1px solid var(--border-soft);
-  background: var(--bg-subtle);
-  color: var(--text-primary);
+.dataroom-sidebar__create-button {
+  --button-height: 50px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #ffffff;
   justify-content: flex-start;
-  border-radius: 10px;
+  border-radius: 8px;
   min-height: var(--button-height);
   height: var(--button-height);
+  padding-inline: 10px;
   transition:
     background-color 120ms ease,
-    border-color 120ms ease;
+    border-color 120ms ease,
+    transform 120ms ease;
 }
 
-.dataroom-sidebar__quick-action-button:hover {
-  border-color: var(--border-muted);
-  background: var(--bg-hover-soft);
+.dataroom-sidebar__create-button:hover {
+  border-color: var(--accent-hover);
+  background: var(--accent-hover);
 }
 
-.dataroom-sidebar__quick-action-button:focus-visible {
-  outline: 2px solid var(--accent);
+.dataroom-sidebar__create-button:active {
+  transform: translateY(1px);
+}
+
+.dataroom-sidebar__create-button:focus-visible {
+  outline: 2px solid var(--focus-ring);
   outline-offset: 1px;
 }
 
-.dataroom-sidebar__quick-action-button .mantine-Button-inner {
+.dataroom-sidebar__create-button .mantine-Button-inner {
   justify-content: flex-start;
   width: 100%;
   min-height: var(--button-height);
 }
 
-.dataroom-sidebar__quick-action-button .mantine-Button-section[data-position='left'] {
-  margin-inline-end: 6px;
-  color: var(--accent);
+.dataroom-sidebar__create-button .mantine-Button-section[data-position='left'] {
+  margin-inline-end: 10px;
+  color: rgb(255 255 255 / 92%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.dataroom-sidebar__quick-action-button .mantine-Button-label {
+.dataroom-sidebar__create-button .mantine-Button-label {
   flex: 1 1 auto;
   text-align: left;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: 0.01em;
 }
 
-.dataroom-sidebar__quick-action-button .mantine-Button-section[data-position='right'] {
-  margin-inline-start: 8px;
+.dataroom-sidebar__create-button .mantine-Button-section[data-position='right'] {
+  margin-inline-start: 10px;
   margin-inline-end: 0;
-}
-
-.dataroom-sidebar__shortcut-hint {
-  font-size: 10px;
-  line-height: 1.1;
-  color: var(--text-muted);
-  white-space: nowrap;
+  color: rgb(255 255 255 / 80%);
 }
 
 .dataroom-sidebar__tree-title {
-  padding: 0 8px 4px;
+  padding: 0 0 4px;
   letter-spacing: 0.01em;
 }
 

@@ -12,7 +12,7 @@ import { downloadBlob } from '@/shared/lib/file/download-blob'
 import { getSelectionRangeIds } from '@/features/select-content-items'
 import { useSortState } from '@/features/sort-content-items'
 import type { SortBy, SortOrder } from '@/shared/types/common'
-import { ActionIcon, Alert, Badge, Box, Center, Group, Loader, Paper, Stack, Text, Title, Tooltip } from '@/shared/ui'
+import { ActionIcon, Alert, Box, Center, Group, Loader, Paper, Stack, Text, Title, Tooltip } from '@/shared/ui'
 import { notifyError } from '@/shared/ui'
 import { BreadcrumbsBar } from '@/widgets/breadcrumbs-bar'
 import { FileTable } from '@/widgets/file-table'
@@ -265,9 +265,6 @@ export const SharedViewPage = () => {
                 <IconSearch size={16} />
               </ActionIcon>
             </Tooltip>
-            <Badge color="gray" variant="light">
-              Read-only
-            </Badge>
           </Group>
         </Group>
         <Text size="xs" c="dimmed" className="shared-view-page__meta">

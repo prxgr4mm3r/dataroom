@@ -1,4 +1,4 @@
-import { IconUpload } from '@tabler/icons-react'
+import { IconFolderPlus, IconUpload } from '@tabler/icons-react'
 import type { ReactElement } from 'react'
 
 import { t } from '@/shared/i18n/messages'
@@ -6,6 +6,7 @@ import { APP_SHORTCUTS } from '@/shared/lib/keyboard/shortcuts'
 import { Menu, Text } from '@/shared/ui'
 
 type ImportSourceMenuProps = {
+  onNewFolder: () => void
   onImportFromGoogle: () => void
   onImportFromComputer: () => void
   children: ReactElement
@@ -28,12 +29,14 @@ const GoogleDriveLogo = () => (
 )
 
 export const ImportSourceMenu = ({
+  onNewFolder,
   onImportFromGoogle,
   onImportFromComputer,
   children,
   position = 'bottom-end',
   offset = 6,
 }: ImportSourceMenuProps) => {
+  const createFolderShortcutLabel = APP_SHORTCUTS.createFolder.compactLabel
   const uploadFromComputerShortcutLabel = APP_SHORTCUTS.importFromComputer.compactLabel
   const importFromGoogleShortcutLabel = APP_SHORTCUTS.importFromGoogle.compactLabel
 
@@ -42,15 +45,34 @@ export const ImportSourceMenu = ({
       <Menu.Target>{children}</Menu.Target>
       <Menu.Dropdown>
         <Menu.Item
+          leftSection={<IconFolderPlus size={14} />}
+          rightSection={
+            <Text size="xs" c="dimmed">
+              {createFolderShortcutLabel}
+            </Text>
+          }
+          onClick={onNewFolder}
+        >
+          {t('newFolder')}
+        </Menu.Item>
+        <Menu.Item
           leftSection={<GoogleDriveLogo />}
-          rightSection={<Text size="xs" c="dimmed">{importFromGoogleShortcutLabel}</Text>}
+          rightSection={
+            <Text size="xs" c="dimmed">
+              {importFromGoogleShortcutLabel}
+            </Text>
+          }
           onClick={onImportFromGoogle}
         >
           {t('importFromGoogle')}
         </Menu.Item>
         <Menu.Item
           leftSection={<IconUpload size={14} />}
-          rightSection={<Text size="xs" c="dimmed">{uploadFromComputerShortcutLabel}</Text>}
+          rightSection={
+            <Text size="xs" c="dimmed">
+              {uploadFromComputerShortcutLabel}
+            </Text>
+          }
           onClick={onImportFromComputer}
         >
           {t('uploadFromComputer')}
