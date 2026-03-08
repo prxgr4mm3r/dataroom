@@ -20,7 +20,23 @@ export const DeleteItemsDialog = ({
   onClose,
   onConfirm,
 }: DeleteItemsDialogProps) => (
-  <Modal opened={opened} onClose={onClose} title={title}>
+  <Modal
+    opened={opened}
+    onClose={onClose}
+    title={title}
+    styles={{
+      header: {
+        padding: '10px 14px',
+        minHeight: 0,
+      },
+      body: {
+        paddingTop: '18px',
+      },
+      title: {
+        fontSize: '0.95rem',
+      },
+    }}
+  >
     <Stack>
       <Text size="sm">{message}</Text>
       {error ? <Alert color="red">{error}</Alert> : null}

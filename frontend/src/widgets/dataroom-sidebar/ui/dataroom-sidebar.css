@@ -143,6 +143,7 @@
 }
 
 .dataroom-sidebar__create-button .mantine-Button-inner {
+  align-items: center;
   justify-content: flex-start;
   width: 100%;
   min-height: var(--button-height);
@@ -157,16 +158,22 @@
 }
 
 .dataroom-sidebar__create-button .mantine-Button-label {
+  display: inline-flex;
+  align-items: center;
   flex: 1 1 auto;
   text-align: left;
   font-weight: 700;
   letter-spacing: 0.01em;
+  line-height: 1;
 }
 
 .dataroom-sidebar__create-button .mantine-Button-section[data-position='right'] {
   margin-inline-start: 10px;
   margin-inline-end: 0;
   color: rgb(255 255 255 / 80%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .dataroom-sidebar__tree-title {

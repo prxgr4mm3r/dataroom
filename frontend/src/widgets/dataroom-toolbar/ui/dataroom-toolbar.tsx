@@ -65,17 +65,18 @@ export const DataroomToolbar = ({
 
       <Group gap="xs">
         <Tooltip label={searchLabelWithShortcut}>
-          <ActionIcon
-            variant="default"
-            size="lg"
-            radius="md"
-            className="dataroom-toolbar__search"
+          <button
+            type="button"
+            className="dataroom-toolbar__search-button"
             aria-label={searchLabelWithShortcut}
             title={searchLabelWithShortcut}
             onClick={onOpenSearch}
+            disabled={!onOpenSearch}
           >
             <IconSearch size={16} />
-          </ActionIcon>
+            <span className="dataroom-toolbar__search-button-label">Search</span>
+            <span className="dataroom-toolbar__search-button-shortcut">{APP_SHORTCUTS.openSearch.compactLabel}</span>
+          </button>
         </Tooltip>
         <Tooltip label={toggleThemeLabel}>
           <ActionIcon

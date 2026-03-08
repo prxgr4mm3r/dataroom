@@ -2,15 +2,39 @@
   border: 1px solid transparent;
 }
 
-.dataroom-toolbar__search.mantine-ActionIcon-root {
+.dataroom-toolbar__search-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+  border-radius: 10px;
+  padding: 0 14px;
   border: 1px solid var(--table-separator);
   background: var(--bg-subtle);
   color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  font: inherit;
 }
 
-.dataroom-toolbar__search.mantine-ActionIcon-root:hover {
+.dataroom-toolbar__search-button:hover {
   border-color: var(--accent);
   color: var(--accent);
+}
+
+.dataroom-toolbar__search-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.dataroom-toolbar__search-button-label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.dataroom-toolbar__search-button-shortcut {
+  font-size: 11px;
+  color: var(--text-muted);
 }
 
 .dataroom-toolbar__theme-toggle--sun.mantine-ActionIcon-root {
