@@ -42,10 +42,6 @@ export const useDataroomShortcuts = ({
         return
       }
 
-      if (suspended) {
-        return
-      }
-
       const isEditableTarget = isEditableEventTarget(event.target)
       const key = event.key
       const isModifier = isModifierPressed(event)
@@ -54,39 +50,53 @@ export const useDataroomShortcuts = ({
         return
       }
 
-      if (key === 'Escape') {
-        event.preventDefault()
-        onEscape()
-        return
-      }
-
       if (isModifier && !event.shiftKey && key.toLowerCase() === 'f') {
         event.preventDefault()
-        onOpenSearch()
+        if (!suspended) {
+          onOpenSearch()
+        }
         return
       }
 
       if (isModifier && event.shiftKey && key.toLowerCase() === 'n') {
         event.preventDefault()
-        onCreateFolder()
+        if (!suspended) {
+          onCreateFolder()
+        }
         return
       }
 
       if (isModifier && !event.shiftKey && key.toLowerCase() === 'i') {
         event.preventDefault()
-        onImportFromComputer()
+        if (!suspended) {
+          onImportFromComputer()
+        }
         return
       }
 
       if (isModifier && !event.shiftKey && key.toLowerCase() === 'a') {
         event.preventDefault()
-        onSelectAll()
+        if (!suspended) {
+          onSelectAll()
+        }
         return
       }
 
       if (isModifier && !event.shiftKey && key === '/') {
         event.preventDefault()
-        onOpenShortcutsHelp()
+        if (!suspended) {
+          onOpenShortcutsHelp()
+        }
+        return
+      }
+
+      if (suspended) {
+        return
+      }
+
+      if (key === 'Escape') {
+        event.preventDefault()
+        onEscape()
         return
       }
 
