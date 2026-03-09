@@ -37,7 +37,17 @@ export const ImportResultsDialog = ({
     failure.reason === 'too_large' ? 'Too large' : 'Upload failed'
 
   return (
-    <Modal opened={opened} onClose={onClose} title="Import results" size="lg" centered>
+    <Modal
+      opened={opened}
+      onClose={onClose}
+      title="Import results"
+      size="lg"
+      centered
+      classNames={{
+        content: 'import-results-dialog__modal-content',
+        body: 'import-results-dialog__modal-body',
+      }}
+    >
       <Stack className="import-results-dialog" gap="md">
         <Box
           className={[
@@ -101,12 +111,12 @@ export const ImportResultsDialog = ({
               </Badge>
             </Group>
             {importedCount > 0 ? (
-              <ScrollArea h={Math.min(220, importedCount * 34 + 12)} mt={8}>
+              <ScrollArea className="import-results-dialog__list-scroll" mt={8}>
                 <Stack gap={6}>
                   {uploadedFiles.map((fileName, index) => (
                     <Group key={`${fileName}:${index}`} className="import-results-dialog__file-row" wrap="nowrap">
                       <IconFile size={14} color="var(--icon-muted)" />
-                      <Text size="sm" truncate="end">
+                      <Text size="sm" className="import-results-dialog__file-name">
                         {fileName}
                       </Text>
                     </Group>
@@ -133,19 +143,23 @@ export const ImportResultsDialog = ({
               </Badge>
             </Group>
             {failedCount > 0 ? (
-              <ScrollArea h={Math.min(250, failedCount * 58 + 12)} mt={8}>
+              <ScrollArea className="import-results-dialog__list-scroll" mt={8}>
                 <Stack gap={8}>
                   {failedFiles.map((failure, index) => (
                     <Box key={`${failure.fileName}:${failure.message}:${index}`} className="import-results-dialog__failed-row">
-                      <Group justify="space-between" gap={6} wrap="nowrap">
-                        <Text size="sm" fw={500} truncate="end">
+                      <Group justify="space-between" gap={6} wrap="wrap" align="flex-start">
+                        <Text size="sm" fw={500} className="import-results-dialog__file-name">
                           {failure.fileName}
                         </Text>
-                        <Badge variant="light" color={failure.reason === 'too_large' ? 'orange' : 'red'}>
+                        <Badge
+                          variant="light"
+                          color={failure.reason === 'too_large' ? 'orange' : 'red'}
+                          className="import-results-dialog__reason-badge"
+                        >
                           {toFailureReasonLabel(failure)}
                         </Badge>
                       </Group>
-                      <Text size="xs" c="dimmed" mt={2}>
+                      <Text size="xs" c="dimmed" mt={2} className="import-results-dialog__failure-message">
                         {failure.message}
                       </Text>
                     </Box>
