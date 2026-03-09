@@ -150,10 +150,13 @@
 }
 
 .preview-pane__body {
+  display: flex;
+  flex-direction: column;
   flex: 1;
   min-height: 0;
   background: var(--bg-sidebar);
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .preview-pane__state {
@@ -170,7 +173,8 @@
 .preview-pane__tabs-panel {
   flex: 1;
   min-height: 0;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   padding: 12px;
 }
 

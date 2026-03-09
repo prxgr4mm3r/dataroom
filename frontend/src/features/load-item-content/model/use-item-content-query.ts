@@ -10,11 +10,11 @@ export type ItemContentResult = {
   objectUrl: string
 }
 
-export const useItemContentQuery = (itemId: string | null, enabled = true) =>
+export const useItemContentQuery = (itemId: string | null, expectedMimeType?: string | null, enabled = true) =>
   useQuery<ItemContentResult>({
-    queryKey: queryKeys.itemContent(itemId || 'none'),
+    queryKey: [...queryKeys.itemContent(itemId || 'none'), expectedMimeType ?? 'none'],
     queryFn: async () => {
-      const payload = await getItemContent(itemId!)
+      const payload = await getItemContent(itemId!, expectedMimeType)
       return {
         ...payload,
         objectUrl: URL.createObjectURL(payload.blob),

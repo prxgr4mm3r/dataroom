@@ -18,6 +18,7 @@ import { downloadBlob } from '@/shared/lib/file/download-blob'
 import { formatFileSize } from '@/shared/lib/file/format-file-size'
 import { getFileTypePresentation } from '@/shared/lib/file/file-type-presentation'
 import { isInlinePreviewableMime } from '@/shared/lib/file/is-previewable-file'
+import { resolveInlineBlob } from '@/shared/lib/file/resolve-inline-blob'
 import { t } from '@/shared/i18n/messages'
 import { ActionIcon, Alert, Box, Button, Group, Loader, Stack, Text } from '@/shared/ui'
 
@@ -78,13 +79,21 @@ const getSharedItem = async (shareToken: string, itemId: string): Promise<Conten
   return mapItemResourceDto(response.data)
 }
 
-const getSharedItemContent = async (shareToken: string, itemId: string): Promise<SharedItemContentResult> => {
+const getSharedItemContent = async (
+  shareToken: string,
+  itemId: string,
+  expectedMimeType?: string | null,
+): Promise<SharedItemContentResult> => {
   const response = await apiClient.get<Blob>(
     `/api/public/shares/${encodeURIComponent(shareToken)}/items/${itemId}/content`,
     { responseType: 'blob' },
   )
 
-  const blob = response.data
+  const blob = resolveInlineBlob(response.data, {
+    headerContentType: response.headers['content-type'],
+    fallbackContentType: expectedMimeType,
+  })
+
   return {
     blob,
     objectUrl: URL.createObjectURL(blob),
@@ -104,23 +113,22 @@ export const SharedPreviewPane = ({ shareToken, previewItemId, onClose }: Shared
   const resizeAnimationFrameRef = useRef<number | null>(null)
   const pendingResizeWidthRef = useRef<number | null>(null)
   const dragStartRef = useRef<{ startX: number; startWidth: number } | null>(null)
-  const shouldLoadPreviewContent = isOpen
 
   const itemQuery = useQuery({
     queryKey: ['shared-item', shareToken, displayPreviewItemId],
     queryFn: async () => getSharedItem(shareToken, String(displayPreviewItemId)),
     enabled: Boolean(shareToken) && Boolean(displayPreviewItemId),
   })
+  const currentItem = itemQuery.data
+  const shouldLoadPreviewContent = isOpen && currentItem?.kind === 'file'
 
   const itemContentQuery = useQuery({
-    queryKey: ['shared-item-content', shareToken, displayPreviewItemId],
-    queryFn: async () => getSharedItemContent(shareToken, String(displayPreviewItemId)),
-    enabled:
-      Boolean(shareToken) && Boolean(displayPreviewItemId) && itemQuery.data?.kind === 'file' && shouldLoadPreviewContent,
+    queryKey: ['shared-item-content', shareToken, displayPreviewItemId, currentItem?.mimeType ?? 'none'],
+    queryFn: async () => getSharedItemContent(shareToken, String(displayPreviewItemId), currentItem?.mimeType),
+    enabled: Boolean(shareToken) && Boolean(displayPreviewItemId) && shouldLoadPreviewContent,
     gcTime: 0,
   })
 
-  const currentItem = itemQuery.data
   const currentContent = itemContentQuery.data
 
   const currentFileType = useMemo(() => {

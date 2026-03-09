@@ -78,12 +78,11 @@ export const PreviewPane = ({ folderId, previewItemId }: PreviewPaneProps) => {
   const pendingResizeWidthRef = useRef<number | null>(null)
   const dragStartRef = useRef<{ startX: number; startWidth: number } | null>(null)
   const closePreview = useCloseFilePreview(folderId)
-  const shouldLoadPreviewContent = isOpen
 
   const itemQuery = useItemQuery(displayPreviewItemId)
-  const itemContentQuery = useItemContentQuery(displayPreviewItemId, shouldLoadPreviewContent)
-
   const currentItem = itemQuery.data
+  const shouldLoadPreviewContent = isOpen && currentItem?.kind === 'file'
+  const itemContentQuery = useItemContentQuery(displayPreviewItemId, currentItem?.mimeType, shouldLoadPreviewContent)
   const currentContent = itemContentQuery.data
 
   const currentFileType = useMemo(() => {
