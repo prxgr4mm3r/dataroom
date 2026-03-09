@@ -58,7 +58,6 @@ class ItemService:
                 break
             folder.size_bytes = max(0, self._normalize_size(folder.size_bytes) + delta)
             folder.updated_at = now
-            self.items.save(folder)
             cursor_parent_id = folder.parent_id
 
     @staticmethod
@@ -546,7 +545,6 @@ class ItemService:
             node.status = ItemStatus.DELETED.value
             node.size_bytes = 0
             node.updated_at = now
-            self.items.save(node)
             if node.kind == ItemKind.FILE.value:
                 asset = assets_by_item.get(node.id)
                 if asset is None:
@@ -554,18 +552,22 @@ class ItemService:
                 self.storage_service.delete_file(asset.storage_path)
                 asset.storage_path = None
                 asset.size_bytes = None
-                self.assets.save(asset)
 
         self._apply_size_delta_to_ancestors(user_id, root_parent_id, -removed_size)
 
         return {"id": root.id, "status": ItemStatus.DELETED.value}
 
     def _collect_subtree(self, user_id: str, root: DataRoomItem) -> list[DataRoomItem]:
+        all_items = self.items.list_active_for_user(user_id)
+        by_parent_id: dict[str | None, list[DataRoomItem]] = {}
+        for item in all_items:
+            by_parent_id.setdefault(item.parent_id, []).append(item)
+
         result: list[DataRoomItem] = []
         stack = [root]
         while stack:
             node = stack.pop()
             result.append(node)
-            children = self.items.list_children(user_id, node.id)
+            children = by_parent_id.get(node.id, [])
             stack.extend(children)
         return result

@@ -20,7 +20,12 @@ import { useUploadFileFromDevice } from '@/features/upload-file-from-device'
 import { useFolderTreeQuery } from '@/features/load-folder-tree'
 import { toApiError } from '@/shared/api'
 import { t } from '@/shared/i18n/messages'
-import { getImportFileTooLargeMessage, isImportFileTooLarge } from '@/shared/lib/file/import-file-size-limit'
+import {
+  getImportBatchTooLargeMessage,
+  getImportFileTooLargeMessage,
+  isImportBatchTooLarge,
+  isImportFileTooLarge,
+} from '@/shared/lib/file/import-file-size-limit'
 import {
   normalizeFolderId,
   toFolderPath,
@@ -380,6 +385,13 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
     const uploadedFiles: string[] = []
     const failedFiles: DragImportFailure[] = []
     const tooLargeMessage = getImportFileTooLargeMessage()
+    const batchTooLargeMessage = getImportBatchTooLargeMessage()
+    const importableFiles = files.filter((file) => !isImportFileTooLarge(file))
+
+    if (importableFiles.length > 0 && isImportBatchTooLarge(importableFiles)) {
+      notifyError(batchTooLargeMessage)
+      return
+    }
 
     for (const file of files) {
       if (isImportFileTooLarge(file)) {
@@ -885,19 +897,30 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
     }
 
     try {
+      const shouldNavigateToParentAfterDelete =
+        deleteDialog.mode === 'single' &&
+        deleteDialog.item.kind === 'folder' &&
+        deleteDialog.item.id === normalizedFolderId
+      const parentFolderIdAfterDelete =
+        deleteDialog.mode === 'single' ? normalizeFolderId(deleteDialog.item.parentId ?? 'root') : null
+
       if (deleteDialog.mode === 'single') {
         await deleteItemMutation.mutateAsync(deleteDialog.item.id)
         closePreviewIfMoved([deleteDialog.item.id], normalizedFolderId)
         setSelectedAndSyncAnchor(selectedIds.filter((id) => id !== deleteDialog.item.id))
-        notifySuccess(t('deleteItemSuccess'))
       } else {
         await bulkDeleteMutation.mutateAsync(selectedIds)
         closePreviewIfMoved(selectedIds, normalizedFolderId)
         clearSelectedItems()
-        notifySuccess(t('deleteItemsSuccess'))
       }
 
       setDeleteDialog(null)
+
+      if (shouldNavigateToParentAfterDelete && parentFolderIdAfterDelete) {
+        navigate(toFolderPath(parentFolderIdAfterDelete), { replace: true })
+      }
+
+      notifySuccess(deleteDialog.mode === 'single' ? t('deleteItemSuccess') : t('deleteItemsSuccess'))
     } catch (error) {
       notifyError(toApiError(error).message)
     }

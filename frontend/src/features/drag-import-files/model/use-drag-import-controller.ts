@@ -5,7 +5,9 @@ import { apiClient, queryKeys, toApiError } from '@/shared/api'
 import type { ItemResourceDto } from '@/shared/api'
 import { INTERNAL_DND_ITEMS_TYPE } from '@/shared/lib/dnd/drag-types'
 import {
+  getImportBatchTooLargeMessage,
   getImportFileTooLargeMessage,
+  isImportBatchTooLarge,
   isImportFileTooLarge,
 } from '@/shared/lib/file/import-file-size-limit'
 import { normalizeFolderId, toNullableFolderId } from '@/shared/routes/dataroom-routes'
@@ -22,6 +24,37 @@ type HoverState = {
 type UploadState = {
   folderId: string
   fileCount: number
+}
+
+type DroppedFileEntry = {
+  file: File
+  relativeFolderSegments: string[]
+}
+
+type DroppedImportPayload = {
+  files: DroppedFileEntry[]
+  folderPaths: string[][]
+}
+
+type LegacyFileSystemEntry = {
+  isFile: boolean
+  isDirectory: boolean
+  name: string
+}
+
+type LegacyFileSystemFileEntry = LegacyFileSystemEntry & {
+  file: (successCallback: (file: File) => void, errorCallback?: (error: DOMException) => void) => void
+}
+
+type LegacyFileSystemDirectoryReader = {
+  readEntries: (
+    successCallback: (entries: LegacyFileSystemEntry[]) => void,
+    errorCallback?: (error: DOMException) => void,
+  ) => void
+}
+
+type LegacyFileSystemDirectoryEntry = LegacyFileSystemEntry & {
+  createReader: () => LegacyFileSystemDirectoryReader
 }
 
 const EMPTY_HOVER_STATE: HoverState = {
@@ -84,6 +117,127 @@ const isExternalFilesDrag = (event: DragEvent<HTMLElement>): boolean => {
   return hasFiles && !isInternalDrag
 }
 
+const splitPathSegments = (path: string): string[] =>
+  path
+    .split(/[\\/]+/)
+    .map((segment) => segment.trim())
+    .filter(Boolean)
+
+const normalizeWhitespace = (value: string): string => value.replace(/\s+/g, ' ').trim()
+
+const normalizeFolderSegment = (value: string): string => {
+  const normalized = normalizeWhitespace(value)
+  if (!normalized) {
+    return 'Untitled folder'
+  }
+  return normalized.slice(0, 512)
+}
+
+const getSafeFileName = (file: Pick<File, 'name'>): string => {
+  const segments = splitPathSegments(file.name)
+  const rawBaseName = segments[segments.length - 1] ?? file.name
+  const normalized = normalizeWhitespace(rawBaseName)
+  if (!normalized) {
+    return 'unnamed'
+  }
+  return normalized.slice(0, 512)
+}
+
+const getRelativeFolderSegmentsFromFile = (file: File): string[] => {
+  const relativePath = (file as File & { webkitRelativePath?: string }).webkitRelativePath
+  if (!relativePath) {
+    return []
+  }
+
+  const segments = splitPathSegments(relativePath)
+  if (segments.length <= 1) {
+    return []
+  }
+
+  return segments.slice(0, -1).map(normalizeFolderSegment)
+}
+
+const getDroppedDisplayName = (entry: Pick<DroppedFileEntry, 'file' | 'relativeFolderSegments'>): string => {
+  const safeFileName = getSafeFileName(entry.file)
+  if (entry.relativeFolderSegments.length === 0) {
+    return safeFileName
+  }
+  return `${entry.relativeFolderSegments.join('/')}/${safeFileName}`
+}
+
+const getDataTransferItemEntry = (item: DataTransferItem): LegacyFileSystemEntry | null => {
+  const withWebkitEntry = item as DataTransferItem & {
+    webkitGetAsEntry?: () => LegacyFileSystemEntry | null
+  }
+  return withWebkitEntry.webkitGetAsEntry?.() ?? null
+}
+
+const readFileFromEntry = (entry: LegacyFileSystemFileEntry): Promise<File> =>
+  new Promise((resolve, reject) => {
+    entry.file(resolve, reject)
+  })
+
+const readAllDirectoryEntries = async (entry: LegacyFileSystemDirectoryEntry): Promise<LegacyFileSystemEntry[]> => {
+  const reader = entry.createReader()
+  const collected: LegacyFileSystemEntry[] = []
+
+  while (true) {
+    const chunk = await new Promise<LegacyFileSystemEntry[]>((resolve, reject) => {
+      reader.readEntries(resolve, reject)
+    })
+
+    if (!chunk.length) {
+      break
+    }
+
+    collected.push(...chunk)
+  }
+
+  return collected
+}
+
+const collectDroppedPayloadFromEntry = async (
+  entry: LegacyFileSystemEntry,
+  parentSegments: string[],
+): Promise<DroppedImportPayload> => {
+  if (entry.isFile) {
+    const file = await readFileFromEntry(entry as LegacyFileSystemFileEntry)
+    return {
+      files: [
+        {
+          file,
+          relativeFolderSegments: parentSegments,
+        },
+      ],
+      folderPaths: [],
+    }
+  }
+
+  if (entry.isDirectory) {
+    const directoryEntry = entry as LegacyFileSystemDirectoryEntry
+    const directorySegments = [...parentSegments, normalizeFolderSegment(directoryEntry.name)]
+    const children = await readAllDirectoryEntries(directoryEntry)
+
+    const aggregated: DroppedImportPayload = {
+      files: [],
+      folderPaths: [directorySegments],
+    }
+
+    for (const child of children) {
+      const childPayload = await collectDroppedPayloadFromEntry(child, directorySegments)
+      aggregated.files.push(...childPayload.files)
+      aggregated.folderPaths.push(...childPayload.folderPaths)
+    }
+
+    return aggregated
+  }
+
+  return {
+    files: [],
+    folderPaths: [],
+  }
+}
+
 const getDraggedFiles = (event: DragEvent<HTMLElement>): File[] => {
   const dataTransfer = event.dataTransfer
   if (!dataTransfer) {
@@ -100,6 +254,62 @@ const getDraggedFiles = (event: DragEvent<HTMLElement>): File[] => {
   }
 
   return Array.from(dataTransfer.files ?? [])
+}
+
+const getDroppedImportPayload = async (event: DragEvent<HTMLElement>): Promise<DroppedImportPayload> => {
+  const dataTransfer = event.dataTransfer
+  if (!dataTransfer) {
+    return {
+      files: [],
+      folderPaths: [],
+    }
+  }
+
+  const items = Array.from(dataTransfer.items ?? []).filter((item) => item.kind === 'file')
+  if (!items.length) {
+    return {
+      files: Array.from(dataTransfer.files ?? []).map((file) => ({
+        file,
+        relativeFolderSegments: getRelativeFolderSegmentsFromFile(file),
+      })),
+      folderPaths: [],
+    }
+  }
+
+  const aggregated: DroppedImportPayload = {
+    files: [],
+    folderPaths: [],
+  }
+
+  for (const item of items) {
+    const entry = getDataTransferItemEntry(item)
+    if (!entry) {
+      const file = item.getAsFile()
+      if (file) {
+        aggregated.files.push({
+          file,
+          relativeFolderSegments: getRelativeFolderSegmentsFromFile(file),
+        })
+      }
+      continue
+    }
+
+    const entryPayload = await collectDroppedPayloadFromEntry(entry, [])
+    aggregated.files.push(...entryPayload.files)
+    aggregated.folderPaths.push(...entryPayload.folderPaths)
+  }
+
+  if (aggregated.files.length === 0) {
+    return {
+      files: Array.from(dataTransfer.files ?? []).map((file) => ({
+        file,
+        relativeFolderSegments: getRelativeFolderSegmentsFromFile(file),
+      })),
+      folderPaths: aggregated.folderPaths,
+    }
+  }
+
+  return aggregated
 }
 
 const analyzeDraggedFiles = (event: DragEvent<HTMLElement>): Omit<HoverState, 'folderId'> => {
@@ -134,12 +344,20 @@ const analyzeDraggedFiles = (event: DragEvent<HTMLElement>): Omit<HoverState, 'f
 
 const uploadFile = async (file: File, targetFolderId: string | null): Promise<ItemResourceDto> => {
   const formData = new FormData()
-  formData.append('file', file)
+  formData.append('file', file, getSafeFileName(file))
   if (targetFolderId) {
     formData.append('target_folder_id', targetFolderId)
   }
 
   const response = await apiClient.post<ItemResourceDto>('/api/files/upload', formData)
+  return response.data
+}
+
+const createFolderForImport = async (name: string, parentId: string | null): Promise<ItemResourceDto> => {
+  const response = await apiClient.post<ItemResourceDto>('/api/folders', {
+    name,
+    parent_id: parentId,
+  })
   return response.data
 }
 
@@ -197,10 +415,32 @@ export const useDragImportController = () => {
     }
 
     event.preventDefault()
-    const files = getDraggedFiles(event)
+    let droppedPayload: DroppedImportPayload
+    try {
+      droppedPayload = await getDroppedImportPayload(event)
+    } catch (error) {
+      setHoverState(EMPTY_HOVER_STATE)
+      const message = toApiError(error).message
+      return {
+        uploadedCount: 0,
+        failedCount: 1,
+        uploadedFiles: [],
+        failedFiles: [
+          {
+            fileName: 'Dropped items',
+            message,
+            reason: 'upload_failed',
+          },
+        ],
+        firstErrorMessage: message,
+        hasPartialFailures: false,
+        allRejectedBySizeLimit: false,
+      }
+    }
+
     setHoverState(EMPTY_HOVER_STATE)
 
-    if (!files.length) {
+    if (droppedPayload.files.length === 0 && droppedPayload.folderPaths.length === 0) {
       return {
         uploadedCount: 0,
         failedCount: 0,
@@ -212,17 +452,47 @@ export const useDragImportController = () => {
       }
     }
 
-    type IndexedFile = { file: File; index: number }
+    type IndexedFile = {
+      file: File
+      index: number
+      relativeFolderSegments: string[]
+      displayName: string
+    }
     type FailureEntry = DragImportFailure & { index: number }
     type UploadedEntry = { fileName: string; index: number }
 
-    const indexedFiles: IndexedFile[] = files.map((file, index) => ({ file, index }))
+    const indexedFiles: IndexedFile[] = droppedPayload.files.map((entry, index) => ({
+      file: entry.file,
+      index,
+      relativeFolderSegments: entry.relativeFolderSegments,
+      displayName: getDroppedDisplayName(entry),
+    }))
+
+    if (indexedFiles.length === 0) {
+      const message =
+        'Could not read files inside the dropped folder. Try dropping files directly or use "Upload from computer".'
+      return {
+        uploadedCount: 0,
+        failedCount: 1,
+        uploadedFiles: [],
+        failedFiles: [
+          {
+            fileName: 'Dropped folder',
+            message,
+            reason: 'upload_failed',
+          },
+        ],
+        firstErrorMessage: message,
+        hasPartialFailures: false,
+        allRejectedBySizeLimit: false,
+      }
+    }
     const tooLargeMessage = getImportFileTooLargeMessage()
 
     const rejectedBySizeEntries: FailureEntry[] = indexedFiles
       .filter(({ file }) => isImportFileTooLarge(file))
-      .map(({ file, index }) => ({
-        fileName: file.name,
+      .map(({ displayName, index }) => ({
+        fileName: displayName,
         message: tooLargeMessage,
         reason: 'too_large',
         index,
@@ -230,17 +500,28 @@ export const useDragImportController = () => {
 
     const acceptedEntries: IndexedFile[] = indexedFiles.filter(({ file }) => !isImportFileTooLarge(file))
 
-    if (!acceptedEntries.length) {
-      return {
-        uploadedCount: 0,
-        failedCount: rejectedBySizeEntries.length,
-        uploadedFiles: [],
-        failedFiles: rejectedBySizeEntries.map(({ fileName, message, reason }) => ({
+    if (acceptedEntries.length > 0 && isImportBatchTooLarge(acceptedEntries.map((entry) => entry.file))) {
+      const batchTooLargeMessage = getImportBatchTooLargeMessage()
+      const batchRejectedEntries: FailureEntry[] = acceptedEntries.map((entry) => ({
+        fileName: entry.displayName,
+        message: batchTooLargeMessage,
+        reason: 'too_large',
+        index: entry.index,
+      }))
+      const sortedFailedFiles = [...rejectedBySizeEntries, ...batchRejectedEntries]
+        .sort((left, right) => left.index - right.index)
+        .map(({ fileName, message, reason }) => ({
           fileName,
           message,
           reason,
-        })),
-        firstErrorMessage: rejectedBySizeEntries[0]?.message ?? null,
+        }))
+
+      return {
+        uploadedCount: 0,
+        failedCount: sortedFailedFiles.length,
+        uploadedFiles: [],
+        failedFiles: sortedFailedFiles,
+        firstErrorMessage: sortedFailedFiles[0]?.message ?? null,
         hasPartialFailures: false,
         allRejectedBySizeLimit: true,
       }
@@ -248,44 +529,110 @@ export const useDragImportController = () => {
 
     const normalizedTargetFolderId = normalizeFolderId(folderId)
     const targetFolderId = toNullableFolderId(normalizedTargetFolderId)
+    const folderPathCache = new Map<string, Promise<string | null>>()
+    folderPathCache.set('', Promise.resolve(targetFolderId))
+    let hasCreatedFolders = false
 
-    setUploadState({
-      folderId: normalizedTargetFolderId,
-      fileCount: acceptedEntries.length,
-    })
+    const ensureDropFolderPath = (relativeFolderSegments: string[]): Promise<string | null> => {
+      let currentPath = ''
+      let currentFolderPromise = folderPathCache.get('') as Promise<string | null>
 
-    let cursor = 0
-    const uploadedEntries: UploadedEntry[] = []
-    const failedEntries: FailureEntry[] = [...rejectedBySizeEntries]
-
-    const worker = async () => {
-      while (cursor < acceptedEntries.length) {
-        const currentIndex = cursor
-        cursor += 1
-        const entry = acceptedEntries[currentIndex]
-
-        try {
-          await uploadFile(entry.file, targetFolderId)
-          uploadedEntries.push({
-            fileName: entry.file.name,
-            index: entry.index,
-          })
-        } catch (error) {
-          failedEntries.push({
-            fileName: entry.file.name,
-            message: toApiError(error).message,
-            reason: 'upload_failed',
-            index: entry.index,
-          })
+      for (const segment of relativeFolderSegments) {
+        currentPath = currentPath ? `${currentPath}/${segment}` : segment
+        const cachedPromise = folderPathCache.get(currentPath)
+        if (cachedPromise) {
+          currentFolderPromise = cachedPromise
+          continue
         }
+
+        const parentFolderPromise = currentFolderPromise
+        const createPromise = (async () => {
+          const parentFolderId = await parentFolderPromise
+          const createdFolder = await createFolderForImport(segment, parentFolderId)
+          hasCreatedFolders = true
+          return createdFolder.id
+        })()
+
+        folderPathCache.set(currentPath, createPromise)
+        currentFolderPromise = createPromise
+      }
+
+      return currentFolderPromise
+    }
+
+    const toFolderPathKey = (segments: string[]): string => segments.join('/')
+    const hasDescendantFiles = (folderSegments: string[]): boolean =>
+      indexedFiles.some((entry) => {
+        if (entry.relativeFolderSegments.length < folderSegments.length) {
+          return false
+        }
+        return folderSegments.every((segment, index) => entry.relativeFolderSegments[index] === segment)
+      })
+
+    const uniqueFolderPathKeys = Array.from(
+      new Set(droppedPayload.folderPaths.filter((segments) => segments.length > 0).map(toFolderPathKey)),
+    ).sort((left, right) => left.split('/').length - right.split('/').length)
+
+    const emptyFolderFailures: FailureEntry[] = []
+
+    for (const folderPathKey of uniqueFolderPathKeys) {
+      const folderSegments = splitPathSegments(folderPathKey)
+      try {
+        await ensureDropFolderPath(folderSegments)
+      } catch (error) {
+        if (hasDescendantFiles(folderSegments)) {
+          continue
+        }
+        emptyFolderFailures.push({
+          fileName: folderPathKey,
+          message: toApiError(error).message,
+          reason: 'upload_failed',
+          index: indexedFiles.length + emptyFolderFailures.length,
+        })
       }
     }
 
-    try {
-      const workerCount = Math.min(MAX_PARALLEL_UPLOADS, acceptedEntries.length)
-      await Promise.all(Array.from({ length: workerCount }, () => worker()))
-    } finally {
-      setUploadState(null)
+    const uploadedEntries: UploadedEntry[] = []
+    const failedEntries: FailureEntry[] = [...rejectedBySizeEntries, ...emptyFolderFailures]
+
+    if (acceptedEntries.length > 0) {
+      setUploadState({
+        folderId: normalizedTargetFolderId,
+        fileCount: acceptedEntries.length,
+      })
+
+      let cursor = 0
+
+      const worker = async () => {
+        while (cursor < acceptedEntries.length) {
+          const currentIndex = cursor
+          cursor += 1
+          const entry = acceptedEntries[currentIndex]
+
+          try {
+            const targetDropFolderId = await ensureDropFolderPath(entry.relativeFolderSegments)
+            await uploadFile(entry.file, targetDropFolderId)
+            uploadedEntries.push({
+              fileName: entry.displayName,
+              index: entry.index,
+            })
+          } catch (error) {
+            failedEntries.push({
+              fileName: entry.displayName,
+              message: toApiError(error).message,
+              reason: 'upload_failed',
+              index: entry.index,
+            })
+          }
+        }
+      }
+
+      try {
+        const workerCount = Math.min(MAX_PARALLEL_UPLOADS, acceptedEntries.length)
+        await Promise.all(Array.from({ length: workerCount }, () => worker()))
+      } finally {
+        setUploadState(null)
+      }
     }
 
     const sortedUploadedFiles = uploadedEntries
@@ -302,7 +649,12 @@ export const useDragImportController = () => {
         reason,
       }))
 
-    if (sortedUploadedFiles.length > 0) {
+    const allRejectedBySizeLimit =
+      sortedUploadedFiles.length === 0 &&
+      sortedFailedFiles.length > 0 &&
+      sortedFailedFiles.every((entry) => entry.reason === 'too_large')
+
+    if (sortedUploadedFiles.length > 0 || hasCreatedFolders) {
       await queryClient.invalidateQueries({ queryKey: queryKeys.items })
       await queryClient.invalidateQueries({ queryKey: queryKeys.folderTree })
     }
@@ -314,7 +666,7 @@ export const useDragImportController = () => {
       failedFiles: sortedFailedFiles,
       firstErrorMessage: sortedFailedFiles[0]?.message ?? null,
       hasPartialFailures: sortedUploadedFiles.length > 0 && sortedFailedFiles.length > 0,
-      allRejectedBySizeLimit: false,
+      allRejectedBySizeLimit,
     }
   }
 

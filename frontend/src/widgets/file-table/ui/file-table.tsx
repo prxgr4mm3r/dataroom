@@ -22,7 +22,7 @@ import { t } from '@/shared/i18n/messages'
 import { formatDate, formatDateCompact } from '@/shared/lib/date/format-date'
 import { formatFileSize } from '@/shared/lib/file/format-file-size'
 import { getFileTypePresentation } from '@/shared/lib/file/file-type-presentation'
-import { MAX_IMPORT_FILE_SIZE_BYTES } from '@/shared/lib/file/import-file-size-limit'
+import { MAX_IMPORT_BATCH_SIZE_BYTES, MAX_IMPORT_FILE_SIZE_BYTES } from '@/shared/lib/file/import-file-size-limit'
 import { splitFileName } from '@/shared/lib/file/split-file-name'
 import { APP_SHORTCUTS, withShortcutHint } from '@/shared/lib/keyboard/shortcuts'
 import {
@@ -207,6 +207,7 @@ export const FileTable = ({
   const isMoveOverlayActive =
     !readOnly && !isImportOverlayActive && moveOverlayItemCount > 0 && currentFolderDropState !== 'none'
   const maxImportSizeLabel = formatFileSize(MAX_IMPORT_FILE_SIZE_BYTES).replace('.0 ', ' ')
+  const maxImportBatchSizeLabel = formatFileSize(MAX_IMPORT_BATCH_SIZE_BYTES).replace('.0 ', ' ')
   const uploadFromComputerLabelWithShortcut = withShortcutHint('Upload from computer', APP_SHORTCUTS.importFromComputer.label)
   const importFromGoogleLabelWithShortcut = withShortcutHint('Import from Google Drive', APP_SHORTCUTS.importFromGoogle.label)
   const uploadFromComputerShortcutLabel = APP_SHORTCUTS.importFromComputer.compactLabel
@@ -279,7 +280,7 @@ export const FileTable = ({
                 All selected files are too large.
               </Text>
               <Text size="xs" c="dimmed">
-                Maximum size per file: {formatFileSize(MAX_IMPORT_FILE_SIZE_BYTES)}.
+                Maximum size per file: {formatFileSize(MAX_IMPORT_FILE_SIZE_BYTES)}. Per import: {formatFileSize(MAX_IMPORT_BATCH_SIZE_BYTES)}.
               </Text>
             </div>
           </div>
@@ -419,7 +420,7 @@ export const FileTable = ({
                 This folder is empty.
               </Text>
               <Text size="xs" c="dimmed" className="file-table__empty-state-hint">
-                Import files up to {maxImportSizeLabel}. Drag and drop files here to upload.
+                Import files up to {maxImportSizeLabel} each, {maxImportBatchSizeLabel} per import. Drag and drop files or folders here to upload.
               </Text>
               <Group gap="xs" className="file-table__empty-state-actions">
                 <Button

@@ -13,7 +13,11 @@ import { t } from '@/shared/i18n/messages'
 import { formatDateCompact } from '@/shared/lib/date/format-date'
 import { formatFileSize } from '@/shared/lib/file/format-file-size'
 import { getFileTypePresentation } from '@/shared/lib/file/file-type-presentation'
-import { MAX_IMPORT_FILE_SIZE_BYTES } from '@/shared/lib/file/import-file-size-limit'
+import {
+  MAX_IMPORT_BATCH_SIZE_BYTES,
+  MAX_IMPORT_FILE_SIZE_BYTES,
+  getImportBatchTooLargeMessage,
+} from '@/shared/lib/file/import-file-size-limit'
 import { toNullableFolderId } from '@/shared/routes/dataroom-routes'
 import {
   Alert,
@@ -113,9 +117,24 @@ export const ImportFileDialog = ({
     () => new Set(importableSelectedGoogleIds),
     [importableSelectedGoogleIds],
   )
+  const selectedImportableGoogleTotalSizeBytes = useMemo(
+    () =>
+      importableSelectedGoogleIds.reduce((total, id) => {
+        const file = visibleGoogleFilesById.get(id)
+        return total + Math.max(0, Number(file?.size_bytes ?? 0) || 0)
+      }, 0),
+    [importableSelectedGoogleIds, visibleGoogleFilesById],
+  )
+  const googleSelectionExceedsBatchLimit = selectedImportableGoogleTotalSizeBytes > MAX_IMPORT_BATCH_SIZE_BYTES
+  const batchTooLargeMessage = getImportBatchTooLargeMessage()
 
   const importPickedFiles = async (googleFileIds: string[]) => {
     if (!googleFileIds.length) {
+      return
+    }
+
+    if (googleSelectionExceedsBatchLimit) {
+      notifyError(batchTooLargeMessage)
       return
     }
 
@@ -645,11 +664,17 @@ export const ImportFileDialog = ({
 
                 <Group justify="space-between" className="import-file-dialog__drive-browser-footer">
                   <Stack gap={2}>
-                    <Text size="xs" c="dimmed">
-                      {importableSelectedGoogleIds.length
-                        ? `${importableSelectedGoogleIds.length} selected`
-                        : 'Select one or more files to import.'}
-                    </Text>
+                    {googleSelectionExceedsBatchLimit ? (
+                      <Text size="xs" c="red">
+                        {batchTooLargeMessage}
+                      </Text>
+                    ) : (
+                      <Text size="xs" c="dimmed">
+                        {importableSelectedGoogleIds.length
+                          ? `${importableSelectedGoogleIds.length} selected`
+                          : 'Select one or more files to import.'}
+                      </Text>
+                    )}
                   </Stack>
                   <Group gap={8}>
                     <Button
@@ -662,7 +687,7 @@ export const ImportFileDialog = ({
                     </Button>
                     <Button
                       size="xs"
-                      disabled={!importableSelectedGoogleIds.length}
+                      disabled={!importableSelectedGoogleIds.length || googleSelectionExceedsBatchLimit}
                       loading={importMutation.isPending}
                       onClick={() => void importPickedFiles(importableSelectedGoogleIds)}
                     >
