@@ -13,11 +13,12 @@ import {
   IconUpload,
   IconX,
 } from '@tabler/icons-react'
-import { useRef, type DragEvent } from 'react'
+import { useEffect, useRef, useState, type DragEvent, type PointerEvent } from 'react'
 
 import type { ContentItem } from '@/entities/content-item'
 import { isFileItem } from '@/entities/content-item'
 import type { DragImportOverlayState } from '@/features/drag-import-files'
+import { useDragSelectionController } from '@/features/select-content-items'
 import { t } from '@/shared/i18n/messages'
 import { formatDate, formatDateCompact } from '@/shared/lib/date/format-date'
 import { formatFileSize } from '@/shared/lib/file/format-file-size'
@@ -58,6 +59,7 @@ type FileTableProps = {
   sortOrder: SortOrder
   onToggleSort: (sortBy: SortBy) => void
   onToggleSelect: (itemId: string, options?: ToggleSelectOptions) => void
+  onSetSelection?: (itemIds: string[]) => void
   onToggleSelectAll?: (checked: boolean) => void
   onOpenFile: (itemId: string) => void
   onOpenFolder: (folderId: string) => void
@@ -122,6 +124,44 @@ const NOOP_FOLDER_DRAG_LEAVE = (): void => {}
 const NOOP_ROW_DRAG_START = (): void => {}
 const NOOP_FOLDER_DRAG_OVER = (): void => {}
 const NOOP_FOLDER_DROP = (): void => {}
+const NOOP_SET_SELECTION = (): void => {}
+
+const INTERACTIVE_TARGET_SELECTOR = [
+  'a',
+  'button',
+  'input',
+  'label',
+  '[role="button"]',
+  '.mantine-Menu-dropdown',
+  '.mantine-ActionIcon-root',
+  '.mantine-Checkbox-root',
+].join(',')
+
+const canStartAreaSelectionFromEvent = (event: PointerEvent<HTMLElement>): boolean => {
+  const target = event.target
+  if (!(target instanceof Element)) {
+    return false
+  }
+
+  if (!target.closest('.file-table__container')) {
+    return false
+  }
+
+  if (target.closest(INTERACTIVE_TARGET_SELECTOR)) {
+    return false
+  }
+
+  if (target.closest('thead')) {
+    return false
+  }
+
+  const isRowTarget = Boolean(target.closest('tr.file-table__row'))
+  if (isRowTarget && !(event.ctrlKey || event.metaKey)) {
+    return false
+  }
+
+  return true
+}
 
 const SortableHeader = ({
   label,
@@ -161,6 +201,7 @@ export const FileTable = ({
   sortOrder,
   onToggleSort,
   onToggleSelect,
+  onSetSelection = NOOP_SET_SELECTION,
   onToggleSelectAll,
   onOpenFile,
   onOpenFolder,
@@ -192,20 +233,20 @@ export const FileTable = ({
   moveOverlayItemCount = 0,
   isDraggingItem = NOOP_IS_DRAGGING,
 }: FileTableProps) => {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const selectionOverlayRef = useRef<HTMLDivElement>(null)
+  const rowRefs = useRef(new Map<string, HTMLTableRowElement>())
+  const [isAreaSelectionModifierPressed, setIsAreaSelectionModifierPressed] = useState(false)
   const pendingToggleOptionsRef = useRef<ToggleSelectOptions | null>(null)
   const currentFolderDropState = readOnly ? 'none' : getFolderDropState(currentFolderId)
   const compactUpdatedAt = Boolean(openedPreviewId)
   const tableClassName = ['file-table', compactUpdatedAt ? 'file-table--preview-open' : ''].filter(Boolean).join(' ')
-  const selectedIdSet = new Set(selectedIds)
-  const visibleSelectedCount = items.reduce((count, item) => count + (selectedIdSet.has(item.id) ? 1 : 0), 0)
-  const allVisibleSelected = items.length > 0 && visibleSelectedCount === items.length
-  const partiallyVisibleSelected = visibleSelectedCount > 0 && !allVisibleSelected
-  const hasVisibleSelection = visibleSelectedCount > 0
-  const selectedCount = selectedIds.length
-  const showBulkHeaderActions = selectedCount > 0 && Boolean(onClearSelection) && Boolean(onDownloadSelected)
   const isImportOverlayActive = !readOnly && importOverlayState.mode !== 'none'
   const isMoveOverlayActive =
     !readOnly && !isImportOverlayActive && moveOverlayItemCount > 0 && currentFolderDropState !== 'none'
+  const hasAreaSelectionHandler = onSetSelection !== NOOP_SET_SELECTION
+  const isAreaSelectionEnabled =
+    !readOnly && hasAreaSelectionHandler && !isImportOverlayActive && !isMoveOverlayActive
   const maxImportSizeLabel = formatFileSize(MAX_IMPORT_FILE_SIZE_BYTES).replace('.0 ', ' ')
   const maxImportBatchSizeLabel = formatFileSize(MAX_IMPORT_BATCH_SIZE_BYTES).replace('.0 ', ' ')
   const uploadFromComputerLabelWithShortcut = withShortcutHint('Upload from computer', APP_SHORTCUTS.importFromComputer.label)
@@ -215,6 +256,81 @@ export const FileTable = ({
   const draggedFileCountLabel =
     importOverlayState.mode === 'none' ? '' : formatDraggedFileCount(importOverlayState.fileCount)
   const draggedItemCountLabel = formatDraggedItemCount(moveOverlayItemCount)
+  const dragSelection = useDragSelectionController({
+    isEnabled: isAreaSelectionEnabled,
+    selectedIds,
+    onSelectionChange: onSetSelection,
+    onOverlayRectChange: (rect) => {
+      const overlayElement = selectionOverlayRef.current
+      if (!overlayElement) {
+        return
+      }
+
+      if (!rect) {
+        overlayElement.style.left = '0px'
+        overlayElement.style.top = '0px'
+        overlayElement.style.width = '0px'
+        overlayElement.style.height = '0px'
+        return
+      }
+
+      overlayElement.style.left = `${rect.x}px`
+      overlayElement.style.top = `${rect.y}px`
+      overlayElement.style.width = `${rect.width}px`
+      overlayElement.style.height = `${rect.height}px`
+    },
+    getContainerElement: () => containerRef.current,
+    getItemRects: () =>
+      items.flatMap((item) => {
+        const rowElement = rowRefs.current.get(item.id)
+        if (!rowElement) {
+          return []
+        }
+        return [
+          {
+            id: item.id,
+            rect: rowElement.getBoundingClientRect(),
+          },
+        ]
+      }),
+    canStartSelection: canStartAreaSelectionFromEvent,
+  })
+  const effectiveSelectedIds = dragSelection.previewSelectedIds ?? selectedIds
+  const selectedIdSet = new Set(effectiveSelectedIds)
+  const visibleSelectedCount = items.reduce((count, item) => count + (selectedIdSet.has(item.id) ? 1 : 0), 0)
+  const allVisibleSelected = items.length > 0 && visibleSelectedCount === items.length
+  const partiallyVisibleSelected = visibleSelectedCount > 0 && !allVisibleSelected
+  const hasVisibleSelection = visibleSelectedCount > 0
+  const selectedCount = effectiveSelectedIds.length
+  const showBulkHeaderActions = selectedCount > 0 && Boolean(onClearSelection) && Boolean(onDownloadSelected)
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.ctrlKey || event.metaKey) {
+        setIsAreaSelectionModifierPressed(true)
+      }
+    }
+
+    const handleKeyUp = (event: KeyboardEvent) => {
+      if (!event.ctrlKey && !event.metaKey) {
+        setIsAreaSelectionModifierPressed(false)
+      }
+    }
+
+    const handleBlur = () => {
+      setIsAreaSelectionModifierPressed(false)
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('keyup', handleKeyUp)
+    window.addEventListener('blur', handleBlur)
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('keyup', handleKeyUp)
+      window.removeEventListener('blur', handleBlur)
+    }
+  }, [])
 
   const renderImportOverlay = () => {
     if (readOnly) {
@@ -468,11 +584,17 @@ export const FileTable = ({
 
   return (
     <Box
+      ref={containerRef}
       className="file-table__container"
       h="100%"
       onDragOver={readOnly ? undefined : (event) => onFolderDragOver(currentFolderId, event)}
       onDrop={readOnly ? undefined : (event) => onFolderDrop(currentFolderId, event)}
       onDragLeave={readOnly ? undefined : handleRootDragLeave}
+      onPointerDown={dragSelection.onPointerDown}
+      onPointerMove={dragSelection.onPointerMove}
+      onPointerUp={dragSelection.onPointerUp}
+      onPointerCancel={dragSelection.onPointerCancel}
+      onClickCapture={dragSelection.onClickCapture}
     >
       <ScrollArea h="100%">
         <Table className={tableClassName} stickyHeader highlightOnHover withColumnBorders={false}>
@@ -627,14 +749,33 @@ export const FileTable = ({
               const hasPrimaryMenuActions = Boolean(onRenameItem)
               const hasSecondaryMenuActions = Boolean(onShareItem || onDownloadItem || onCopyItem || onMoveItem)
               const hasDeleteMenuAction = Boolean(onDeleteItem)
+              const canDragRow = !readOnly && !isAreaSelectionModifierPressed
 
               return (
                 <Table.Tr
                   key={item.id}
+                  ref={(element) => {
+                    if (element) {
+                      rowRefs.current.set(item.id, element)
+                      return
+                    }
+                    rowRefs.current.delete(item.id)
+                  }}
+                  data-item-id={item.id}
                   className="file-table__row"
                   bg={rowBackground}
-                  draggable={!readOnly}
-                  onDragStart={readOnly ? undefined : (event) => onDragStartItem(item.id, event)}
+                  draggable={canDragRow}
+                  onDragStart={
+                    readOnly
+                      ? undefined
+                      : (event) => {
+                          if (event.ctrlKey || event.metaKey) {
+                            event.preventDefault()
+                            return
+                          }
+                          onDragStartItem(item.id, event)
+                        }
+                  }
                   onDragEnd={readOnly ? undefined : onDragEnd}
                   onDragOver={
                     !readOnly && isFolder
@@ -687,7 +828,21 @@ export const FileTable = ({
 
                   <Table.Td
                     className="file-table__td file-table__td--name"
-                    onClick={() => (isFileItem(item) ? onOpenFile(item.id) : onOpenFolder(item.id))}
+                    onClick={(event) => {
+                      if (!readOnly && (event.ctrlKey || event.metaKey)) {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        onToggleSelect(item.id, { keepExisting: true })
+                        return
+                      }
+
+                      if (isFileItem(item)) {
+                        onOpenFile(item.id)
+                        return
+                      }
+
+                      onOpenFolder(item.id)
+                    }}
                   >
                     <Group gap={8} wrap="nowrap">
                       <span className="file-table__item-icon" aria-hidden="true">
@@ -781,6 +936,7 @@ export const FileTable = ({
           </Table.Tbody>
         </Table>
       </ScrollArea>
+      {dragSelection.isSelecting ? <div ref={selectionOverlayRef} className="file-table__selection-rect" aria-hidden="true" /> : null}
       {renderImportOverlay()}
       {renderMoveOverlay()}
     </Box>

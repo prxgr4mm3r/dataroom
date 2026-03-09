@@ -8,6 +8,9 @@ type SelectionState = {
   clear: () => void
 }
 
+const areArraysEqual = (left: string[], right: string[]): boolean =>
+  left.length === right.length && left.every((value, index) => value === right[index])
+
 export const useSelectionStore = create<SelectionState>((set, get) => ({
   selectedIds: [],
   isSelected: (id) => get().selectedIds.includes(id),
@@ -19,6 +22,19 @@ export const useSelectionStore = create<SelectionState>((set, get) => ({
         : [...selected, id],
     })
   },
-  setMany: (ids) => set({ selectedIds: [...new Set(ids)] }),
-  clear: () => set({ selectedIds: [] }),
+  setMany: (ids) =>
+    set((state) => {
+      const nextSelectedIds = [...new Set(ids)]
+      if (areArraysEqual(state.selectedIds, nextSelectedIds)) {
+        return state
+      }
+      return { selectedIds: nextSelectedIds }
+    }),
+  clear: () =>
+    set((state) => {
+      if (!state.selectedIds.length) {
+        return state
+      }
+      return { selectedIds: [] }
+    }),
 }))

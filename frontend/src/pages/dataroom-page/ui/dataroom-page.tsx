@@ -1060,6 +1060,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
                   sortOrder={sortOrder}
                   onToggleSort={toggleSort}
                   onToggleSelect={handleToggleSelect}
+                  onSetSelection={setSelectedAndSyncAnchor}
                   onToggleSelectAll={(checked) => {
                     if (!checked) {
                       clearSelectedItems()
