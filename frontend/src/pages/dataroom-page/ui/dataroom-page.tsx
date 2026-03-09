@@ -123,6 +123,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
 
   const [importDialogOpened, setImportDialogOpened] = useState(false)
   const [createFolderOpened, setCreateFolderOpened] = useState(false)
+  const [createFolderParentId, setCreateFolderParentId] = useState<string>(normalizedFolderId)
   const [deleteDialog, setDeleteDialog] = useState<DeleteDialogState | null>(null)
   const [transferDialog, setTransferDialog] = useState<TransferDialogState | null>(null)
   const [shareDialogItem, setShareDialogItem] = useState<ContentItem | null>(null)
@@ -359,6 +360,11 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
 
   const openGoogleImportDialog = () => {
     setImportDialogOpened(true)
+  }
+
+  const openCreateFolderDialog = (folderId: string = normalizedFolderId) => {
+    setCreateFolderParentId(normalizeFolderId(folderId))
+    setCreateFolderOpened(true)
   }
 
   const openComputerImportPicker = () => {
@@ -897,12 +903,32 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
     }
 
     try {
-      const shouldNavigateToParentAfterDelete =
-        deleteDialog.mode === 'single' &&
-        deleteDialog.item.kind === 'folder' &&
-        deleteDialog.item.id === normalizedFolderId
-      const parentFolderIdAfterDelete =
-        deleteDialog.mode === 'single' ? normalizeFolderId(deleteDialog.item.parentId ?? 'root') : null
+      const navigationTargetFolderIdAfterDelete = (() => {
+        if (deleteDialog.mode !== 'single' || deleteDialog.item.kind !== 'folder') {
+          return null
+        }
+
+        const deletedFolderId = deleteDialog.item.id
+        const deletedFolderParentId = normalizeFolderId(deleteDialog.item.parentId ?? 'root')
+
+        if (deletedFolderId === normalizedFolderId) {
+          return deletedFolderParentId
+        }
+
+        const deletedFolderPathIndex = breadcrumbs.findIndex((crumb) => crumb.id === deletedFolderId)
+        const isDeletedFolderInCurrentPath = deletedFolderPathIndex >= 0
+        const isDeletedFolderAncestorOfCurrent = deletedFolderPathIndex >= 0 && deletedFolderPathIndex < breadcrumbs.length - 1
+
+        if (!isDeletedFolderInCurrentPath || !isDeletedFolderAncestorOfCurrent) {
+          return null
+        }
+
+        if (deletedFolderPathIndex <= 0) {
+          return 'root'
+        }
+
+        return normalizeFolderId(breadcrumbs[deletedFolderPathIndex - 1]?.id ?? deletedFolderParentId)
+      })()
 
       if (deleteDialog.mode === 'single') {
         await deleteItemMutation.mutateAsync(deleteDialog.item.id)
@@ -916,8 +942,8 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
 
       setDeleteDialog(null)
 
-      if (shouldNavigateToParentAfterDelete && parentFolderIdAfterDelete) {
-        navigate(toFolderPath(parentFolderIdAfterDelete), { replace: true })
+      if (navigationTargetFolderIdAfterDelete) {
+        navigate(toFolderPath(navigationTargetFolderIdAfterDelete), { replace: true })
       }
 
       notifySuccess(deleteDialog.mode === 'single' ? t('deleteItemSuccess') : t('deleteItemsSuccess'))
@@ -955,7 +981,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
   useDataroomShortcuts({
     suspended: hasBlockingDialog,
     onOpenSearch: () => setSearchDialogOpened(true),
-    onCreateFolder: () => setCreateFolderOpened(true),
+    onCreateFolder: () => openCreateFolderDialog(normalizedFolderId),
     onImportFromComputer: openComputerImportPicker,
     onImportFromGoogle: openGoogleImportDialog,
     onSelectAll: selectAllVisibleItems,
@@ -985,7 +1011,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
             activeFolderId={normalizedFolderId}
             activePreviewId={previewId}
             expandedIds={treeBrowser.expandedIds}
-            onNewFolder={() => setCreateFolderOpened(true)}
+            onNewFolder={() => openCreateFolderDialog(normalizedFolderId)}
             onImportFromGoogle={openGoogleImportDialog}
             onImportFromComputer={openComputerImportPicker}
             onToggleExpanded={treeBrowser.toggleExpanded}
@@ -998,6 +1024,9 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
             onMoveItem={openSingleMoveDialog}
             onDeleteItem={openSingleDeleteDialog}
             onShareItem={openSingleShareDialog}
+            onRootCreateFolder={() => openCreateFolderDialog('root')}
+            onRootDownload={downloadRootFolder}
+            onRootShare={openRootShareDialog}
             onDragStartItem={dragMoveController.startDragFromTree}
             onDragEnd={dragMoveController.endDrag}
             onFolderDragOver={handleFolderDragOver}
@@ -1012,7 +1041,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
         collapsedSidebar={
           <DataroomSidebarRail
             currentUser={currentUser}
-            onNewFolder={() => setCreateFolderOpened(true)}
+            onNewFolder={() => openCreateFolderDialog(normalizedFolderId)}
             onImportFromGoogle={openGoogleImportDialog}
             onImportFromComputer={openComputerImportPicker}
             onSignOut={() => void signOutUser()}
@@ -1024,21 +1053,47 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
             onNavigate={openFolder}
             onOpenSearch={() => setSearchDialogOpened(true)}
             currentFolderMenu={
-              normalizedFolderId === 'root'
-                ? {
-                    onCreateFolder: () => setCreateFolderOpened(true),
-                    onDownload: () => downloadRootFolder(),
-                    onShare: () => openRootShareDialog(),
+              {
+                onCreateFolder: (folder) => openCreateFolderDialog(folder.id),
+                onDownload: (folder) => {
+                  if (folder.id === 'root') {
+                    downloadRootFolder()
+                    return
                   }
-                : {
-                    onCreateFolder: () => setCreateFolderOpened(true),
-                    onDownload: (folder) => downloadCurrentFolder(folder.id),
-                    onCopy: (folder) => openCurrentFolderCopyDialog(folder.id),
-                    onShare: (folder) => openCurrentFolderShareDialog(folder.id),
-                    onRename: (folder) => openCurrentFolderRenameDialog(folder.id),
-                    onMove: (folder) => openCurrentFolderMoveDialog(folder.id),
-                    onDelete: (folder) => openCurrentFolderDeleteDialog(folder.id),
+                  downloadCurrentFolder(folder.id)
+                },
+                onCopy: (folder) => {
+                  if (folder.id === 'root') {
+                    return
                   }
+                  openCurrentFolderCopyDialog(folder.id)
+                },
+                onShare: (folder) => {
+                  if (folder.id === 'root') {
+                    openRootShareDialog()
+                    return
+                  }
+                  openCurrentFolderShareDialog(folder.id)
+                },
+                onRename: (folder) => {
+                  if (folder.id === 'root') {
+                    return
+                  }
+                  openCurrentFolderRenameDialog(folder.id)
+                },
+                onMove: (folder) => {
+                  if (folder.id === 'root') {
+                    return
+                  }
+                  openCurrentFolderMoveDialog(folder.id)
+                },
+                onDelete: (folder) => {
+                  if (folder.id === 'root') {
+                    return
+                  }
+                  openCurrentFolderDeleteDialog(folder.id)
+                },
+              }
             }
             onFolderDragOver={handleFolderDragOver}
             onFolderDragLeave={handleFolderDragLeave}
@@ -1138,7 +1193,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
 
       <CreateFolderDialog
         opened={createFolderOpened}
-        folderId={normalizedFolderId}
+        folderId={createFolderParentId}
         onClose={() => setCreateFolderOpened(false)}
       />
 

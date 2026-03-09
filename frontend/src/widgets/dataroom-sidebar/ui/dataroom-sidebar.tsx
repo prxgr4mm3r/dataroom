@@ -48,6 +48,9 @@ type DataroomSidebarProps = {
   onMoveItem?: (item: ContentItem) => void
   onDeleteItem?: (item: ContentItem) => void
   onShareItem?: (item: ContentItem) => void
+  onRootCreateFolder?: () => void
+  onRootDownload?: () => void
+  onRootShare?: () => void
   onDragStartItem: (item: ContentItem, event: DragEvent<HTMLElement>) => void
   onDragEnd: () => void
   onFolderDragOver: (folderId: string, event: DragEvent<HTMLElement>) => void
@@ -95,11 +98,18 @@ type DataroomSidebarRailProps = {
 
 const TREE_INDENT_STEP = 20
 
-type SidebarContextMenuState = {
-  item: ContentItem
-  x: number
-  y: number
-}
+type SidebarContextMenuState =
+  | {
+      kind: 'item'
+      item: ContentItem
+      x: number
+      y: number
+    }
+  | {
+      kind: 'root'
+      x: number
+      y: number
+    }
 
 type SidebarItemActionsMenuContentProps = {
   item: ContentItem
@@ -109,6 +119,13 @@ type SidebarItemActionsMenuContentProps = {
   onMoveItem?: (item: ContentItem) => void
   onDeleteItem?: (item: ContentItem) => void
   onShareItem?: (item: ContentItem) => void
+  onAction?: () => void
+}
+
+type SidebarRootActionsMenuContentProps = {
+  onCreateFolder?: () => void
+  onDownload?: () => void
+  onShare?: () => void
   onAction?: () => void
 }
 
@@ -162,6 +179,43 @@ const SidebarItemActionsMenuContent = ({
       {onDeleteItem ? (
         <Menu.Item color="red" leftSection={<IconTrash size={14} />} onClick={runAction(onDeleteItem)}>
           Delete
+        </Menu.Item>
+      ) : null}
+    </>
+  )
+}
+
+const SidebarRootActionsMenuContent = ({
+  onCreateFolder,
+  onDownload,
+  onShare,
+  onAction,
+}: SidebarRootActionsMenuContentProps) => {
+  const runAction = (handler: () => void): (() => void) => {
+    return () => {
+      onAction?.()
+      handler()
+    }
+  }
+  const hasPrimaryActions = Boolean(onCreateFolder)
+  const hasMiddleActions = Boolean(onShare || onDownload)
+
+  return (
+    <>
+      {onCreateFolder ? (
+        <Menu.Item leftSection={<IconPlus size={14} />} onClick={runAction(onCreateFolder)}>
+          Create folder
+        </Menu.Item>
+      ) : null}
+      {hasPrimaryActions && hasMiddleActions ? <Menu.Divider /> : null}
+      {onShare ? (
+        <Menu.Item leftSection={<IconLink size={14} />} onClick={runAction(onShare)}>
+          Share
+        </Menu.Item>
+      ) : null}
+      {onDownload ? (
+        <Menu.Item leftSection={<IconDownload size={14} />} onClick={runAction(onDownload)}>
+          Download
         </Menu.Item>
       ) : null}
     </>
@@ -800,6 +854,9 @@ export const DataroomSidebar = ({
   onMoveItem,
   onDeleteItem,
   onShareItem,
+  onRootCreateFolder,
+  onRootDownload,
+  onRootShare,
   onDragStartItem,
   onDragEnd,
   onFolderDragOver,
@@ -845,7 +902,18 @@ export const DataroomSidebar = ({
     event.preventDefault()
     event.stopPropagation()
     setContextMenuState({
+      kind: 'item',
       item,
+      x: event.clientX,
+      y: event.clientY,
+    })
+  }
+
+  const handleRootContextMenu = (event: ReactMouseEvent<HTMLElement>) => {
+    event.preventDefault()
+    event.stopPropagation()
+    setContextMenuState({
+      kind: 'root',
       x: event.clientX,
       y: event.clientY,
     })
@@ -934,6 +1002,7 @@ export const DataroomSidebar = ({
             event.stopPropagation()
             onFolderDragLeave('root')
           }}
+          onContextMenu={handleRootContextMenu}
         />
 
         {rootCanExpand && expandedIds.has('root') ? (
@@ -1024,8 +1093,8 @@ export const DataroomSidebar = ({
           <Box
             style={{
               position: 'fixed',
-              left: contextMenuState?.x ?? -9999,
-              top: contextMenuState?.y ?? -9999,
+              left: contextMenuState ? contextMenuState.x : -9999,
+              top: contextMenuState ? contextMenuState.y : -9999,
               width: 1,
               height: 1,
               pointerEvents: 'none',
@@ -1033,7 +1102,7 @@ export const DataroomSidebar = ({
           />
         </Menu.Target>
         <Menu.Dropdown onContextMenu={(event) => event.preventDefault()}>
-          {contextMenuState ? (
+          {contextMenuState?.kind === 'item' ? (
             <SidebarItemActionsMenuContent
               item={contextMenuState.item}
               onDownloadItem={onDownloadItem}
@@ -1042,6 +1111,14 @@ export const DataroomSidebar = ({
               onMoveItem={onMoveItem}
               onDeleteItem={onDeleteItem}
               onShareItem={onShareItem}
+              onAction={() => setContextMenuState(null)}
+            />
+          ) : null}
+          {contextMenuState?.kind === 'root' ? (
+            <SidebarRootActionsMenuContent
+              onCreateFolder={onRootCreateFolder}
+              onDownload={onRootDownload}
+              onShare={onRootShare}
               onAction={() => setContextMenuState(null)}
             />
           ) : null}
