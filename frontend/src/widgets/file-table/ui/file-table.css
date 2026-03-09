@@ -100,6 +100,7 @@
 
 .file-table__th--select,
 .file-table__td--select {
+  --file-table-select-inset: 8px;
   width: 44px;
   text-align: center;
   padding-left: 0;
@@ -115,8 +116,9 @@
 .file-table__select-control {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   min-height: 100%;
+  padding-left: var(--file-table-select-inset, 0);
 }
 
 .file-table__empty-wrap {
