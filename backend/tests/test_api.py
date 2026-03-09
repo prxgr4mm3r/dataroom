@@ -547,6 +547,84 @@ class BackendApiTests(unittest.TestCase):
         self.assertIn("Budget Child", names)
         self.assertNotIn("Budget Private", names)
 
+    def test_authenticated_search_returns_items_for_empty_query(self):
+        headers = self._auth_headers("search-empty-user")
+
+        self.client.post("/api/folders", headers=headers, json={"name": "Alpha"})
+        self.client.post("/api/folders", headers=headers, json={"name": "Beta"})
+        self.client.post("/api/folders", headers=headers, json={"name": "Gamma"})
+
+        response = self.client.get("/api/items/search?limit=2", headers=headers)
+        self.assertEqual(200, response.status_code)
+        self.assertEqual(2, len(response.json["items"]))
+
+        names = {item["name"] for item in response.json["items"]}
+        self.assertTrue(names.issubset({"Alpha", "Beta", "Gamma"}))
+
+    def test_share_search_returns_items_for_empty_query(self):
+        headers = self._auth_headers("share-empty-search-user")
+
+        shared_root = self.client.post("/api/folders", headers=headers, json={"name": "Shared Root"})
+        self.assertEqual(201, shared_root.status_code)
+        shared_root_id = shared_root.json["id"]
+
+        shared_child = self.client.post(
+            "/api/folders",
+            headers=headers,
+            json={"parent_id": shared_root_id, "name": "Shared Child"},
+        )
+        self.assertEqual(201, shared_child.status_code)
+
+        private_folder = self.client.post("/api/folders", headers=headers, json={"name": "Private Folder"})
+        self.assertEqual(201, private_folder.status_code)
+        self.assertTrue(private_folder.json["id"])
+
+        share_response = self.client.post("/api/shares", headers=headers, json={"item_id": shared_root_id})
+        self.assertEqual(201, share_response.status_code)
+        token = str(share_response.json["share_url"]).rstrip("/").split("/s/")[-1]
+
+        search_response = self.client.get(f"/api/public/shares/{token}/search?limit=100")
+        self.assertEqual(200, search_response.status_code)
+
+        names = {item["name"] for item in search_response.json["items"]}
+        self.assertIn("Shared Root", names)
+        self.assertIn("Shared Child", names)
+        self.assertNotIn("Private Folder", names)
+
+    def test_authenticated_search_current_scope_uses_root_item_id(self):
+        headers = self._auth_headers("search-current-scope-user")
+
+        current_folder_response = self.client.post("/api/folders", headers=headers, json={"name": "Current Scope Root"})
+        self.assertEqual(201, current_folder_response.status_code)
+        current_folder_id = current_folder_response.json["id"]
+
+        nested_response = self.client.post(
+            "/api/folders",
+            headers=headers,
+            json={"parent_id": current_folder_id, "name": "Current Scope Child"},
+        )
+        self.assertEqual(201, nested_response.status_code)
+
+        for index in range(120):
+            outside_response = self.client.post("/api/folders", headers=headers, json={"name": f"Outside {index}"})
+            self.assertEqual(201, outside_response.status_code)
+
+        global_response = self.client.get("/api/items/search?limit=100", headers=headers)
+        self.assertEqual(200, global_response.status_code)
+        global_names = {item["name"] for item in global_response.json["items"]}
+        self.assertNotIn("Current Scope Root", global_names)
+        self.assertNotIn("Current Scope Child", global_names)
+
+        current_scope_response = self.client.get(
+            f"/api/items/search?limit=100&root_item_id={current_folder_id}",
+            headers=headers,
+        )
+        self.assertEqual(200, current_scope_response.status_code)
+        current_scope_names = {item["name"] for item in current_scope_response.json["items"]}
+        self.assertIn("Current Scope Root", current_scope_names)
+        self.assertIn("Current Scope Child", current_scope_names)
+        self.assertFalse(any(name.startswith("Outside ") for name in current_scope_names))
+
     def test_share_root_search_matches_authenticated_search_results(self):
         headers = self._auth_headers("share-root-search-user")
 

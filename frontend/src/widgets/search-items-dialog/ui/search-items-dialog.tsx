@@ -130,10 +130,18 @@ export const SearchItemsDialog = ({
     return () => window.clearTimeout(timeoutId)
   }, [opened, query])
 
-  const canSearch = opened && debouncedQuery.length > 0 && (mode === 'dataroom' || Boolean(shareToken))
+  const canSearch = opened && (mode === 'dataroom' || Boolean(shareToken))
+  const useServerScopedCurrentFolderSearch = mode === 'dataroom' && searchScope === 'current' && currentFolderId !== 'root'
 
   const searchQuery = useQuery({
-    queryKey: ['global-search-items', mode, shareToken ?? '', debouncedQuery],
+    queryKey: [
+      'global-search-items',
+      mode,
+      shareToken ?? '',
+      debouncedQuery,
+      searchScope,
+      useServerScopedCurrentFolderSearch ? currentFolderId : 'root',
+    ],
     queryFn: async () => {
       if (mode === 'shared') {
         return searchSharedContentItems({
@@ -145,6 +153,7 @@ export const SearchItemsDialog = ({
       return searchContentItems({
         query: debouncedQuery,
         limit: SEARCH_RESULT_LIMIT,
+        rootItemId: useServerScopedCurrentFolderSearch ? currentFolderId : undefined,
       })
     },
     enabled: canSearch,
@@ -204,7 +213,7 @@ export const SearchItemsDialog = ({
   const canApplyCurrentScope = searchScope === 'all' || currentFolderId === 'root' || Boolean(currentFolderDescendantIds)
 
   const filteredByScopeItems = useMemo(() => {
-    if (searchScope === 'all' || currentFolderId === 'root') {
+    if (searchScope === 'all' || currentFolderId === 'root' || useServerScopedCurrentFolderSearch) {
       return enrichedItems
     }
 
@@ -221,7 +230,7 @@ export const SearchItemsDialog = ({
       const parentId = item.raw.parentId
       return parentId === currentFolderId || (parentId ? currentFolderDescendantIds.has(parentId) : false)
     })
-  }, [currentFolderDescendantIds, currentFolderId, enrichedItems, searchScope])
+  }, [currentFolderDescendantIds, currentFolderId, enrichedItems, searchScope, useServerScopedCurrentFolderSearch])
 
   const filteredItems = useMemo(
     () =>
@@ -243,8 +252,12 @@ export const SearchItemsDialog = ({
     [filteredByScopeItems, selectedFileType],
   )
 
-  const showScopeWarning = searchScope === 'current' && !canApplyCurrentScope && !folderTreePending && !folderTreeError
-  const hasQuery = query.trim().length > 0
+  const showScopeWarning =
+    !useServerScopedCurrentFolderSearch &&
+    searchScope === 'current' &&
+    !canApplyCurrentScope &&
+    !folderTreePending &&
+    !folderTreeError
 
   const handleClose = () => {
     setQuery('')
@@ -353,27 +366,22 @@ export const SearchItemsDialog = ({
               Current folder tree is unavailable. Showing direct folder matches only.
             </Text>
           ) : null}
-          {!hasQuery ? (
-            <Text size="sm" c="dimmed" className="search-items-dialog__empty">
-              Start typing to search by name across all files and folders.
-            </Text>
-          ) : null}
-          {hasQuery && searchQuery.isPending ? (
+          {searchQuery.isPending ? (
             <Box className="search-items-dialog__loading">
               <Loader size="sm" />
             </Box>
           ) : null}
-          {hasQuery && searchQuery.error ? (
+          {!searchQuery.isPending && searchQuery.error ? (
             <Text size="sm" c="red" className="search-items-dialog__empty">
               {toApiError(searchQuery.error).message}
             </Text>
           ) : null}
-          {hasQuery && !searchQuery.isPending && !searchQuery.error && filteredItems.length === 0 ? (
+          {!searchQuery.isPending && !searchQuery.error && filteredItems.length === 0 ? (
             <Text size="sm" c="dimmed" className="search-items-dialog__empty">
               {items.length > 0 ? 'No items match current filters.' : 'No items found.'}
             </Text>
           ) : null}
-          {hasQuery && !searchQuery.isPending && !searchQuery.error && filteredItems.length > 0 ? (
+          {!searchQuery.isPending && !searchQuery.error && filteredItems.length > 0 ? (
             <div className="search-items-dialog__list">
               {filteredItems.map(({ raw: item, fileType }) => {
                 const subtitle = item.kind === 'folder' ? 'Folder' : fileType?.label ?? 'File'

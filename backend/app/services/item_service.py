@@ -197,14 +197,26 @@ class ItemService:
         user_id: str,
         query: str | None,
         limit: int,
+        root_item_id: str | None = None,
     ) -> dict:
         normalized_query = self.name_resolver.normalize(str(query or ""))
         normalized_terms = [segment for segment in normalized_query.split(" ") if segment]
-        if not normalized_terms:
-            return {"items": []}
-
         normalized_limit = max(1, min(int(limit or 50), 100))
-        entries = self.items.search_active_for_user(user_id, normalized_terms, normalized_limit)
+        normalized_root_item_id = self._normalize_parent_id(root_item_id)
+        if normalized_root_item_id is None:
+            entries = self.items.search_active_for_user(user_id, normalized_terms, normalized_limit)
+        else:
+            root_folder = self._resolve_parent_folder(user_id, normalized_root_item_id)
+            if root_folder is None:
+                entries = self.items.search_active_for_user(user_id, normalized_terms, normalized_limit)
+            else:
+                scoped_ids = self._collect_subtree_item_ids(user_id, root_folder.id)
+                entries = self.items.search_active_for_user_in_ids(
+                    user_id,
+                    normalized_terms,
+                    normalized_limit,
+                    list(scoped_ids),
+                )
         if not entries:
             return {"items": []}
 
@@ -225,6 +237,24 @@ class ItemService:
                 for entry in entries
             ],
         }
+
+    def _collect_subtree_item_ids(self, user_id: str, root_folder_id: str) -> set[str]:
+        entries = self.items.list_active_for_user(user_id)
+        children_by_parent: dict[str | None, list[DataRoomItem]] = {}
+        for entry in entries:
+            children_by_parent.setdefault(entry.parent_id, []).append(entry)
+
+        scoped_ids: set[str] = {root_folder_id}
+        stack = [root_folder_id]
+        while stack:
+            parent_id = stack.pop()
+            for child in children_by_parent.get(parent_id, []):
+                if child.id in scoped_ids:
+                    continue
+                scoped_ids.add(child.id)
+                if child.kind == ItemKind.FOLDER.value:
+                    stack.append(child.id)
+        return scoped_ids
 
     def get_item(self, user_id: str, item_id: str) -> tuple[DataRoomItem, FileAsset | None]:
         item = self.items.get_for_user(user_id, item_id)

@@ -132,9 +132,6 @@ class ItemRepository:
         normalized_terms: list[str],
         limit: int,
     ) -> list[DataRoomItem]:
-        if not normalized_terms:
-            return []
-
         query = self.db.query(DataRoomItem).filter(
             DataRoomItem.user_id == user_id,
             DataRoomItem.status != ItemStatus.DELETED.value,
@@ -156,7 +153,7 @@ class ItemRepository:
         limit: int,
         item_ids: list[str],
     ) -> list[DataRoomItem]:
-        if not normalized_terms or not item_ids:
+        if not item_ids:
             return []
 
         query = self.db.query(DataRoomItem).filter(

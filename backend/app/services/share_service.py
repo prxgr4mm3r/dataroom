@@ -521,9 +521,6 @@ class ShareService:
         scope = self._resolve_scope(raw_token, touch_access=False)
         normalized_query = self.name_resolver.normalize(str(query or ""))
         normalized_terms = [segment for segment in normalized_query.split(" ") if segment]
-        if not normalized_terms:
-            return {"items": []}
-
         normalized_limit = max(1, min(int(limit or 50), 100))
         if scope.is_root_scope:
             entries = self.items.search_active_for_user(scope.owner_user_id, normalized_terms, normalized_limit)

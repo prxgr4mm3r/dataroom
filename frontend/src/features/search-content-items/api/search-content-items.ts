@@ -9,6 +9,7 @@ type SearchItemsResponse = {
 type SearchContentItemsParams = {
   query: string
   limit?: number
+  rootItemId?: string
 }
 
 type SearchSharedContentItemsParams = SearchContentItemsParams & {
@@ -20,11 +21,13 @@ const DEFAULT_LIMIT = 50
 export const searchContentItems = async ({
   query,
   limit = DEFAULT_LIMIT,
+  rootItemId,
 }: SearchContentItemsParams): Promise<ContentItem[]> => {
   const response = await apiClient.get<SearchItemsResponse>('/api/items/search', {
     params: {
       q: query,
       limit,
+      root_item_id: rootItemId,
     },
   })
   return response.data.items.map(mapItemResourceDto)

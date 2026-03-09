@@ -38,6 +38,7 @@ def list_items():
 @require_auth
 def search_items():
     query = request.args.get("q")
+    root_item_id = request.args.get("root_item_id")
     raw_limit = request.args.get("limit", "50")
     try:
         limit = int(raw_limit)
@@ -45,7 +46,7 @@ def search_items():
         limit = 50
 
     service = _build_item_service()
-    response = service.search_items(g.current_user.id, query, limit)
+    response = service.search_items(g.current_user.id, query, limit, root_item_id=root_item_id)
     return jsonify(response)
 
 
