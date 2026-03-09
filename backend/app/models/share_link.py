@@ -21,10 +21,10 @@ class ShareLink(Base, IdMixin, TimestampMixin):
         nullable=False,
         index=True,
     )
-    root_item_id: Mapped[str] = mapped_column(
+    root_item_id: Mapped[str | None] = mapped_column(
         String(36),
         ForeignKey("dataroom_items.id", ondelete="CASCADE"),
-        nullable=False,
+        nullable=True,
         index=True,
     )
     permission: Mapped[str] = mapped_column(String(16), nullable=False, default=SharePermission.READ)

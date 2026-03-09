@@ -72,6 +72,7 @@ type DropState = 'none' | 'valid' | 'warning' | 'invalid'
 const SYNTHETIC_FOLDER_TIMESTAMP = '1970-01-01T00:00:00.000Z'
 const DOWNLOAD_FALLBACK_NAME = 'dataroom-download.zip'
 const ZIP_EXTENSION_PATTERN = /\.zip$/i
+const ROOT_FOLDER_NAME = 'Data Room'
 
 const moveReasonMessage = (reason: ReturnType<typeof validateMoveTarget>['reason']): string | null => {
   if (reason === 'self') {
@@ -793,6 +794,40 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
     downloadSingleItem(folderItem)
   }
 
+  const openRootShareDialog = () => {
+    const rootName = (breadcrumbs[0]?.name || ROOT_FOLDER_NAME).trim() || ROOT_FOLDER_NAME
+    const nowIso = new Date().toISOString()
+    setShareDialogItem({
+      id: 'root',
+      kind: 'folder',
+      name: rootName,
+      parentId: null,
+      childrenCount: items.length,
+      status: 'active',
+      createdAt: nowIso,
+      updatedAt: nowIso,
+      mimeType: null,
+      sizeBytes: items.reduce((total, item) => total + Number(item.sizeBytes || 0), 0),
+      importedAt: null,
+      origin: null,
+      googleFileId: null,
+    })
+  }
+
+  const downloadRootFolder = () => {
+    if (!items.length) {
+      notifyError('There are no items in Data Room to download.')
+      return
+    }
+
+    const rootName = (breadcrumbs[0]?.name || ROOT_FOLDER_NAME).trim() || ROOT_FOLDER_NAME
+    const fallbackName = ZIP_EXTENSION_PATTERN.test(rootName) ? rootName : `${rootName}.zip`
+    void downloadItems(
+      items.map((item) => item.id),
+      fallbackName,
+    )
+  }
+
   const openBulkDeleteDialog = () => {
     if (!selectedIds.length) {
       return
@@ -961,7 +996,11 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
             onOpenSearch={() => setSearchDialogOpened(true)}
             currentFolderMenu={
               normalizedFolderId === 'root'
-                ? undefined
+                ? {
+                    onCreateFolder: () => setCreateFolderOpened(true),
+                    onDownload: () => downloadRootFolder(),
+                    onShare: () => openRootShareDialog(),
+                  }
                 : {
                     onCreateFolder: () => setCreateFolderOpened(true),
                     onDownload: (folder) => downloadCurrentFolder(folder.id),

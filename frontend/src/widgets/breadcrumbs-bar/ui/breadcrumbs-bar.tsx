@@ -66,7 +66,6 @@ export const BreadcrumbsBar = ({
   const hasCurrentFolderMenu =
     Boolean(currentFolderMenu) &&
     Boolean(currentBreadcrumb) &&
-    currentBreadcrumb.id !== 'root' &&
     Boolean(
       currentFolderMenu?.onCreateFolder ||
         currentFolderMenu?.onRename ||

@@ -11,7 +11,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.errors import ApiError
-from app.models import DataRoomItem, FileAsset, ItemKind, ShareLink, SharePermission
+from app.models import DataRoomItem, FileAsset, ItemKind, ItemStatus, ShareLink, SharePermission
 from app.repositories import FileAssetRepository, ItemRepository, ShareLinkRepository
 from app.services.download_service import DownloadService, DownloadPayload
 from app.services.policies import ItemSerializer, SortPolicy
@@ -21,14 +21,21 @@ from app.services.token_cipher import TokenCipher
 @dataclass
 class ShareScope:
     link: ShareLink
-    root_item: DataRoomItem
+    root_item: DataRoomItem | None
 
     @property
     def owner_user_id(self) -> str:
         return self.link.owner_user_id
 
+    @property
+    def is_root_scope(self) -> bool:
+        return self.root_item is None
+
 
 class ShareService:
+    ROOT_SCOPE_ID = "root"
+    ROOT_SCOPE_NAME = "Data Room"
+
     def __init__(self, db: Session, config: dict[str, Any]):
         self.db = db
         self.config = config
@@ -49,6 +56,11 @@ class ShareService:
         if parent_id in (None, "", "root", "null"):
             return None
         return parent_id
+
+    @classmethod
+    def _is_root_scope_id(cls, value: str | None) -> bool:
+        normalized = str(value or "").strip().casefold()
+        return normalized == cls.ROOT_SCOPE_ID
 
     @staticmethod
     def _sanitize_item_ids(item_ids: list[str]) -> list[str]:
@@ -98,6 +110,12 @@ class ShareService:
         return root_item
 
     def _is_item_in_scope(self, scope: ShareScope, item: DataRoomItem) -> bool:
+        if scope.is_root_scope:
+            return True
+
+        if scope.root_item is None:
+            return False
+
         cursor: DataRoomItem | None = item
         visited: set[str] = set()
         while cursor is not None and cursor.id not in visited:
@@ -131,9 +149,13 @@ class ShareService:
         if not hmac.compare_digest(link.token_hash, expected_hash):
             raise self._share_not_found()
 
-        root_item = self._ensure_active_share_root(
-            self.items.get_for_user(link.owner_user_id, link.root_item_id),
-        )
+        root_item: DataRoomItem | None
+        if link.root_item_id is None:
+            root_item = None
+        else:
+            root_item = self._ensure_active_share_root(
+                self.items.get_for_user(link.owner_user_id, link.root_item_id),
+            )
         link.last_access_at = now
         self.links.save(link)
         return ShareScope(link=link, root_item=root_item)
@@ -159,7 +181,7 @@ class ShareService:
         return {
             "id": link.id,
             "permission": link.permission,
-            "root_item_id": link.root_item_id,
+            "root_item_id": link.root_item_id or self.ROOT_SCOPE_ID,
             "expires_at": link.expires_at.isoformat() if link.expires_at else None,
             "created_at": link.created_at.isoformat(),
             "updated_at": link.updated_at.isoformat(),
@@ -174,11 +196,24 @@ class ShareService:
         root_item_id: str,
         expires_in_days: int | None = None,
     ) -> dict[str, Any]:
-        root_item = self.items.get_for_user(owner_user_id, root_item_id)
-        if root_item is None:
-            raise ApiError(404, "item_not_found", "Item not found.")
+        normalized_item_id = str(root_item_id).strip()
+        is_root_scope = self._is_root_scope_id(normalized_item_id)
 
-        existing_links = self.links.list_for_owner(owner_user_id, root_item.id, include_revoked=False)
+        resolved_root_item_id: str | None
+        if is_root_scope:
+            resolved_root_item_id = None
+        else:
+            root_item = self.items.get_for_user(owner_user_id, normalized_item_id)
+            if root_item is None:
+                raise ApiError(404, "item_not_found", "Item not found.")
+            resolved_root_item_id = root_item.id
+
+        existing_links = self.links.list_for_owner(
+            owner_user_id,
+            root_item_id=resolved_root_item_id,
+            include_revoked=False,
+            root_scope_only=True if is_root_scope else None,
+        )
         if existing_links:
             now = datetime.now(timezone.utc)
             selected: tuple[ShareLink, str] | None = None
@@ -207,7 +242,7 @@ class ShareService:
 
         link = ShareLink(
             owner_user_id=owner_user_id,
-            root_item_id=root_item.id,
+            root_item_id=resolved_root_item_id,
             permission=SharePermission.READ,
             token_kid=token_kid,
             token_hash=token_hash,
@@ -232,16 +267,24 @@ class ShareService:
         root_item_id: str | None = None,
         include_revoked: bool = False,
     ) -> list[dict[str, Any]]:
-        normalized_item_id = str(root_item_id).strip() if root_item_id else None
+        normalized_item_id = str(root_item_id).strip() if root_item_id is not None else None
+        root_scope_only: bool | None = None
+        filter_item_id: str | None = None
+
         if normalized_item_id:
-            root_item = self.items.get_for_user(owner_user_id, normalized_item_id)
-            if root_item is None:
-                raise ApiError(404, "item_not_found", "Item not found.")
+            if self._is_root_scope_id(normalized_item_id):
+                root_scope_only = True
+            else:
+                root_item = self.items.get_for_user(owner_user_id, normalized_item_id)
+                if root_item is None:
+                    raise ApiError(404, "item_not_found", "Item not found.")
+                filter_item_id = root_item.id
 
         links = self.links.list_for_owner(
             owner_user_id=owner_user_id,
-            root_item_id=normalized_item_id,
+            root_item_id=filter_item_id,
             include_revoked=include_revoked,
+            root_scope_only=root_scope_only,
         )
 
         result: list[dict[str, Any]] = []
@@ -264,6 +307,18 @@ class ShareService:
     def _resolve_folder_for_listing(self, scope: ShareScope, parent_id: str | None) -> DataRoomItem | None:
         normalized_parent = self._normalize_parent_id(parent_id)
 
+        if scope.is_root_scope:
+            if normalized_parent is None:
+                return None
+
+            folder = self.items.get_for_user(scope.owner_user_id, normalized_parent)
+            if folder is None or folder.kind != ItemKind.FOLDER.value:
+                raise self._share_not_found()
+            return folder
+
+        if scope.root_item is None:
+            raise self._share_not_found()
+
         if scope.root_item.kind == ItemKind.FILE.value:
             if normalized_parent is None or normalized_parent == scope.root_item.id:
                 return None
@@ -280,6 +335,29 @@ class ShareService:
         return folder
 
     def _build_scoped_breadcrumbs(self, scope: ShareScope, folder: DataRoomItem | None) -> list[dict[str, str]]:
+        if scope.is_root_scope:
+            if folder is None:
+                return [{"id": "root", "name": self.ROOT_SCOPE_NAME}]
+
+            chain: list[DataRoomItem] = []
+            cursor: DataRoomItem | None = folder
+            while cursor is not None:
+                chain.append(cursor)
+                if cursor.parent_id is None:
+                    break
+                cursor = self.items.get_for_user(scope.owner_user_id, cursor.parent_id)
+
+            if not chain or chain[-1].parent_id is not None:
+                raise self._share_not_found()
+
+            breadcrumbs = [{"id": "root", "name": self.ROOT_SCOPE_NAME}]
+            for node in reversed(chain):
+                breadcrumbs.append({"id": node.id, "name": node.name})
+            return breadcrumbs
+
+        if scope.root_item is None:
+            raise self._share_not_found()
+
         if folder is None or folder.id == scope.root_item.id:
             return [{"id": "root", "name": scope.root_item.name}]
 
@@ -301,9 +379,27 @@ class ShareService:
 
     def get_meta(self, raw_token: str) -> dict[str, Any]:
         scope = self._resolve_scope(raw_token)
-        root = scope.root_item
-        root_asset = self.assets.get_for_item(root.id) if root.kind == ItemKind.FILE.value else None
-        root_children_count = self.items.count_children(scope.owner_user_id, root.id) if root.kind == ItemKind.FOLDER.value else 0
+        if scope.is_root_scope:
+            top_level_items = self.items.list_children(scope.owner_user_id, None)
+            root_size_bytes = sum(max(0, int(item.size_bytes or 0)) for item in top_level_items)
+            root_resource: dict[str, Any] = {
+                "id": self.ROOT_SCOPE_ID,
+                "kind": ItemKind.FOLDER.value,
+                "name": self.ROOT_SCOPE_NAME,
+                "parent_id": None,
+                "status": ItemStatus.ACTIVE.value,
+                "created_at": scope.link.created_at.isoformat(),
+                "updated_at": scope.link.updated_at.isoformat(),
+                "children_count": len(top_level_items),
+                "size_bytes": root_size_bytes,
+            }
+        else:
+            if scope.root_item is None:
+                raise self._share_not_found()
+            root = scope.root_item
+            root_asset = self.assets.get_for_item(root.id) if root.kind == ItemKind.FILE.value else None
+            root_children_count = self.items.count_children(scope.owner_user_id, root.id) if root.kind == ItemKind.FOLDER.value else 0
+            root_resource = self.serializer.as_resource(root, root_asset, children_count=root_children_count)
 
         return {
             "share": {
@@ -312,7 +408,7 @@ class ShareService:
                 "expires_at": scope.link.expires_at.isoformat() if scope.link.expires_at else None,
                 "created_at": scope.link.created_at.isoformat(),
             },
-            "root": self.serializer.as_resource(root, root_asset, children_count=root_children_count),
+            "root": root_resource,
         }
 
     def list_items(
@@ -325,22 +421,55 @@ class ShareService:
         scope = self._resolve_scope(raw_token)
         folder = self._resolve_folder_for_listing(scope, parent_id)
 
-        if folder is None:
-            root_item = scope.root_item
-            asset = self.assets.get_for_item(root_item.id) if root_item.kind == ItemKind.FILE.value else None
-            return {
-                "folder": {
-                    "id": "root",
-                    "name": root_item.name,
+        if scope.is_root_scope:
+            entries = self.items.list_children(scope.owner_user_id, folder.id if folder else None)
+            if folder is None:
+                folder_payload = {
+                    "id": self.ROOT_SCOPE_ID,
+                    "name": self.ROOT_SCOPE_NAME,
                     "parent_id": None,
-                },
-                "breadcrumbs": [{"id": "root", "name": root_item.name}],
-                "items": [
-                    self.serializer.as_resource(root_item, asset, children_count=0),
-                ],
+                }
+            else:
+                folder_payload = {
+                    "id": folder.id,
+                    "name": folder.name,
+                    "parent_id": self.ROOT_SCOPE_ID if folder.parent_id is None else folder.parent_id,
+                }
+        else:
+            if scope.root_item is None:
+                raise self._share_not_found()
+
+            if folder is None:
+                root_item = scope.root_item
+                asset = self.assets.get_for_item(root_item.id) if root_item.kind == ItemKind.FILE.value else None
+                return {
+                    "folder": {
+                        "id": "root",
+                        "name": root_item.name,
+                        "parent_id": None,
+                    },
+                    "breadcrumbs": [{"id": "root", "name": root_item.name}],
+                    "items": [
+                        self.serializer.as_resource(root_item, asset, children_count=0),
+                    ],
+                }
+
+            entries = self.items.list_children(scope.owner_user_id, folder.id)
+
+            parent_ref: str | None
+            if folder.id == scope.root_item.id:
+                parent_ref = None
+                folder_id = "root"
+            else:
+                folder_id = folder.id
+                parent_ref = "root" if folder.parent_id == scope.root_item.id else folder.parent_id
+
+            folder_payload = {
+                "id": folder_id,
+                "name": folder.name,
+                "parent_id": parent_ref,
             }
 
-        entries = self.items.list_children(scope.owner_user_id, folder.id)
         assets_by_item_id = {
             asset.item_id: asset for asset in self.assets.list_for_items([entry.id for entry in entries])
         }
@@ -349,20 +478,8 @@ class ShareService:
         rows = [{"item": entry, "asset": assets_by_item_id.get(entry.id)} for entry in entries]
         rows = self.sort_policy.sort_rows(rows, sort_by, sort_order)
 
-        parent_ref: str | None
-        if folder.id == scope.root_item.id:
-            parent_ref = None
-            folder_id = "root"
-        else:
-            folder_id = folder.id
-            parent_ref = "root" if folder.parent_id == scope.root_item.id else folder.parent_id
-
         return {
-            "folder": {
-                "id": folder_id,
-                "name": folder.name,
-                "parent_id": parent_ref,
-            },
+            "folder": folder_payload,
             "breadcrumbs": self._build_scoped_breadcrumbs(scope, folder),
             "items": [
                 self.serializer.as_resource(
@@ -385,10 +502,12 @@ class ShareService:
 
         all_items = self.items.list_active_for_user(scope.owner_user_id)
 
-        scoped_ids: set[str] = set()
-        if scope.root_item.kind == ItemKind.FILE.value:
-            scoped_ids.add(scope.root_item.id)
-        else:
+        if scope.is_root_scope:
+            scoped_ids = {item.id for item in all_items}
+        elif scope.root_item and scope.root_item.kind == ItemKind.FILE.value:
+            scoped_ids = {scope.root_item.id}
+        elif scope.root_item:
+            scoped_ids: set[str] = set()
             children_by_parent: dict[str | None, list[DataRoomItem]] = {}
             for node in all_items:
                 children_by_parent.setdefault(node.parent_id, []).append(node)
@@ -403,6 +522,8 @@ class ShareService:
                     if child.kind == ItemKind.FOLDER.value:
                         queue.append(child.id)
                     scoped_ids.add(child.id)
+        else:
+            raise self._share_not_found()
 
         filtered_items = [
             item
@@ -437,7 +558,10 @@ class ShareService:
 
     def get_folder_tree(self, raw_token: str) -> dict[str, Any]:
         scope = self._resolve_scope(raw_token)
-        if scope.root_item.kind != ItemKind.FOLDER.value:
+        if scope.is_root_scope:
+            root_folder_id: str | None = None
+            root_name = self.ROOT_SCOPE_NAME
+        elif scope.root_item and scope.root_item.kind != ItemKind.FOLDER.value:
             return {
                 "root": {
                     "id": "root",
@@ -445,6 +569,11 @@ class ShareService:
                     "children": [],
                 }
             }
+        elif scope.root_item:
+            root_folder_id = scope.root_item.id
+            root_name = scope.root_item.name
+        else:
+            raise self._share_not_found()
 
         folders = self.items.list_all_folders(scope.owner_user_id)
         children_by_parent: dict[str | None, list[DataRoomItem]] = {}
@@ -453,7 +582,7 @@ class ShareService:
         for children in children_by_parent.values():
             children.sort(key=lambda f: f.name.casefold())
 
-        def build(parent_id: str) -> list[dict[str, Any]]:
+        def build(parent_id: str | None) -> list[dict[str, Any]]:
             result: list[dict[str, Any]] = []
             for folder in children_by_parent.get(parent_id, []):
                 result.append(
@@ -468,8 +597,8 @@ class ShareService:
         return {
             "root": {
                 "id": "root",
-                "name": scope.root_item.name,
-                "children": build(scope.root_item.id),
+                "name": root_name,
+                "children": build(root_folder_id),
             }
         }
 

@@ -32,9 +32,14 @@ class ShareLinkRepository:
         owner_user_id: str,
         root_item_id: str | None = None,
         include_revoked: bool = False,
+        root_scope_only: bool | None = None,
     ) -> list[ShareLink]:
         query = self.db.query(ShareLink).filter(ShareLink.owner_user_id == owner_user_id)
-        if root_item_id:
+        if root_scope_only is True:
+            query = query.filter(ShareLink.root_item_id.is_(None))
+        elif root_scope_only is False:
+            query = query.filter(ShareLink.root_item_id.is_not(None))
+        if root_item_id is not None:
             query = query.filter(ShareLink.root_item_id == root_item_id)
         if not include_revoked:
             query = query.filter(ShareLink.revoked_at.is_(None))

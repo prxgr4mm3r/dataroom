@@ -488,6 +488,37 @@ class BackendApiTests(unittest.TestCase):
         self.assertEqual(400, invalid_request.status_code)
         self.assertEqual("invalid_request", invalid_request.json["error"]["code"])
 
+    def test_share_root_scope_create_list_and_public_items(self):
+        headers = self._auth_headers("share-root-user")
+
+        root_folder = self.client.post("/api/folders", headers=headers, json={"name": "Root Folder"})
+        self.assertEqual(201, root_folder.status_code)
+
+        share_response = self.client.post("/api/shares", headers=headers, json={"item_id": "root"})
+        self.assertEqual(201, share_response.status_code)
+        self.assertEqual("root", share_response.json["root_item_id"])
+        self.assertTrue(share_response.json["share_url"])
+
+        list_response = self.client.get("/api/shares?item_id=root", headers=headers)
+        self.assertEqual(200, list_response.status_code)
+        self.assertEqual(1, len(list_response.json["items"]))
+        self.assertEqual("root", list_response.json["items"][0]["root_item_id"])
+
+        share_url = str(share_response.json["share_url"])
+        token = share_url.rstrip("/").split("/s/")[-1]
+        self.assertTrue(token)
+
+        meta_response = self.client.get(f"/api/public/shares/{token}/meta")
+        self.assertEqual(200, meta_response.status_code)
+        self.assertEqual("root", meta_response.json["root"]["id"])
+        self.assertEqual("folder", meta_response.json["root"]["kind"])
+        self.assertEqual("Data Room", meta_response.json["root"]["name"])
+
+        items_response = self.client.get(f"/api/public/shares/{token}/items?parent_id=root")
+        self.assertEqual(200, items_response.status_code)
+        names = {item["name"] for item in items_response.json["items"]}
+        self.assertIn("Root Folder", names)
+
     def test_bulk_move_is_atomic(self):
         headers = self._auth_headers("bulk-user")
         folder_a = self.client.post("/api/folders", headers=headers, json={"name": "FolderA"}).json["id"]
