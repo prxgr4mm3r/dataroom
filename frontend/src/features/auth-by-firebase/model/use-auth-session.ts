@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import {
   EmailAuthProvider,
   GoogleAuthProvider,
@@ -38,6 +39,7 @@ export type AuthSession = {
 const googleProvider = new GoogleAuthProvider()
 const MAGIC_LINK_EMAIL_KEY = 'dataroom.auth.magic_link_email'
 const PENDING_GOOGLE_CREDENTIAL_KEY = 'dataroom.auth.pending_google_credential'
+const DATAROOM_QUERY_KEY = ['dataroom'] as const
 
 type StoredGoogleCredential = {
   email: string
@@ -138,6 +140,7 @@ const stripMagicLinkParamsFromUrl = (): void => {
 }
 
 export const useAuthSession = (): AuthSession => {
+  const queryClient = useQueryClient()
   const [user, setUser] = useState<User | null>(firebaseAuth.currentUser)
   const [loading, setLoading] = useState<boolean>(true)
 
@@ -257,7 +260,9 @@ export const useAuthSession = (): AuthSession => {
     clearPendingGoogleCredential()
     clearStoredMagicLinkEmail()
     await signOut(firebaseAuth)
-  }, [])
+    await queryClient.cancelQueries({ queryKey: DATAROOM_QUERY_KEY })
+    queryClient.removeQueries({ queryKey: DATAROOM_QUERY_KEY })
+  }, [queryClient])
 
   const getIdToken = useCallback(async (forceRefresh?: boolean): Promise<string | null> => {
     const active = firebaseAuth.currentUser
