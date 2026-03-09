@@ -992,6 +992,12 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
             onOpenFolder={openFolder}
             onOpenFile={openFileFromSidebar}
             onSignOut={() => void signOutUser()}
+            onDownloadItem={downloadSingleItem}
+            onCopyItem={openSingleCopyDialog}
+            onRenameItem={openSingleRenameDialog}
+            onMoveItem={openSingleMoveDialog}
+            onDeleteItem={openSingleDeleteDialog}
+            onShareItem={openSingleShareDialog}
             onDragStartItem={dragMoveController.startDragFromTree}
             onDragEnd={dragMoveController.endDrag}
             onFolderDragOver={handleFolderDragOver}

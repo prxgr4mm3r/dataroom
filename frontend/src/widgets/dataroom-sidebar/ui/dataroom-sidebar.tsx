@@ -1,13 +1,19 @@
 import {
+  IconArrowsMove,
   IconChevronDown,
   IconChevronRight,
+  IconCopy,
+  IconDownload,
   IconDotsVertical,
+  IconEdit,
   IconFolder,
+  IconLink,
   IconLogout,
   IconPlus,
+  IconTrash,
 } from '@tabler/icons-react'
-import type { CSSProperties, DragEvent } from 'react'
-import { useState } from 'react'
+import type { CSSProperties, DragEvent, MouseEvent as ReactMouseEvent } from 'react'
+import { useEffect, useState } from 'react'
 
 import type { ContentItem } from '@/entities/content-item'
 import { isFileItem } from '@/entities/content-item'
@@ -36,6 +42,12 @@ type DataroomSidebarProps = {
   onOpenFolder: (folderId: string) => void
   onOpenFile: (fileId: string, parentFolderId: string) => void
   onSignOut: () => void
+  onDownloadItem: (item: ContentItem) => void
+  onCopyItem?: (item: ContentItem) => void
+  onRenameItem?: (item: ContentItem) => void
+  onMoveItem?: (item: ContentItem) => void
+  onDeleteItem?: (item: ContentItem) => void
+  onShareItem?: (item: ContentItem) => void
   onDragStartItem: (item: ContentItem, event: DragEvent<HTMLElement>) => void
   onDragEnd: () => void
   onFolderDragOver: (folderId: string, event: DragEvent<HTMLElement>) => void
@@ -55,6 +67,12 @@ type FolderChildrenProps = {
   onToggleExpanded: (folderId: string) => void
   onOpenFolder: (folderId: string) => void
   onOpenFile: (fileId: string, parentFolderId: string) => void
+  onDownloadItem: (item: ContentItem) => void
+  onCopyItem?: (item: ContentItem) => void
+  onRenameItem?: (item: ContentItem) => void
+  onMoveItem?: (item: ContentItem) => void
+  onDeleteItem?: (item: ContentItem) => void
+  onShareItem?: (item: ContentItem) => void
   onDragStartItem: (item: ContentItem, event: DragEvent<HTMLElement>) => void
   onDragEnd: () => void
   onFolderDragOver: (folderId: string, event: DragEvent<HTMLElement>) => void
@@ -62,6 +80,7 @@ type FolderChildrenProps = {
   onFolderDragLeave: (folderId: string) => void
   getFolderDropState: (folderId: string) => DropState
   isDraggingItem: (itemId: string) => boolean
+  onItemContextMenu: (item: ContentItem, event: ReactMouseEvent<HTMLElement>) => void
 }
 
 type ActiveVariant = 'solid' | 'file' | 'context'
@@ -75,6 +94,79 @@ type DataroomSidebarRailProps = {
 }
 
 const TREE_INDENT_STEP = 20
+
+type SidebarContextMenuState = {
+  item: ContentItem
+  x: number
+  y: number
+}
+
+type SidebarItemActionsMenuContentProps = {
+  item: ContentItem
+  onDownloadItem: (item: ContentItem) => void
+  onCopyItem?: (item: ContentItem) => void
+  onRenameItem?: (item: ContentItem) => void
+  onMoveItem?: (item: ContentItem) => void
+  onDeleteItem?: (item: ContentItem) => void
+  onShareItem?: (item: ContentItem) => void
+  onAction?: () => void
+}
+
+const SidebarItemActionsMenuContent = ({
+  item,
+  onDownloadItem,
+  onCopyItem,
+  onRenameItem,
+  onMoveItem,
+  onDeleteItem,
+  onShareItem,
+  onAction,
+}: SidebarItemActionsMenuContentProps) => {
+  const runAction = (handler: (item: ContentItem) => void): (() => void) => {
+    return () => {
+      onAction?.()
+      handler(item)
+    }
+  }
+  const hasPrimaryMenuActions = Boolean(onRenameItem)
+  const hasSecondaryMenuActions = Boolean(onShareItem || onDownloadItem || onCopyItem || onMoveItem)
+  const hasDeleteMenuAction = Boolean(onDeleteItem)
+
+  return (
+    <>
+      {onRenameItem ? (
+        <Menu.Item leftSection={<IconEdit size={14} />} onClick={runAction(onRenameItem)}>
+          Rename
+        </Menu.Item>
+      ) : null}
+      {hasPrimaryMenuActions && (hasSecondaryMenuActions || hasDeleteMenuAction) ? <Menu.Divider /> : null}
+      {onShareItem ? (
+        <Menu.Item leftSection={<IconLink size={14} />} onClick={runAction(onShareItem)}>
+          Share
+        </Menu.Item>
+      ) : null}
+      <Menu.Item leftSection={<IconDownload size={14} />} onClick={runAction(onDownloadItem)}>
+        Download
+      </Menu.Item>
+      {onCopyItem ? (
+        <Menu.Item leftSection={<IconCopy size={14} />} onClick={runAction(onCopyItem)}>
+          Copy
+        </Menu.Item>
+      ) : null}
+      {onMoveItem ? (
+        <Menu.Item leftSection={<IconArrowsMove size={14} />} onClick={runAction(onMoveItem)}>
+          Move
+        </Menu.Item>
+      ) : null}
+      {hasSecondaryMenuActions && hasDeleteMenuAction ? <Menu.Divider /> : null}
+      {onDeleteItem ? (
+        <Menu.Item color="red" leftSection={<IconTrash size={14} />} onClick={runAction(onDeleteItem)}>
+          Delete
+        </Menu.Item>
+      ) : null}
+    </>
+  )
+}
 
 const toInitials = (value: string): string => {
   const trimmed = value.trim()
@@ -419,6 +511,7 @@ const TreeRow = ({
   onDragOver,
   onDrop,
   onDragLeave,
+  onContextMenu,
 }: {
   depth: number
   active: boolean
@@ -438,6 +531,7 @@ const TreeRow = ({
   onDragOver?: (event: DragEvent<HTMLElement>) => void
   onDrop?: (event: DragEvent<HTMLElement>) => void
   onDragLeave?: (event: DragEvent<HTMLElement>) => void
+  onContextMenu?: (event: ReactMouseEvent<HTMLElement>) => void
 }) => {
   const nameParts = isFile
     ? splitFileName(name)
@@ -482,6 +576,7 @@ const TreeRow = ({
       onDragOver={onDragOver}
       onDrop={onDrop}
       onDragLeave={onDragLeave}
+      onContextMenu={onContextMenu}
     >
       <Group gap={8} px="sm" py={6} wrap="nowrap">
         {canExpand ? (
@@ -533,6 +628,12 @@ const FolderChildren = ({
   onToggleExpanded,
   onOpenFolder,
   onOpenFile,
+  onDownloadItem,
+  onCopyItem,
+  onRenameItem,
+  onMoveItem,
+  onDeleteItem,
+  onShareItem,
   onDragStartItem,
   onDragEnd,
   onFolderDragOver,
@@ -540,6 +641,7 @@ const FolderChildren = ({
   onFolderDragLeave,
   getFolderDropState,
   isDraggingItem,
+  onItemContextMenu,
 }: FolderChildrenProps) => {
   const query = useListContentItemsQuery(folderId, 'name', 'asc')
 
@@ -594,6 +696,7 @@ const FolderChildren = ({
                 event.stopPropagation()
                 onFolderDrop(folderId, event)
               }}
+              onContextMenu={(event) => onItemContextMenu(item, event)}
               onClick={() => onOpenFile(item.id, folderId)}
             />
           )
@@ -642,6 +745,7 @@ const FolderChildren = ({
                 event.stopPropagation()
                 onFolderDragLeave(item.id)
               }}
+              onContextMenu={(event) => onItemContextMenu(item, event)}
             />
 
             {canExpand && isExpanded ? (
@@ -655,6 +759,12 @@ const FolderChildren = ({
                 onToggleExpanded={onToggleExpanded}
                 onOpenFolder={onOpenFolder}
                 onOpenFile={onOpenFile}
+                onDownloadItem={onDownloadItem}
+                onCopyItem={onCopyItem}
+                onRenameItem={onRenameItem}
+                onMoveItem={onMoveItem}
+                onDeleteItem={onDeleteItem}
+                onShareItem={onShareItem}
                 onDragStartItem={onDragStartItem}
                 onDragEnd={onDragEnd}
                 onFolderDragOver={onFolderDragOver}
@@ -662,6 +772,7 @@ const FolderChildren = ({
                 onFolderDragLeave={onFolderDragLeave}
                 getFolderDropState={getFolderDropState}
                 isDraggingItem={isDraggingItem}
+                onItemContextMenu={onItemContextMenu}
               />
             ) : null}
           </Box>
@@ -683,6 +794,12 @@ export const DataroomSidebar = ({
   onOpenFolder,
   onOpenFile,
   onSignOut,
+  onDownloadItem,
+  onCopyItem,
+  onRenameItem,
+  onMoveItem,
+  onDeleteItem,
+  onShareItem,
   onDragStartItem,
   onDragEnd,
   onFolderDragOver,
@@ -707,6 +824,32 @@ export const DataroomSidebar = ({
     cacheId: avatarCacheId,
     photoUrl: currentUser.photoUrl,
   })
+  const [contextMenuState, setContextMenuState] = useState<SidebarContextMenuState | null>(null)
+
+  useEffect(() => {
+    if (!contextMenuState) {
+      return
+    }
+
+    const handleWindowScroll = () => {
+      setContextMenuState(null)
+    }
+
+    window.addEventListener('scroll', handleWindowScroll, true)
+    return () => {
+      window.removeEventListener('scroll', handleWindowScroll, true)
+    }
+  }, [contextMenuState])
+
+  const handleItemContextMenu = (item: ContentItem, event: ReactMouseEvent<HTMLElement>) => {
+    event.preventDefault()
+    event.stopPropagation()
+    setContextMenuState({
+      item,
+      x: event.clientX,
+      y: event.clientY,
+    })
+  }
 
   return (
     <Box h="100%" p="sm" pb={0} className="dataroom-sidebar">
@@ -804,6 +947,12 @@ export const DataroomSidebar = ({
             onToggleExpanded={onToggleExpanded}
             onOpenFolder={onOpenFolder}
             onOpenFile={onOpenFile}
+            onDownloadItem={onDownloadItem}
+            onCopyItem={onCopyItem}
+            onRenameItem={onRenameItem}
+            onMoveItem={onMoveItem}
+            onDeleteItem={onDeleteItem}
+            onShareItem={onShareItem}
             onDragStartItem={onDragStartItem}
             onDragEnd={onDragEnd}
             onFolderDragOver={onFolderDragOver}
@@ -811,6 +960,7 @@ export const DataroomSidebar = ({
             onFolderDragLeave={onFolderDragLeave}
             getFolderDropState={getFolderDropState}
             isDraggingItem={isDraggingItem}
+            onItemContextMenu={handleItemContextMenu}
           />
         ) : null}
       </ScrollArea>
@@ -860,6 +1010,43 @@ export const DataroomSidebar = ({
           </Menu.Dropdown>
         </Menu>
       </Box>
+      <Menu
+        opened={Boolean(contextMenuState)}
+        onChange={(opened) => {
+          if (!opened) {
+            setContextMenuState(null)
+          }
+        }}
+        withinPortal
+        position="bottom-start"
+      >
+        <Menu.Target>
+          <Box
+            style={{
+              position: 'fixed',
+              left: contextMenuState?.x ?? -9999,
+              top: contextMenuState?.y ?? -9999,
+              width: 1,
+              height: 1,
+              pointerEvents: 'none',
+            }}
+          />
+        </Menu.Target>
+        <Menu.Dropdown onContextMenu={(event) => event.preventDefault()}>
+          {contextMenuState ? (
+            <SidebarItemActionsMenuContent
+              item={contextMenuState.item}
+              onDownloadItem={onDownloadItem}
+              onCopyItem={onCopyItem}
+              onRenameItem={onRenameItem}
+              onMoveItem={onMoveItem}
+              onDeleteItem={onDeleteItem}
+              onShareItem={onShareItem}
+              onAction={() => setContextMenuState(null)}
+            />
+          ) : null}
+        </Menu.Dropdown>
+      </Menu>
     </Box>
   )
 }

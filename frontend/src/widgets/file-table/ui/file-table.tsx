@@ -92,6 +92,89 @@ type FileTableProps = {
   isDraggingItem?: (itemId: string) => boolean
 }
 
+type ContextMenuState = {
+  item: ContentItem
+  x: number
+  y: number
+}
+
+type ItemActionsMenuContentProps = {
+  item: ContentItem
+  readOnly: boolean
+  onDownloadItem: (item: ContentItem) => void
+  onCopyItem?: (item: ContentItem) => void
+  onRenameItem?: (item: ContentItem) => void
+  onMoveItem?: (item: ContentItem) => void
+  onDeleteItem?: (item: ContentItem) => void
+  onShareItem?: (item: ContentItem) => void
+  onAction?: () => void
+}
+
+const ItemActionsMenuContent = ({
+  item,
+  readOnly,
+  onDownloadItem,
+  onCopyItem,
+  onRenameItem,
+  onMoveItem,
+  onDeleteItem,
+  onShareItem,
+  onAction,
+}: ItemActionsMenuContentProps) => {
+  const runAction = (handler: (item: ContentItem) => void): (() => void) => {
+    return () => {
+      onAction?.()
+      handler(item)
+    }
+  }
+  const hasPrimaryMenuActions = !readOnly && Boolean(onRenameItem)
+  const hasSecondaryMenuActions = Boolean(onShareItem || onDownloadItem || onCopyItem || onMoveItem)
+  const hasDeleteMenuAction = !readOnly && Boolean(onDeleteItem)
+
+  if (readOnly) {
+    return (
+      <Menu.Item leftSection={<IconDownload size={14} />} onClick={runAction(onDownloadItem)}>
+        Download
+      </Menu.Item>
+    )
+  }
+
+  return (
+    <>
+      {onRenameItem ? (
+        <Menu.Item leftSection={<IconEdit size={14} />} onClick={runAction(onRenameItem)}>
+          Rename
+        </Menu.Item>
+      ) : null}
+      {hasPrimaryMenuActions && (hasSecondaryMenuActions || hasDeleteMenuAction) ? <Menu.Divider /> : null}
+      {onShareItem ? (
+        <Menu.Item leftSection={<IconLink size={14} />} onClick={runAction(onShareItem)}>
+          Share
+        </Menu.Item>
+      ) : null}
+      <Menu.Item leftSection={<IconDownload size={14} />} onClick={runAction(onDownloadItem)}>
+        Download
+      </Menu.Item>
+      {onCopyItem ? (
+        <Menu.Item leftSection={<IconCopy size={14} />} onClick={runAction(onCopyItem)}>
+          Copy
+        </Menu.Item>
+      ) : null}
+      {onMoveItem ? (
+        <Menu.Item leftSection={<IconArrowsMove size={14} />} onClick={runAction(onMoveItem)}>
+          Move
+        </Menu.Item>
+      ) : null}
+      {hasSecondaryMenuActions && hasDeleteMenuAction ? <Menu.Divider /> : null}
+      {onDeleteItem ? (
+        <Menu.Item color="red" leftSection={<IconTrash size={14} />} onClick={runAction(onDeleteItem)}>
+          Delete
+        </Menu.Item>
+      ) : null}
+    </>
+  )
+}
+
 const formatDraggedFileCount = (count: number): string => {
   if (count <= 0) {
     return 'files'
@@ -237,6 +320,7 @@ export const FileTable = ({
   const selectionOverlayRef = useRef<HTMLDivElement>(null)
   const rowRefs = useRef(new Map<string, HTMLTableRowElement>())
   const [isAreaSelectionModifierPressed, setIsAreaSelectionModifierPressed] = useState(false)
+  const [contextMenuState, setContextMenuState] = useState<ContextMenuState | null>(null)
   const pendingToggleOptionsRef = useRef<ToggleSelectOptions | null>(null)
   const currentFolderDropState = readOnly ? 'none' : getFolderDropState(currentFolderId)
   const compactUpdatedAt = Boolean(openedPreviewId)
@@ -296,6 +380,7 @@ export const FileTable = ({
     canStartSelection: canStartAreaSelectionFromEvent,
   })
   const effectiveSelectedIds = dragSelection.previewSelectedIds ?? selectedIds
+  const contextMenuItem = contextMenuState ? items.find((item) => item.id === contextMenuState.item.id) ?? null : null
   const selectedIdSet = new Set(effectiveSelectedIds)
   const visibleSelectedCount = items.reduce((count, item) => count + (selectedIdSet.has(item.id) ? 1 : 0), 0)
   const allVisibleSelected = items.length > 0 && visibleSelectedCount === items.length
@@ -331,6 +416,21 @@ export const FileTable = ({
       window.removeEventListener('blur', handleBlur)
     }
   }, [])
+
+  useEffect(() => {
+    if (!contextMenuState) {
+      return
+    }
+
+    const handleWindowScroll = () => {
+      setContextMenuState(null)
+    }
+
+    window.addEventListener('scroll', handleWindowScroll, true)
+    return () => {
+      window.removeEventListener('scroll', handleWindowScroll, true)
+    }
+  }, [contextMenuState])
 
   const renderImportOverlay = () => {
     if (readOnly) {
@@ -746,9 +846,6 @@ export const FileTable = ({
               } else if (isOpened) {
                 rowBackground = 'var(--accent-soft)'
               }
-              const hasPrimaryMenuActions = Boolean(onRenameItem)
-              const hasSecondaryMenuActions = Boolean(onShareItem || onDownloadItem || onCopyItem || onMoveItem)
-              const hasDeleteMenuAction = Boolean(onDeleteItem)
               const canDragRow = !readOnly && !isAreaSelectionModifierPressed
 
               return (
@@ -777,6 +874,15 @@ export const FileTable = ({
                         }
                   }
                   onDragEnd={readOnly ? undefined : onDragEnd}
+                  onContextMenu={(event) => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    setContextMenuState({
+                      item,
+                      x: event.clientX,
+                      y: event.clientY,
+                    })
+                  }}
                   onDragOver={
                     !readOnly && isFolder
                       ? (event) => {
@@ -890,42 +996,16 @@ export const FileTable = ({
                           </ActionIcon>
                         </Menu.Target>
                         <Menu.Dropdown>
-                          {onRenameItem ? (
-                            <Menu.Item leftSection={<IconEdit size={14} />} onClick={() => onRenameItem(item)}>
-                              Rename
-                            </Menu.Item>
-                          ) : null}
-                          {hasPrimaryMenuActions && (hasSecondaryMenuActions || hasDeleteMenuAction) ? (
-                            <Menu.Divider />
-                          ) : null}
-                          {onShareItem ? (
-                            <Menu.Item leftSection={<IconLink size={14} />} onClick={() => onShareItem(item)}>
-                              Share
-                            </Menu.Item>
-                          ) : null}
-                          <Menu.Item leftSection={<IconDownload size={14} />} onClick={() => onDownloadItem(item)}>
-                            Download
-                          </Menu.Item>
-                          {onCopyItem ? (
-                            <Menu.Item leftSection={<IconCopy size={14} />} onClick={() => onCopyItem(item)}>
-                              Copy
-                            </Menu.Item>
-                          ) : null}
-                          {onMoveItem ? (
-                            <Menu.Item leftSection={<IconArrowsMove size={14} />} onClick={() => onMoveItem(item)}>
-                              Move
-                            </Menu.Item>
-                          ) : null}
-                          {hasSecondaryMenuActions && hasDeleteMenuAction ? <Menu.Divider /> : null}
-                          {onDeleteItem ? (
-                            <Menu.Item
-                              color="red"
-                              leftSection={<IconTrash size={14} />}
-                              onClick={() => onDeleteItem(item)}
-                            >
-                              Delete
-                            </Menu.Item>
-                          ) : null}
+                          <ItemActionsMenuContent
+                            item={item}
+                            readOnly={readOnly}
+                            onDownloadItem={onDownloadItem}
+                            onCopyItem={onCopyItem}
+                            onRenameItem={onRenameItem}
+                            onMoveItem={onMoveItem}
+                            onDeleteItem={onDeleteItem}
+                            onShareItem={onShareItem}
+                          />
                         </Menu.Dropdown>
                       </Menu>
                     )}
@@ -939,6 +1019,44 @@ export const FileTable = ({
       {dragSelection.isSelecting ? <div ref={selectionOverlayRef} className="file-table__selection-rect" aria-hidden="true" /> : null}
       {renderImportOverlay()}
       {renderMoveOverlay()}
+      <Menu
+        opened={Boolean(contextMenuState && contextMenuItem)}
+        onChange={(opened) => {
+          if (!opened) {
+            setContextMenuState(null)
+          }
+        }}
+        withinPortal
+        position="bottom-start"
+      >
+        <Menu.Target>
+          <Box
+            style={{
+              position: 'fixed',
+              left: contextMenuState?.x ?? -9999,
+              top: contextMenuState?.y ?? -9999,
+              width: 1,
+              height: 1,
+              pointerEvents: 'none',
+            }}
+          />
+        </Menu.Target>
+        <Menu.Dropdown onContextMenu={(event) => event.preventDefault()}>
+          {contextMenuItem ? (
+            <ItemActionsMenuContent
+              item={contextMenuItem}
+              readOnly={readOnly}
+              onDownloadItem={onDownloadItem}
+              onCopyItem={onCopyItem}
+              onRenameItem={onRenameItem}
+              onMoveItem={onMoveItem}
+              onDeleteItem={onDeleteItem}
+              onShareItem={onShareItem}
+              onAction={() => setContextMenuState(null)}
+            />
+          ) : null}
+        </Menu.Dropdown>
+      </Menu>
     </Box>
   )
 }
