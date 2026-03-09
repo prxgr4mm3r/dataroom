@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from collections import deque
 import hashlib
 import hmac
 from pathlib import Path
@@ -14,7 +15,7 @@ from app.errors import ApiError
 from app.models import DataRoomItem, FileAsset, ItemKind, ItemStatus, ShareLink, SharePermission
 from app.repositories import FileAssetRepository, ItemRepository, ShareLinkRepository
 from app.services.download_service import DownloadService, DownloadPayload
-from app.services.policies import ItemSerializer, SortPolicy
+from app.services.policies import ItemSerializer, NameConflictResolver, SortPolicy
 from app.services.token_cipher import TokenCipher
 
 
@@ -43,6 +44,7 @@ class ShareService:
         self.assets = FileAssetRepository(db)
         self.links = ShareLinkRepository(db)
         self.serializer = ItemSerializer()
+        self.name_resolver = NameConflictResolver()
         self.sort_policy = SortPolicy()
         self.downloads = DownloadService(db)
         self.token_cipher = TokenCipher(str(config.get("TOKEN_ENCRYPTION_KEY") or ""))
@@ -127,7 +129,7 @@ class ShareService:
             cursor = self.items.get_for_user(scope.owner_user_id, cursor.parent_id)
         return False
 
-    def _resolve_scope(self, raw_token: str) -> ShareScope:
+    def _resolve_scope(self, raw_token: str, *, touch_access: bool = True) -> ShareScope:
         token_kid, token_secret = self._parse_raw_token(raw_token)
         link = self.links.get_by_kid(token_kid)
         if link is None:
@@ -156,9 +158,33 @@ class ShareService:
             root_item = self._ensure_active_share_root(
                 self.items.get_for_user(link.owner_user_id, link.root_item_id),
             )
-        link.last_access_at = now
-        self.links.save(link)
+        if touch_access:
+            link.last_access_at = now
+            self.links.save(link)
         return ShareScope(link=link, root_item=root_item)
+
+    def _collect_scope_item_ids(self, scope: ShareScope) -> set[str]:
+        if scope.is_root_scope:
+            return set()
+        if scope.root_item is None:
+            raise self._share_not_found()
+        if scope.root_item.kind == ItemKind.FILE.value:
+            return {scope.root_item.id}
+
+        scoped_ids: set[str] = set()
+        queue: deque[str] = deque([scope.root_item.id])
+        while queue:
+            parent_id = queue.popleft()
+            if parent_id in scoped_ids:
+                continue
+            scoped_ids.add(parent_id)
+
+            children = self.items.list_children(scope.owner_user_id, parent_id)
+            for child in children:
+                scoped_ids.add(child.id)
+                if child.kind == ItemKind.FOLDER.value:
+                    queue.append(child.id)
+        return scoped_ids
 
     @staticmethod
     def _to_share_url(frontend_url: str, raw_token: str) -> str:
@@ -492,57 +518,36 @@ class ShareService:
         }
 
     def search_items(self, raw_token: str, query: str | None, limit: int) -> dict[str, Any]:
-        scope = self._resolve_scope(raw_token)
-        normalized_query = " ".join(str(query or "").casefold().split())
+        scope = self._resolve_scope(raw_token, touch_access=False)
+        normalized_query = self.name_resolver.normalize(str(query or ""))
         normalized_terms = [segment for segment in normalized_query.split(" ") if segment]
         if not normalized_terms:
             return {"items": []}
 
         normalized_limit = max(1, min(int(limit or 50), 100))
-
-        all_items = self.items.list_active_for_user(scope.owner_user_id)
-
         if scope.is_root_scope:
-            scoped_ids = {item.id for item in all_items}
+            entries = self.items.search_active_for_user(scope.owner_user_id, normalized_terms, normalized_limit)
         elif scope.root_item and scope.root_item.kind == ItemKind.FILE.value:
-            scoped_ids = {scope.root_item.id}
-        elif scope.root_item:
-            scoped_ids: set[str] = set()
-            children_by_parent: dict[str | None, list[DataRoomItem]] = {}
-            for node in all_items:
-                children_by_parent.setdefault(node.parent_id, []).append(node)
-
-            queue = [scope.root_item.id]
-            while queue:
-                parent_id = queue.pop(0)
-                if parent_id in scoped_ids:
-                    continue
-                scoped_ids.add(parent_id)
-                for child in children_by_parent.get(parent_id, []):
-                    if child.kind == ItemKind.FOLDER.value:
-                        queue.append(child.id)
-                    scoped_ids.add(child.id)
+            is_match = all(term in scope.root_item.normalized_name for term in normalized_terms)
+            entries = [scope.root_item] if is_match else []
         else:
-            raise self._share_not_found()
+            scoped_ids = self._collect_scope_item_ids(scope)
+            entries = self.items.search_active_for_user_in_ids(
+                scope.owner_user_id,
+                normalized_terms,
+                normalized_limit,
+                list(scoped_ids),
+            )
 
-        filtered_items = [
-            item
-            for item in all_items
-            if item.id in scoped_ids and all(term in item.normalized_name for term in normalized_terms)
-        ]
-
-        if not filtered_items:
+        if not entries:
             return {"items": []}
 
-        filtered_items.sort(key=lambda item: item.updated_at, reverse=True)
-        limited_items = filtered_items[:normalized_limit]
-
-        file_item_ids = [item.id for item in limited_items if item.kind == ItemKind.FILE.value]
+        file_item_ids = [item.id for item in entries if item.kind == ItemKind.FILE.value]
         assets_by_item_id = {
             asset.item_id: asset for asset in self.assets.list_for_items(file_item_ids)
         }
 
-        folder_ids = [item.id for item in limited_items if item.kind == ItemKind.FOLDER.value]
+        folder_ids = [item.id for item in entries if item.kind == ItemKind.FOLDER.value]
         children_count_by_parent_id = self.items.count_children_by_parent_ids(scope.owner_user_id, folder_ids)
 
         return {
@@ -552,7 +557,7 @@ class ShareService:
                     assets_by_item_id.get(item.id),
                     children_count_by_parent_id.get(item.id, 0),
                 )
-                for item in limited_items
+                for item in entries
             ],
         }
 

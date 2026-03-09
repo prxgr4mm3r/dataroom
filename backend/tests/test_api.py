@@ -519,6 +519,58 @@ class BackendApiTests(unittest.TestCase):
         names = {item["name"] for item in items_response.json["items"]}
         self.assertIn("Root Folder", names)
 
+    def test_share_search_is_limited_to_shared_scope(self):
+        headers = self._auth_headers("share-search-user")
+
+        shared_root = self.client.post("/api/folders", headers=headers, json={"name": "Budget Shared"})
+        self.assertEqual(201, shared_root.status_code)
+        shared_root_id = shared_root.json["id"]
+
+        shared_child = self.client.post(
+            "/api/folders",
+            headers=headers,
+            json={"parent_id": shared_root_id, "name": "Budget Child"},
+        )
+        self.assertEqual(201, shared_child.status_code)
+
+        private_folder = self.client.post("/api/folders", headers=headers, json={"name": "Budget Private"})
+        self.assertEqual(201, private_folder.status_code)
+
+        share_response = self.client.post("/api/shares", headers=headers, json={"item_id": shared_root_id})
+        self.assertEqual(201, share_response.status_code)
+        token = str(share_response.json["share_url"]).rstrip("/").split("/s/")[-1]
+
+        search_response = self.client.get(f"/api/public/shares/{token}/search?q=budget&limit=100")
+        self.assertEqual(200, search_response.status_code)
+        names = {item["name"] for item in search_response.json["items"]}
+        self.assertIn("Budget Shared", names)
+        self.assertIn("Budget Child", names)
+        self.assertNotIn("Budget Private", names)
+
+    def test_share_root_search_matches_authenticated_search_results(self):
+        headers = self._auth_headers("share-root-search-user")
+
+        folder_a = self.client.post("/api/folders", headers=headers, json={"name": "Report Alpha"})
+        self.assertEqual(201, folder_a.status_code)
+        folder_b = self.client.post("/api/folders", headers=headers, json={"name": "Report Beta"})
+        self.assertEqual(201, folder_b.status_code)
+        other = self.client.post("/api/folders", headers=headers, json={"name": "Misc"})
+        self.assertEqual(201, other.status_code)
+
+        auth_search = self.client.get("/api/items/search?q=report&limit=100", headers=headers)
+        self.assertEqual(200, auth_search.status_code)
+        auth_ids = {item["id"] for item in auth_search.json["items"]}
+
+        share_response = self.client.post("/api/shares", headers=headers, json={"item_id": "root"})
+        self.assertEqual(201, share_response.status_code)
+        token = str(share_response.json["share_url"]).rstrip("/").split("/s/")[-1]
+
+        shared_search = self.client.get(f"/api/public/shares/{token}/search?q=report&limit=100")
+        self.assertEqual(200, shared_search.status_code)
+        shared_ids = {item["id"] for item in shared_search.json["items"]}
+
+        self.assertSetEqual(auth_ids, shared_ids)
+
     def test_bulk_move_is_atomic(self):
         headers = self._auth_headers("bulk-user")
         folder_a = self.client.post("/api/folders", headers=headers, json={"name": "FolderA"}).json["id"]

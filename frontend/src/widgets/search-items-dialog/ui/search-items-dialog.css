@@ -8,7 +8,8 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding-right: 10px;
+  width: 100%;
+  padding-right: 0;
 }
 
 .search-items-dialog__scope-toggle {
@@ -109,8 +110,11 @@
 }
 
 .search-items-dialog__results {
+  --search-results-scrollbar-space: 10px;
   min-height: 220px;
   max-height: 420px;
+  width: calc(100% + var(--search-results-scrollbar-space));
+  margin-right: calc(var(--search-results-scrollbar-space) * -1);
 }
 
 .search-items-dialog__scope-warning {

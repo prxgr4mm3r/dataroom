@@ -23,7 +23,7 @@ const theme = createTheme({
         content: {
           border: '1px solid var(--border-muted)',
           background: 'var(--bg-surface)',
-          boxShadow: 'var(--shadow-soft), 0 0 0 1px var(--table-row-hover-border)',
+          boxShadow: 'var(--shadow-soft)',
         },
         header: {
           background: 'var(--bg-subtle)',

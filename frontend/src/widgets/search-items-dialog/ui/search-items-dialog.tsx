@@ -28,7 +28,7 @@ const SEARCH_DEBOUNCE_MS = 280
 const SEARCH_RESULT_LIMIT = 100
 const RESULTS_SCROLLBAR_SIZE = 10
 
-type FileTypeFilter = 'any' | 'documents' | 'images' | 'media' | 'archives' | 'code' | 'data' | 'other'
+type FileTypeFilter = 'any' | 'folders' | 'documents' | 'images' | 'media' | 'archives' | 'code' | 'data' | 'other'
 type SearchScope = 'all' | 'current'
 
 type EnrichedItem = {
@@ -39,6 +39,7 @@ type EnrichedItem = {
 
 const fileTypeOptions: Array<{ value: FileTypeFilter; label: string }> = [
   { value: 'any', label: 'Any' },
+  { value: 'folders', label: 'Folders' },
   { value: 'documents', label: 'Documents' },
   { value: 'images', label: 'Images' },
   { value: 'media', label: 'Media' },
@@ -227,6 +228,10 @@ export const SearchItemsDialog = ({
       filteredByScopeItems.filter((item) => {
         if (selectedFileType === 'any') {
           return true
+        }
+
+        if (selectedFileType === 'folders') {
+          return item.raw.kind === 'folder'
         }
 
         if (item.raw.kind !== 'file') {

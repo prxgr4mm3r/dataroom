@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from app.models import DataRoomItem, ItemKind, ItemStatus
@@ -139,6 +139,38 @@ class ItemRepository:
             DataRoomItem.user_id == user_id,
             DataRoomItem.status != ItemStatus.DELETED.value,
         )
+
+        for term in normalized_terms:
+            query = query.filter(DataRoomItem.normalized_name.contains(term))
+
+        return (
+            query.order_by(DataRoomItem.updated_at.desc(), DataRoomItem.created_at.desc())
+            .limit(limit)
+            .all()
+        )
+
+    def search_active_for_user_in_ids(
+        self,
+        user_id: str,
+        normalized_terms: list[str],
+        limit: int,
+        item_ids: list[str],
+    ) -> list[DataRoomItem]:
+        if not normalized_terms or not item_ids:
+            return []
+
+        query = self.db.query(DataRoomItem).filter(
+            DataRoomItem.user_id == user_id,
+            DataRoomItem.status != ItemStatus.DELETED.value,
+        )
+
+        # SQLite has a low bound-parameter limit, so split large IN lists into chunks.
+        chunk_size = 900
+        chunks = [item_ids[i : i + chunk_size] for i in range(0, len(item_ids), chunk_size)]
+        if len(chunks) == 1:
+            query = query.filter(DataRoomItem.id.in_(chunks[0]))
+        else:
+            query = query.filter(or_(*[DataRoomItem.id.in_(chunk) for chunk in chunks]))
 
         for term in normalized_terms:
             query = query.filter(DataRoomItem.normalized_name.contains(term))

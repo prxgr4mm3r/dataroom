@@ -147,6 +147,13 @@ export const SharedViewPage = () => {
   })
 
   const items = useMemo(() => listQuery.data?.items ?? [], [listQuery.data?.items])
+  const sharedRootId = metaQuery.data?.root.id ?? 'root'
+  const normalizeSharedFolderId = (value: string | null | undefined): string => {
+    if (!value || value === sharedRootId) {
+      return 'root'
+    }
+    return value
+  }
   const orderedItemIds = useMemo(() => items.map((item) => item.id), [items])
   const breadcrumbs = useMemo(
     () => listQuery.data?.breadcrumbs.map((crumb) => ({ id: crumb.id, name: crumb.name })) ?? [],
@@ -227,11 +234,11 @@ export const SharedViewPage = () => {
   }
 
   const openSharedSearchFolder = (targetFolderId: string) => {
-    openSharedFolder(targetFolderId || 'root')
+    openSharedFolder(normalizeSharedFolderId(targetFolderId))
   }
 
   const openSharedSearchFile = (fileId: string, parentFolderId: string | null) => {
-    setSharedLocation(parentFolderId ?? 'root', fileId)
+    setSharedLocation(normalizeSharedFolderId(parentFolderId), fileId)
   }
 
   const downloadItems = async (itemIds: string[]) => {
@@ -360,7 +367,7 @@ export const SharedViewPage = () => {
         opened={searchDialogOpened}
         mode="shared"
         shareToken={String(shareToken)}
-        currentFolderId={folderId}
+        currentFolderId={normalizeSharedFolderId(folderId)}
         onClose={() => setSearchDialogOpened(false)}
         onOpenFolder={openSharedSearchFolder}
         onOpenFile={openSharedSearchFile}

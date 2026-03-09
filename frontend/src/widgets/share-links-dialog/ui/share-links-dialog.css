@@ -1,6 +1,8 @@
 .share-links-dialog__modal-content {
-  background: transparent;
-  box-shadow: none;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
 }
 
 .share-links-dialog__modal-body {
