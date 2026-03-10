@@ -17,6 +17,7 @@ import { useDataroomDelete } from '@/pages/dataroom-page/model/use-dataroom-dele
 import { useDataroomImport } from '@/pages/dataroom-page/model/use-dataroom-import'
 import { useDataroomSelection } from '@/pages/dataroom-page/model/use-dataroom-selection'
 import { useDataroomTransfer } from '@/pages/dataroom-page/model/use-dataroom-transfer'
+import { resolveVisibleFileContentFolderIds } from '@/pages/dataroom-page/model/resolve-visible-file-content-folder-ids'
 import { toApiError } from '@/shared/api'
 import {
   normalizeFolderId,
@@ -298,10 +299,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
   }
 
   const fileContentVisibleFolderIds = useMemo(() => {
-    const next = new Set(manualFileContentVisibleFolderIds)
-    next.add('root')
-    next.add(normalizedFolderId)
-    return next
+    return resolveVisibleFileContentFolderIds(manualFileContentVisibleFolderIds, normalizedFolderId)
   }, [manualFileContentVisibleFolderIds, normalizedFolderId])
 
   const expandedPathIds = useMemo(() => breadcrumbs.map((crumb) => crumb.id), [breadcrumbs])
