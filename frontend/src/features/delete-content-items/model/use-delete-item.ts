@@ -4,13 +4,13 @@ import { queryKeys } from '@/shared/api'
 
 import { deleteItem } from '../api/delete-item'
 
-export const useDeleteItem = (folderId: string) => {
+export const useDeleteItem = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: deleteItem,
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.itemsPrefix(folderId) })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.items })
       void queryClient.invalidateQueries({ queryKey: queryKeys.folderTree })
     },
   })

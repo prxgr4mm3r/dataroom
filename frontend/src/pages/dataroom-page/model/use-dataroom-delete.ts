@@ -38,8 +38,8 @@ export const useDataroomDelete = ({
 }: UseDataroomDeleteParams) => {
   const [deleteDialog, setDeleteDialog] = useState<DeleteDialogState | null>(null)
 
-  const deleteItemMutation = useDeleteItem(normalizedFolderId)
-  const bulkDeleteMutation = useBulkDeleteItems(normalizedFolderId)
+  const deleteItemMutation = useDeleteItem()
+  const bulkDeleteMutation = useBulkDeleteItems()
 
   const openSingleDeleteDialog = (item: ContentItem) => {
     deleteItemMutation.reset()

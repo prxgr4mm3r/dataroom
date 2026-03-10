@@ -17,6 +17,7 @@ import { downloadBlob } from '@/shared/lib/file/download-blob'
 import { formatFileSize } from '@/shared/lib/file/format-file-size'
 import { getFileTypePresentation } from '@/shared/lib/file/file-type-presentation'
 import { isInlinePreviewableMime } from '@/shared/lib/file/is-previewable-file'
+import { useObjectUrl } from '@/shared/lib/file/use-object-url'
 import { usePreviewRenderState } from '@/shared/lib/preview/use-preview-render-state'
 import { t } from '@/shared/i18n/messages'
 import { ActionIcon, Alert, Box, Button, Group, Loader, Stack, Text } from '@/shared/ui'
@@ -83,6 +84,7 @@ export const PreviewPane = ({ folderId, previewItemId }: PreviewPaneProps) => {
   const shouldLoadPreviewContent = isOpen && currentItem?.kind === 'file'
   const itemContentQuery = useItemContentQuery(displayPreviewItemId, currentItem?.mimeType, shouldLoadPreviewContent)
   const currentContent = itemContentQuery.data
+  const currentContentObjectUrl = useObjectUrl(currentContent?.blob)
 
   const currentFileType = useMemo(() => {
     if (!currentItem) {
@@ -129,7 +131,9 @@ export const PreviewPane = ({ folderId, previewItemId }: PreviewPaneProps) => {
     ]
   }, [currentFileType?.label, currentItem])
 
-  const canUseFileActions = Boolean(currentItem && currentItem.kind === 'file' && currentContent)
+  const canUseFileActions = Boolean(
+    currentItem && currentItem.kind === 'file' && currentContent && currentContentObjectUrl,
+  )
 
   const cancelResizeFrame = () => {
     if (resizeAnimationFrameRef.current !== null) {
@@ -217,21 +221,12 @@ export const PreviewPane = ({ folderId, previewItemId }: PreviewPaneProps) => {
     }
   }, [isResizing])
 
-  useEffect(() => {
-    const objectUrl = itemContentQuery.data?.objectUrl
-    return () => {
-      if (objectUrl) {
-        URL.revokeObjectURL(objectUrl)
-      }
-    }
-  }, [itemContentQuery.data?.objectUrl])
-
   const handleOpenInNewTab = () => {
-    if (!currentContent) {
+    if (!currentContentObjectUrl) {
       return
     }
 
-    window.open(currentContent.objectUrl, '_blank', 'noopener,noreferrer')
+    window.open(currentContentObjectUrl, '_blank', 'noopener,noreferrer')
   }
 
   const handleDownload = () => {
@@ -319,7 +314,7 @@ export const PreviewPane = ({ folderId, previewItemId }: PreviewPaneProps) => {
       )
     }
 
-    if (!currentContent) {
+    if (!currentContent || !currentContentObjectUrl) {
       return (
         <Box className="preview-pane__preview-empty">
           <Text c="dimmed">{t('previewEmpty')}</Text>
@@ -328,11 +323,11 @@ export const PreviewPane = ({ folderId, previewItemId }: PreviewPaneProps) => {
     }
 
     if (isImage) {
-      return <img src={currentContent.objectUrl} alt={currentItem.name} className="preview-pane__image" />
+      return <img src={currentContentObjectUrl} alt={currentItem.name} className="preview-pane__image" />
     }
 
     if (isPdf) {
-      const previewSource = `${currentContent.objectUrl}#zoom=page-width`
+      const previewSource = `${currentContentObjectUrl}#zoom=page-width`
       const showPdfFrame = canRenderHeavyPreview && !isResizing
 
       return (
@@ -355,10 +350,11 @@ export const PreviewPane = ({ folderId, previewItemId }: PreviewPaneProps) => {
       )
     }
 
-    return <iframe title={currentItem.name} src={currentContent.objectUrl} className="preview-pane__frame" />
+    return <iframe title={currentItem.name} src={currentContentObjectUrl} className="preview-pane__frame" />
   }, [
     canRenderHeavyPreview,
     currentContent,
+    currentContentObjectUrl,
     currentItem,
     isOpeningAnimationPending,
     isResizing,
