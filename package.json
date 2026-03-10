@@ -4,6 +4,7 @@
   "scripts": {
     "frontend": "npm --prefix frontend run dev",
     "frontend:build": "npm --prefix frontend run build",
+    "frontend:prod-local": "npm --prefix frontend run build && npm --prefix frontend run preview -- --port 5173 --strictPort",
     "backend": "cd backend && .venv/bin/flask --app run.py run --debug",
     "backend:init-db": "cd backend && .venv/bin/flask --app run.py init-db",
     "backend:test": "cd backend && .venv/bin/python -m unittest discover -s tests"
