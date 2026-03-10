@@ -35,7 +35,7 @@ class ShareLink(Base, IdMixin, TimestampMixin):
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_access_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    owner = relationship("User")
+    owner = relationship("User", back_populates="share_links")
     root_item = relationship("DataRoomItem")
 
     __table_args__ = (

@@ -16,4 +16,4 @@ class User(Base, IdMixin, TimestampMixin):
 
     google_drive_connections = relationship("GoogleDriveConnection", back_populates="user")
     items = relationship("DataRoomItem", back_populates="user")
-    share_links = relationship("ShareLink")
+    share_links = relationship("ShareLink", back_populates="owner")
