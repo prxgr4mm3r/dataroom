@@ -151,7 +151,7 @@ export const PreviewPaneView = ({
 
     if (!inline) {
       return (
-        <Alert color="yellow" title="Unsupported preview">
+        <Alert color="yellow" title={t('previewUnsupportedTitle')}>
           {t('previewUnsupported')}
         </Alert>
       )
@@ -203,7 +203,7 @@ export const PreviewPaneView = ({
             : apiError.message
 
       return (
-        <Alert color="orange" title="Preview error">
+        <Alert color="orange" title={t('previewErrorTitle')}>
           {message}
         </Alert>
       )
@@ -272,7 +272,7 @@ export const PreviewPaneView = ({
       const apiError = toApiError(itemError)
       previewBody = (
         <Box className="preview-pane__state preview-pane__state--pad">
-          <Alert color="red" title="Preview metadata error">
+          <Alert color="red" title={t('previewMetadataErrorTitle')}>
             {apiError.message}
           </Alert>
         </Box>
@@ -341,7 +341,7 @@ export const PreviewPaneView = ({
           onPointerDown={layout.onResizeStart}
           role="separator"
           aria-orientation="vertical"
-          aria-label="Resize preview panel"
+          aria-label={t('previewResizeAriaLabel')}
         />
       ) : null}
 
@@ -351,7 +351,7 @@ export const PreviewPaneView = ({
             <Group className="preview-pane__header-top" justify="space-between" wrap="nowrap">
               <Box className="preview-pane__heading-block">
                 <Text size="sm" fw={600} className="preview-pane__file-name" title={currentItem?.name ?? undefined}>
-                  {currentItem?.name ?? 'Loading...'}
+                  {currentItem?.name ?? t('loading')}
                 </Text>
               </Box>
 
@@ -361,7 +361,7 @@ export const PreviewPaneView = ({
                   variant="subtle"
                   className="preview-pane__icon-btn preview-pane__icon-btn--close"
                   onClick={onClose}
-                  aria-label="Close preview"
+                  aria-label={t('previewCloseAriaLabel')}
                 >
                   <IconX size={14} />
                 </ActionIcon>
