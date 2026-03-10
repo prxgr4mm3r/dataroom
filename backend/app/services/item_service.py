@@ -239,22 +239,7 @@ class ItemService:
         }
 
     def _collect_subtree_item_ids(self, user_id: str, root_folder_id: str) -> set[str]:
-        entries = self.items.list_active_for_user(user_id)
-        children_by_parent: dict[str | None, list[DataRoomItem]] = {}
-        for entry in entries:
-            children_by_parent.setdefault(entry.parent_id, []).append(entry)
-
-        scoped_ids: set[str] = {root_folder_id}
-        stack = [root_folder_id]
-        while stack:
-            parent_id = stack.pop()
-            for child in children_by_parent.get(parent_id, []):
-                if child.id in scoped_ids:
-                    continue
-                scoped_ids.add(child.id)
-                if child.kind == ItemKind.FOLDER.value:
-                    stack.append(child.id)
-        return scoped_ids
+        return set(self.items.list_subtree_ids_for_user(user_id, root_folder_id))
 
     def get_item(self, user_id: str, item_id: str) -> tuple[DataRoomItem, FileAsset | None]:
         item = self.items.get_for_user(user_id, item_id)
@@ -613,16 +598,11 @@ class ItemService:
         return {"id": root.id, "status": ItemStatus.DELETED.value}
 
     def _collect_subtree(self, user_id: str, root: DataRoomItem) -> list[DataRoomItem]:
-        all_items = self.items.list_active_for_user(user_id)
-        by_parent_id: dict[str | None, list[DataRoomItem]] = {}
-        for item in all_items:
-            by_parent_id.setdefault(item.parent_id, []).append(item)
+        subtree_ids = self.items.list_subtree_ids_for_user(user_id, root.id)
+        if not subtree_ids:
+            return [root]
 
-        result: list[DataRoomItem] = []
-        stack = [root]
-        while stack:
-            node = stack.pop()
-            result.append(node)
-            children = by_parent_id.get(node.id, [])
-            stack.extend(children)
-        return result
+        subtree_items = self.items.list_for_user_ids(user_id, subtree_ids, include_deleted=False)
+        by_id = {item.id: item for item in subtree_items}
+        ordered = [by_id[item_id] for item_id in subtree_ids if item_id in by_id]
+        return ordered or [root]

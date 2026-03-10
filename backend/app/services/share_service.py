@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from collections import deque
 import hashlib
 import hmac
 from pathlib import Path
@@ -117,17 +116,7 @@ class ShareService:
 
         if scope.root_item is None:
             return False
-
-        cursor: DataRoomItem | None = item
-        visited: set[str] = set()
-        while cursor is not None and cursor.id not in visited:
-            if cursor.id == scope.root_item.id:
-                return True
-            visited.add(cursor.id)
-            if cursor.parent_id is None:
-                return False
-            cursor = self.items.get_for_user(scope.owner_user_id, cursor.parent_id)
-        return False
+        return self.items.is_descendant_or_self(scope.owner_user_id, item.id, scope.root_item.id)
 
     def _resolve_scope(self, raw_token: str, *, touch_access: bool = True) -> ShareScope:
         token_kid, token_secret = self._parse_raw_token(raw_token)
@@ -170,21 +159,7 @@ class ShareService:
             raise self._share_not_found()
         if scope.root_item.kind == ItemKind.FILE.value:
             return {scope.root_item.id}
-
-        scoped_ids: set[str] = set()
-        queue: deque[str] = deque([scope.root_item.id])
-        while queue:
-            parent_id = queue.popleft()
-            if parent_id in scoped_ids:
-                continue
-            scoped_ids.add(parent_id)
-
-            children = self.items.list_children(scope.owner_user_id, parent_id)
-            for child in children:
-                scoped_ids.add(child.id)
-                if child.kind == ItemKind.FOLDER.value:
-                    queue.append(child.id)
-        return scoped_ids
+        return set(self.items.list_subtree_ids_for_user(scope.owner_user_id, scope.root_item.id))
 
     @staticmethod
     def _to_share_url(frontend_url: str, raw_token: str) -> str:

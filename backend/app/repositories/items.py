@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import func, or_
+from sqlalchemy import func, or_, text
 from sqlalchemy.orm import Session
 
 from app.models import DataRoomItem, ItemKind, ItemStatus
@@ -177,3 +177,64 @@ class ItemRepository:
             .limit(limit)
             .all()
         )
+
+    def list_subtree_ids_for_user(self, user_id: str, root_item_id: str) -> list[str]:
+        rows = self.db.execute(
+            text(
+                """
+                WITH RECURSIVE subtree(id) AS (
+                    SELECT i.id
+                    FROM dataroom_items i
+                    WHERE i.user_id = :user_id
+                      AND i.id = :root_item_id
+                      AND i.status != :deleted_status
+                    UNION ALL
+                    SELECT child.id
+                    FROM dataroom_items child
+                    JOIN subtree parent ON child.parent_id = parent.id
+                    WHERE child.user_id = :user_id
+                      AND child.status != :deleted_status
+                )
+                SELECT id
+                FROM subtree
+                """
+            ),
+            {
+                "user_id": user_id,
+                "root_item_id": root_item_id,
+                "deleted_status": ItemStatus.DELETED.value,
+            },
+        ).all()
+        return [str(row[0]) for row in rows if row and row[0]]
+
+    def is_descendant_or_self(self, user_id: str, item_id: str, ancestor_id: str) -> bool:
+        row = self.db.execute(
+            text(
+                """
+                WITH RECURSIVE ancestors(id, parent_id) AS (
+                    SELECT i.id, i.parent_id
+                    FROM dataroom_items i
+                    WHERE i.user_id = :user_id
+                      AND i.id = :item_id
+                      AND i.status != :deleted_status
+                    UNION ALL
+                    SELECT parent.id, parent.parent_id
+                    FROM dataroom_items parent
+                    JOIN ancestors child ON parent.id = child.parent_id
+                    WHERE parent.user_id = :user_id
+                      AND parent.status != :deleted_status
+                )
+                SELECT 1
+                FROM ancestors
+                WHERE id = :ancestor_id
+                LIMIT 1
+                """
+            ),
+            {
+                "user_id": user_id,
+                "item_id": item_id,
+                "ancestor_id": ancestor_id,
+                "deleted_status": ItemStatus.DELETED.value,
+            },
+        ).first()
+        return row is not None
