@@ -84,7 +84,9 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
   const [renameDialogItem, setRenameDialogItem] = useState<ContentItem | null>(null)
   const [searchDialogOpened, setSearchDialogOpened] = useState(false)
   const [shortcutsDialogOpened, setShortcutsDialogOpened] = useState(false)
-  const [fileContentVisibleFolderIds, setFileContentVisibleFolderIds] = useState<Set<string>>(() => new Set())
+  const [fileContentVisibleFolderIds, setFileContentVisibleFolderIds] = useState<Set<string>>(
+    () => new Set(['root']),
+  )
 
   const navigate = useNavigate()
 
@@ -289,6 +291,9 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
       if (visible) {
         next.add(normalizedId)
       } else {
+        if (normalizedId === 'root') {
+          return next
+        }
         next.delete(normalizedId)
       }
       return next
