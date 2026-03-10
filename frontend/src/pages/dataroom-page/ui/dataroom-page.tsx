@@ -14,10 +14,10 @@ import { useDragMoveController, validateMoveTarget } from '@/features/drag-move-
 import { useListContentItemsQuery } from '@/features/list-content-items'
 import { useBulkMoveItems, useMoveItem } from '@/features/move-content-items'
 import { useOpenFilePreview } from '@/features/open-file-preview'
-import { getSelectionRangeIds, useSelectionStore } from '@/features/select-content-items'
 import { useSortState } from '@/features/sort-content-items'
 import { useUploadFileFromDevice } from '@/features/upload-file-from-device'
 import { useFolderTreeQuery } from '@/features/load-folder-tree'
+import { useDataroomSelection } from '@/pages/dataroom-page/model/use-dataroom-selection'
 import { toApiError } from '@/shared/api'
 import { t } from '@/shared/i18n/messages'
 import {
@@ -132,7 +132,6 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
   const [searchDialogOpened, setSearchDialogOpened] = useState(false)
   const [shortcutsDialogOpened, setShortcutsDialogOpened] = useState(false)
   const [targetFolderId, setTargetFolderId] = useState<string>('root')
-  const selectionAnchorIdRef = useRef<string | null>(null)
 
   const navigate = useNavigate()
 
@@ -173,54 +172,24 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
   const bulkMoveMutation = useBulkMoveItems()
   const uploadFromComputerMutation = useUploadFileFromDevice(normalizedFolderId)
 
-  const selectedIds = useSelectionStore((state) => state.selectedIds)
-  const toggleSelected = useSelectionStore((state) => state.toggle)
-  const clearSelection = useSelectionStore((state) => state.clear)
-  const setSelected = useSelectionStore((state) => state.setMany)
-  const clearSelectedItems = () => {
-    clearSelection()
-    selectionAnchorIdRef.current = null
-  }
-
-  useEffect(() => {
-    clearSelection()
-  }, [clearSelection, normalizedFolderId])
-
   const items = useMemo(() => listQuery.data?.items || [], [listQuery.data?.items])
   const itemMap = useMemo(() => new Map(items.map((item) => [item.id, item])), [items])
   const breadcrumbs = useMemo(() => listQuery.data?.breadcrumbs || [], [listQuery.data?.breadcrumbs])
   const orderedItemIds = useMemo(() => items.map((item) => item.id), [items])
-  const setSelectedAndSyncAnchor = (ids: string[]) => {
-    const uniqueIds = [...new Set(ids)]
-    setSelected(uniqueIds)
-    const currentAnchorId = selectionAnchorIdRef.current
-    selectionAnchorIdRef.current = currentAnchorId && uniqueIds.includes(currentAnchorId) ? currentAnchorId : uniqueIds[0] ?? null
-  }
-
-  const getSingleSelectedItem = (): ContentItem | null => {
-    if (selectedIds.length !== 1) {
-      return null
-    }
-    return itemMap.get(selectedIds[0]) ?? null
-  }
-
-  const handleToggleSelect = (itemId: string, options?: { range?: boolean; keepExisting?: boolean }) => {
-    if (options?.range) {
-      const rangeIds = getSelectionRangeIds(orderedItemIds, selectionAnchorIdRef.current, itemId)
-      if (rangeIds.length) {
-        setSelectedAndSyncAnchor(options.keepExisting ? [...selectedIds, ...rangeIds] : rangeIds)
-      }
-      return
-    }
-
-    toggleSelected(itemId)
-    selectionAnchorIdRef.current = itemId
-  }
-
-  const selectAllVisibleItems = () => {
-    const nextSelectedIds = items.map((item) => item.id)
-    setSelectedAndSyncAnchor(nextSelectedIds)
-  }
+  const {
+    selectedIds,
+    clearSelectedItems,
+    setSelectedAndSyncAnchor,
+    getSingleSelectedItem,
+    handleToggleSelect,
+    selectAllVisibleItems,
+    excludeIdsFromSelection,
+  } = useDataroomSelection({
+    normalizedFolderId,
+    items,
+    orderedItemIds,
+    itemMap,
+  })
 
   const openSelectedItem = () => {
     const selectedItem = getSingleSelectedItem()
@@ -646,7 +615,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
           targetFolderId: targetFolderNullable,
         })
         closePreviewIfMoved(transferDialog.itemIds, targetFolderId)
-        setSelectedAndSyncAnchor(selectedIds.filter((id) => !transferDialog.itemIds.includes(id)))
+        excludeIdsFromSelection(transferDialog.itemIds)
         notifySuccess(t('moveItemSuccess'))
       } else {
         await bulkMoveMutation.mutateAsync({
@@ -654,7 +623,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
           targetFolderId: targetFolderNullable,
         })
         closePreviewIfMoved(transferDialog.itemIds, targetFolderId)
-        setSelectedAndSyncAnchor(selectedIds.filter((id) => !transferDialog.itemIds.includes(id)))
+        excludeIdsFromSelection(transferDialog.itemIds)
         notifySuccess(t('moveItemsSuccess'))
       }
 
@@ -688,7 +657,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
         }
 
         closePreviewIfMoved(itemIds, destinationFolderId)
-        setSelectedAndSyncAnchor(selectedIds.filter((id) => !itemIds.includes(id)))
+        excludeIdsFromSelection(itemIds)
       } catch (error) {
         notifyError(toApiError(error).message)
       }
@@ -933,7 +902,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
       if (deleteDialog.mode === 'single') {
         await deleteItemMutation.mutateAsync(deleteDialog.item.id)
         closePreviewIfMoved([deleteDialog.item.id], normalizedFolderId)
-        setSelectedAndSyncAnchor(selectedIds.filter((id) => id !== deleteDialog.item.id))
+        excludeIdsFromSelection([deleteDialog.item.id])
       } else {
         await bulkDeleteMutation.mutateAsync(selectedIds)
         closePreviewIfMoved(selectedIds, normalizedFolderId)
