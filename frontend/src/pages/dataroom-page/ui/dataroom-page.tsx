@@ -84,8 +84,8 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
   const [renameDialogItem, setRenameDialogItem] = useState<ContentItem | null>(null)
   const [searchDialogOpened, setSearchDialogOpened] = useState(false)
   const [shortcutsDialogOpened, setShortcutsDialogOpened] = useState(false)
-  const [fileContentVisibleFolderIds, setFileContentVisibleFolderIds] = useState<Set<string>>(
-    () => new Set(['root']),
+  const [manualFileContentVisibleFolderIds, setManualFileContentVisibleFolderIds] = useState<Set<string>>(
+    () => new Set(),
   )
 
   const navigate = useNavigate()
@@ -286,23 +286,23 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
   }
   const setFolderFileContentVisibility = (folderId: string, visible: boolean) => {
     const normalizedId = normalizeFolderId(folderId)
-    setFileContentVisibleFolderIds((previous) => {
+    setManualFileContentVisibleFolderIds((previous) => {
       const next = new Set(previous)
       if (visible) {
         next.add(normalizedId)
       } else {
-        if (normalizedId === 'root') {
-          return next
-        }
         next.delete(normalizedId)
       }
       return next
     })
   }
 
-  useEffect(() => {
-    setFolderFileContentVisibility(normalizedFolderId, true)
-  }, [normalizedFolderId])
+  const fileContentVisibleFolderIds = useMemo(() => {
+    const next = new Set(manualFileContentVisibleFolderIds)
+    next.add('root')
+    next.add(normalizedFolderId)
+    return next
+  }, [manualFileContentVisibleFolderIds, normalizedFolderId])
 
   const expandedPathIds = useMemo(() => breadcrumbs.map((crumb) => crumb.id), [breadcrumbs])
   const treeBrowser = useContentTreeBrowser({
