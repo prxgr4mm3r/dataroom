@@ -301,12 +301,20 @@
   content: '';
   position: absolute;
   left: var(--sidebar-tree-line-x);
-  top: 6px;
-  bottom: 6px;
+  top: 0;
+  bottom: 0;
   width: 1px;
   background: var(--tree-line);
   pointer-events: none;
   opacity: 0.9;
+}
+
+.sidebar-tree-row + .sidebar-tree-children::before {
+  top: 6px;
+}
+
+.sidebar-tree-children:last-child::before {
+  bottom: 6px;
 }
 
 .sidebar-tree-children--active-branch::before {

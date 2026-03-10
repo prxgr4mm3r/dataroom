@@ -17,6 +17,7 @@ import { useEffect, useState } from 'react'
 
 import type { ContentItem } from '@/entities/content-item'
 import { isFileItem } from '@/entities/content-item'
+import type { FolderNode } from '@/entities/folder'
 import type { UserProfile } from '@/entities/user'
 import { useListContentItemsQuery } from '@/features/list-content-items'
 import { t } from '@/shared/i18n/messages'
@@ -32,13 +33,16 @@ type DropState = 'none' | 'valid' | 'warning' | 'invalid'
 
 type DataroomSidebarProps = {
   currentUser: UserProfile
+  folderTree: FolderNode | undefined
   activeFolderId: string
   activePreviewId: string | null
   expandedIds: Set<string>
+  fileContentVisibleFolderIds: Set<string>
   onNewFolder: () => void
   onImportFromGoogle: () => void
   onImportFromComputer: () => void
   onToggleExpanded: (folderId: string) => void
+  onSetFileContentVisibility: (folderId: string, visible: boolean) => void
   onOpenFolder: (folderId: string) => void
   onOpenFile: (fileId: string, parentFolderId: string) => void
   onSignOut: () => void
@@ -58,16 +62,20 @@ type DataroomSidebarProps = {
   onFolderDragLeave: (folderId: string) => void
   getFolderDropState: (folderId: string) => DropState
   isDraggingItem: (itemId: string) => boolean
+  getFolderItem: (folderId: string) => ContentItem | null
 }
 
 type FolderChildrenProps = {
-  folderId: string
+  folderNode: FolderNode
+  parentFolderId: string | null
   depth: number
   highlightBranch?: boolean
   expandedIds: Set<string>
+  fileContentVisibleFolderIds: Set<string>
   activeFolderId: string
   activePreviewId: string | null
   onToggleExpanded: (folderId: string) => void
+  onSetFileContentVisibility: (folderId: string, visible: boolean) => void
   onOpenFolder: (folderId: string) => void
   onOpenFile: (fileId: string, parentFolderId: string) => void
   onDownloadItem: (item: ContentItem) => void
@@ -83,6 +91,7 @@ type FolderChildrenProps = {
   onFolderDragLeave: (folderId: string) => void
   getFolderDropState: (folderId: string) => DropState
   isDraggingItem: (itemId: string) => boolean
+  getFolderItem: (folderId: string) => ContentItem | null
   onItemContextMenu: (item: ContentItem, event: ReactMouseEvent<HTMLElement>) => void
 }
 
@@ -526,7 +535,7 @@ const handleFolderRowClick = ({
   canExpand: boolean
   isActive: boolean
   onOpenFolder: (folderId: string) => void
-  onToggleExpanded: (folderId: string) => void
+  onToggleExpanded: () => void
 }) => {
   onOpenFolder(folderId)
 
@@ -535,7 +544,7 @@ const handleFolderRowClick = ({
   }
 
   if (isActive) {
-    onToggleExpanded(folderId)
+    onToggleExpanded()
   }
 }
 
@@ -665,31 +674,58 @@ const TreeRow = ({
   )
 }
 
-const FolderChildren = ({
+const SYNTHETIC_FOLDER_TIMESTAMP = '1970-01-01T00:00:00.000Z'
+
+const createFallbackFolderItem = (
+  folderId: string,
+  folderName: string,
+  parentFolderId: string | null,
+  childrenCount: number,
+): ContentItem => ({
+  id: folderId,
+  kind: 'folder',
+  name: folderName,
+  parentId: parentFolderId,
+  childrenCount,
+  status: 'active',
+  createdAt: SYNTHETIC_FOLDER_TIMESTAMP,
+  updatedAt: SYNTHETIC_FOLDER_TIMESTAMP,
+  mimeType: null,
+  sizeBytes: null,
+  importedAt: null,
+  origin: null,
+  googleFileId: null,
+})
+
+type FolderFilesProps = {
+  folderId: string
+  depth: number
+  highlightBranch?: boolean
+  activeFolderId: string
+  activePreviewId: string | null
+  onOpenFile: (fileId: string, parentFolderId: string) => void
+  onDragStartItem: (item: ContentItem, event: DragEvent<HTMLElement>) => void
+  onDragEnd: () => void
+  onFolderDragOver: (folderId: string, event: DragEvent<HTMLElement>) => void
+  onFolderDrop: (folderId: string, event: DragEvent<HTMLElement>) => void
+  isDraggingItem: (itemId: string) => boolean
+  onItemContextMenu: (item: ContentItem, event: ReactMouseEvent<HTMLElement>) => void
+}
+
+const FolderFiles = ({
   folderId,
   depth,
   highlightBranch = false,
-  expandedIds,
   activeFolderId,
   activePreviewId,
-  onToggleExpanded,
-  onOpenFolder,
   onOpenFile,
-  onDownloadItem,
-  onCopyItem,
-  onRenameItem,
-  onMoveItem,
-  onDeleteItem,
-  onShareItem,
   onDragStartItem,
   onDragEnd,
   onFolderDragOver,
   onFolderDrop,
-  onFolderDragLeave,
-  getFolderDropState,
   isDraggingItem,
   onItemContextMenu,
-}: FolderChildrenProps) => {
+}: FolderFilesProps) => {
   const query = useListContentItemsQuery(folderId, 'name', 'asc')
 
   if (query.isPending) {
@@ -708,6 +744,11 @@ const FolderChildren = ({
     )
   }
 
+  const files = query.data?.items.filter(isFileItem) ?? []
+  if (!files.length) {
+    return null
+  }
+
   return (
     <Box
       className={[
@@ -718,108 +759,197 @@ const FolderChildren = ({
         .join(' ')}
       style={{ '--sidebar-tree-line-x': `${depth * TREE_INDENT_STEP - 1}px` } as CSSProperties}
     >
-      {query.data?.items.map((item) => {
-        if (isFileItem(item)) {
-          const isActiveFile = activePreviewId === item.id && activeFolderId === folderId
-          const fileActiveVariant: ActiveVariant = isActiveFile ? 'file' : 'solid'
-          return (
-            <TreeRow
-              key={item.id}
-              depth={depth}
-              active={isActiveFile}
-              activeVariant={fileActiveVariant}
-              isFile
-              name={item.name}
-              mimeType={item.mimeType}
-              draggable
-              isDragging={isDraggingItem(item.id)}
-              onDragStart={(event) => onDragStartItem(item, event)}
-              onDragEnd={onDragEnd}
-              onDragOver={(event) => {
-                event.stopPropagation()
-                onFolderDragOver(folderId, event)
-              }}
-              onDrop={(event) => {
-                event.stopPropagation()
-                onFolderDrop(folderId, event)
-              }}
-              onContextMenu={(event) => onItemContextMenu(item, event)}
-              onClick={() => onOpenFile(item.id, folderId)}
-            />
-          )
-        }
-
-        const isExpanded = expandedIds.has(item.id)
-        const canExpand = item.childrenCount > 0
-        const isActiveFolder = normalizeFolderId(activeFolderId) === item.id
-        const folderActiveVariant: ActiveVariant = isActiveFolder && Boolean(activePreviewId) ? 'context' : 'solid'
+      {files.map((item) => {
+        const isActiveFile = activePreviewId === item.id && activeFolderId === folderId
+        const fileActiveVariant: ActiveVariant = isActiveFile ? 'file' : 'solid'
 
         return (
-          <Box key={item.id}>
+          <TreeRow
+            key={item.id}
+            depth={depth}
+            active={isActiveFile}
+            activeVariant={fileActiveVariant}
+            isFile
+            name={item.name}
+            mimeType={item.mimeType}
+            draggable
+            isDragging={isDraggingItem(item.id)}
+            onDragStart={(event) => onDragStartItem(item, event)}
+            onDragEnd={onDragEnd}
+            onDragOver={(event) => {
+              event.stopPropagation()
+              onFolderDragOver(folderId, event)
+            }}
+            onDrop={(event) => {
+              event.stopPropagation()
+              onFolderDrop(folderId, event)
+            }}
+            onContextMenu={(event) => onItemContextMenu(item, event)}
+            onClick={() => onOpenFile(item.id, folderId)}
+          />
+        )
+      })}
+    </Box>
+  )
+}
+
+const FolderChildren = ({
+  folderNode,
+  parentFolderId,
+  depth,
+  highlightBranch = false,
+  expandedIds,
+  fileContentVisibleFolderIds,
+  activeFolderId,
+  activePreviewId,
+  onToggleExpanded,
+  onSetFileContentVisibility,
+  onOpenFolder,
+  onOpenFile,
+  onDownloadItem,
+  onCopyItem,
+  onRenameItem,
+  onMoveItem,
+  onDeleteItem,
+  onShareItem,
+  onDragStartItem,
+  onDragEnd,
+  onFolderDragOver,
+  onFolderDrop,
+  onFolderDragLeave,
+  getFolderDropState,
+  isDraggingItem,
+  getFolderItem,
+  onItemContextMenu,
+}: FolderChildrenProps) => {
+  if (!folderNode.children.length) {
+    return null
+  }
+
+  return (
+    <Box
+      className={[
+        'sidebar-tree-children',
+        highlightBranch ? 'sidebar-tree-children--active-branch' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+      style={{ '--sidebar-tree-line-x': `${depth * TREE_INDENT_STEP - 1}px` } as CSSProperties}
+    >
+      {folderNode.children.map((childFolder) => {
+        const folderItem =
+          getFolderItem(childFolder.id) ??
+          createFallbackFolderItem(
+            childFolder.id,
+            childFolder.name,
+            parentFolderId,
+            childFolder.children.length,
+          )
+        const isExpanded = expandedIds.has(childFolder.id)
+        const showFiles = fileContentVisibleFolderIds.has(childFolder.id)
+        const isActiveFolder = normalizeFolderId(activeFolderId) === childFolder.id
+        const folderActiveVariant: ActiveVariant = isActiveFolder && Boolean(activePreviewId) ? 'context' : 'solid'
+
+        const toggleFolderView = () => {
+          if (isExpanded && !showFiles) {
+            onSetFileContentVisibility(childFolder.id, true)
+            return
+          }
+
+          const nextExpandedState = !isExpanded
+          onToggleExpanded(childFolder.id)
+          onSetFileContentVisibility(childFolder.id, nextExpandedState)
+        }
+
+        return (
+          <Box key={childFolder.id}>
             <TreeRow
               depth={depth}
               active={isActiveFolder}
               activeVariant={folderActiveVariant}
               isFile={false}
-              name={item.name}
-              canExpand={canExpand}
+              name={childFolder.name}
+              canExpand
               expanded={isExpanded}
               draggable
-              isDragging={isDraggingItem(item.id)}
-              onDragStart={(event) => onDragStartItem(item, event)}
+              isDragging={isDraggingItem(childFolder.id)}
+              onDragStart={(event) => onDragStartItem(folderItem, event)}
               onDragEnd={onDragEnd}
-              onToggle={canExpand ? () => onToggleExpanded(item.id) : undefined}
+              onToggle={toggleFolderView}
               onClick={() =>
                 handleFolderRowClick({
-                  folderId: item.id,
-                  canExpand,
+                  folderId: childFolder.id,
+                  canExpand: true,
                   isActive: isActiveFolder,
                   onOpenFolder,
-                  onToggleExpanded,
+                  onToggleExpanded: toggleFolderView,
                 })
               }
-              dropState={getFolderDropState(item.id)}
+              dropState={getFolderDropState(childFolder.id)}
               onDragOver={(event) => {
                 event.stopPropagation()
-                onFolderDragOver(item.id, event)
+                onFolderDragOver(childFolder.id, event)
               }}
               onDrop={(event) => {
                 event.stopPropagation()
-                onFolderDrop(item.id, event)
+                onFolderDrop(childFolder.id, event)
               }}
               onDragLeave={(event) => {
                 event.stopPropagation()
-                onFolderDragLeave(item.id)
+                onFolderDragLeave(childFolder.id)
               }}
-              onContextMenu={(event) => onItemContextMenu(item, event)}
+              onContextMenu={(event) => onItemContextMenu(folderItem, event)}
             />
 
-            {canExpand && isExpanded ? (
-              <FolderChildren
-                folderId={item.id}
-                depth={depth + 1}
-                highlightBranch={isActiveFolder}
-                expandedIds={expandedIds}
-                activeFolderId={activeFolderId}
-                activePreviewId={activePreviewId}
-                onToggleExpanded={onToggleExpanded}
-                onOpenFolder={onOpenFolder}
-                onOpenFile={onOpenFile}
-                onDownloadItem={onDownloadItem}
-                onCopyItem={onCopyItem}
-                onRenameItem={onRenameItem}
-                onMoveItem={onMoveItem}
-                onDeleteItem={onDeleteItem}
-                onShareItem={onShareItem}
-                onDragStartItem={onDragStartItem}
-                onDragEnd={onDragEnd}
-                onFolderDragOver={onFolderDragOver}
-                onFolderDrop={onFolderDrop}
-                onFolderDragLeave={onFolderDragLeave}
-                getFolderDropState={getFolderDropState}
-                isDraggingItem={isDraggingItem}
-                onItemContextMenu={onItemContextMenu}
-              />
+            {isExpanded ? (
+              <>
+                {showFiles ? (
+                  <FolderFiles
+                    folderId={childFolder.id}
+                    depth={depth + 1}
+                    highlightBranch={isActiveFolder}
+                    activeFolderId={activeFolderId}
+                    activePreviewId={activePreviewId}
+                    onOpenFile={onOpenFile}
+                    onDragStartItem={onDragStartItem}
+                    onDragEnd={onDragEnd}
+                    onFolderDragOver={onFolderDragOver}
+                    onFolderDrop={onFolderDrop}
+                    isDraggingItem={isDraggingItem}
+                    onItemContextMenu={onItemContextMenu}
+                  />
+                ) : null}
+
+                <FolderChildren
+                  folderNode={childFolder}
+                  parentFolderId={childFolder.id}
+                  depth={depth + 1}
+                  highlightBranch={isActiveFolder}
+                  expandedIds={expandedIds}
+                  fileContentVisibleFolderIds={fileContentVisibleFolderIds}
+                  activeFolderId={activeFolderId}
+                  activePreviewId={activePreviewId}
+                  onToggleExpanded={onToggleExpanded}
+                  onSetFileContentVisibility={onSetFileContentVisibility}
+                  onOpenFolder={onOpenFolder}
+                  onOpenFile={onOpenFile}
+                  onDownloadItem={onDownloadItem}
+                  onCopyItem={onCopyItem}
+                  onRenameItem={onRenameItem}
+                  onMoveItem={onMoveItem}
+                  onDeleteItem={onDeleteItem}
+                  onShareItem={onShareItem}
+                  onDragStartItem={onDragStartItem}
+                  onDragEnd={onDragEnd}
+                  onFolderDragOver={onFolderDragOver}
+                  onFolderDrop={onFolderDrop}
+                  onFolderDragLeave={onFolderDragLeave}
+                  getFolderDropState={getFolderDropState}
+                  isDraggingItem={isDraggingItem}
+                  getFolderItem={getFolderItem}
+                  onItemContextMenu={onItemContextMenu}
+                />
+              </>
             ) : null}
           </Box>
         )
@@ -830,13 +960,16 @@ const FolderChildren = ({
 
 export const DataroomSidebar = ({
   currentUser,
+  folderTree,
   activeFolderId,
   activePreviewId,
   expandedIds,
+  fileContentVisibleFolderIds,
   onNewFolder,
   onImportFromGoogle,
   onImportFromComputer,
   onToggleExpanded,
+  onSetFileContentVisibility,
   onOpenFolder,
   onOpenFile,
   onSignOut,
@@ -856,11 +989,11 @@ export const DataroomSidebar = ({
   onFolderDragLeave,
   getFolderDropState,
   isDraggingItem,
+  getFolderItem,
 }: DataroomSidebarProps) => {
   const isRootActive = normalizeFolderId(activeFolderId) === 'root'
   const isRootExpanded = expandedIds.has('root')
-  const rootItemsQuery = useListContentItemsQuery('root', 'name', 'asc')
-  const rootCanExpand = (rootItemsQuery.data?.items.length ?? 0) > 0
+  const rootShowFiles = fileContentVisibleFolderIds.has('root')
   const rootActiveVariant: ActiveVariant = isRootActive && Boolean(activePreviewId) ? 'context' : 'solid'
   const accountName = currentUser.displayName || currentUser.email || currentUser.firebaseUid
   const accountSubtitle = currentUser.displayName && currentUser.email ? currentUser.email : t('accountMember')
@@ -968,17 +1101,33 @@ export const DataroomSidebar = ({
           activeVariant={rootActiveVariant}
           isFile={false}
           name="Data Room"
-          canExpand={rootCanExpand}
+          canExpand
           expanded={isRootExpanded}
-          onToggle={rootCanExpand ? () => onToggleExpanded('root') : undefined}
+          onToggle={() => {
+            if (isRootExpanded && !rootShowFiles) {
+              onSetFileContentVisibility('root', true)
+              return
+            }
+            const nextExpandedState = !isRootExpanded
+            onToggleExpanded('root')
+            onSetFileContentVisibility('root', nextExpandedState)
+          }}
           onClick={() =>
-              handleFolderRowClick({
-                folderId: 'root',
-                canExpand: rootCanExpand,
-                isActive: isRootActive,
-                onOpenFolder,
-                onToggleExpanded,
-              })
+            handleFolderRowClick({
+              folderId: 'root',
+              canExpand: true,
+              isActive: isRootActive,
+              onOpenFolder,
+              onToggleExpanded: () => {
+                if (isRootExpanded && !rootShowFiles) {
+                  onSetFileContentVisibility('root', true)
+                  return
+                }
+                const nextExpandedState = !isRootExpanded
+                onToggleExpanded('root')
+                onSetFileContentVisibility('root', nextExpandedState)
+              },
+            })
           }
           dropState={getFolderDropState('root')}
           onDragOver={(event) => {
@@ -996,15 +1145,18 @@ export const DataroomSidebar = ({
           onContextMenu={handleRootContextMenu}
         />
 
-        {rootCanExpand && expandedIds.has('root') ? (
+        {isRootExpanded && folderTree ? (
           <FolderChildren
-            folderId="root"
+            folderNode={folderTree}
+            parentFolderId={folderTree.id === 'root' ? null : folderTree.id}
             depth={1}
             highlightBranch={isRootActive}
             expandedIds={expandedIds}
+            fileContentVisibleFolderIds={fileContentVisibleFolderIds}
             activeFolderId={activeFolderId}
             activePreviewId={activePreviewId}
             onToggleExpanded={onToggleExpanded}
+            onSetFileContentVisibility={onSetFileContentVisibility}
             onOpenFolder={onOpenFolder}
             onOpenFile={onOpenFile}
             onDownloadItem={onDownloadItem}
@@ -1019,6 +1171,24 @@ export const DataroomSidebar = ({
             onFolderDrop={onFolderDrop}
             onFolderDragLeave={onFolderDragLeave}
             getFolderDropState={getFolderDropState}
+            isDraggingItem={isDraggingItem}
+            getFolderItem={getFolderItem}
+            onItemContextMenu={handleItemContextMenu}
+          />
+        ) : null}
+
+        {isRootExpanded && rootShowFiles ? (
+          <FolderFiles
+            folderId="root"
+            depth={1}
+            highlightBranch={isRootActive}
+            activeFolderId={activeFolderId}
+            activePreviewId={activePreviewId}
+            onOpenFile={onOpenFile}
+            onDragStartItem={onDragStartItem}
+            onDragEnd={onDragEnd}
+            onFolderDragOver={onFolderDragOver}
+            onFolderDrop={onFolderDrop}
             isDraggingItem={isDraggingItem}
             onItemContextMenu={handleItemContextMenu}
           />

@@ -84,6 +84,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
   const [renameDialogItem, setRenameDialogItem] = useState<ContentItem | null>(null)
   const [searchDialogOpened, setSearchDialogOpened] = useState(false)
   const [shortcutsDialogOpened, setShortcutsDialogOpened] = useState(false)
+  const [fileContentVisibleFolderIds, setFileContentVisibleFolderIds] = useState<Set<string>>(() => new Set())
 
   const navigate = useNavigate()
 
@@ -128,6 +129,43 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
   const listQuery = useListContentItemsQuery(normalizedFolderId, sortBy, sortOrder)
   const folderTreeQuery = useFolderTreeQuery(true)
   const openFilePreview = useOpenFilePreview(normalizedFolderId)
+  const { folderNodeById, folderParentIdById } = useMemo(() => {
+    const nodeById = new Map<string, { id: string; name: string; childrenCount: number }>()
+    const parentById = new Map<string, string | null>()
+    const rootNode = folderTreeQuery.data
+
+    if (rootNode) {
+      const stack: Array<{ node: typeof rootNode; parentId: string | null }> = [
+        { node: rootNode, parentId: null },
+      ]
+
+      while (stack.length) {
+        const current = stack.pop()
+        if (!current) {
+          continue
+        }
+
+        nodeById.set(current.node.id, {
+          id: current.node.id,
+          name: current.node.name,
+          childrenCount: current.node.children.length,
+        })
+        parentById.set(current.node.id, current.parentId)
+
+        for (let index = current.node.children.length - 1; index >= 0; index -= 1) {
+          stack.push({
+            node: current.node.children[index],
+            parentId: current.node.id,
+          })
+        }
+      }
+    }
+
+    return {
+      folderNodeById: nodeById,
+      folderParentIdById: parentById,
+    }
+  }, [folderTreeQuery.data])
 
   const downloadItemsMutation = useDownloadContentItems()
 
@@ -201,7 +239,28 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
 
     const breadcrumbIndex = breadcrumbs.findIndex((crumb) => crumb.id === folderId)
     if (breadcrumbIndex < 0) {
-      return null
+      const treeFolder = folderNodeById.get(folderId)
+      if (!treeFolder) {
+        return null
+      }
+
+      const parentFolderId = folderParentIdById.get(folderId) ?? null
+
+      return {
+        id: treeFolder.id,
+        kind: 'folder',
+        name: treeFolder.name,
+        parentId: parentFolderId && parentFolderId !== 'root' ? parentFolderId : null,
+        childrenCount: treeFolder.childrenCount,
+        status: 'active',
+        createdAt: SYNTHETIC_FOLDER_TIMESTAMP,
+        updatedAt: SYNTHETIC_FOLDER_TIMESTAMP,
+        mimeType: null,
+        sizeBytes: null,
+        importedAt: null,
+        origin: null,
+        googleFileId: null,
+      }
     }
 
     const folder = breadcrumbs[breadcrumbIndex]
@@ -223,6 +282,23 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
       googleFileId: null,
     }
   }
+  const setFolderFileContentVisibility = (folderId: string, visible: boolean) => {
+    const normalizedId = normalizeFolderId(folderId)
+    setFileContentVisibleFolderIds((previous) => {
+      const next = new Set(previous)
+      if (visible) {
+        next.add(normalizedId)
+      } else {
+        next.delete(normalizedId)
+      }
+      return next
+    })
+  }
+
+  useEffect(() => {
+    setFolderFileContentVisibility(normalizedFolderId, true)
+  }, [normalizedFolderId])
+
   const expandedPathIds = useMemo(() => breadcrumbs.map((crumb) => crumb.id), [breadcrumbs])
   const treeBrowser = useContentTreeBrowser({
     activeFolderId: normalizedFolderId,
@@ -529,13 +605,16 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
         sidebar={
           <DataroomSidebar
             currentUser={currentUser}
+            folderTree={folderTreeQuery.data}
             activeFolderId={normalizedFolderId}
             activePreviewId={previewId}
             expandedIds={treeBrowser.expandedIds}
+            fileContentVisibleFolderIds={fileContentVisibleFolderIds}
             onNewFolder={() => openCreateFolderDialog(normalizedFolderId)}
             onImportFromGoogle={openGoogleImportDialog}
             onImportFromComputer={openComputerImportPicker}
             onToggleExpanded={treeBrowser.toggleExpanded}
+            onSetFileContentVisibility={setFolderFileContentVisibility}
             onOpenFolder={openFolder}
             onOpenFile={openFileFromSidebar}
             onSignOut={() => void signOutUser()}
@@ -557,6 +636,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
             onFolderDragLeave={handleFolderDragLeave}
             getFolderDropState={getFolderDropState}
             isDraggingItem={dragMoveController.isDraggingItem}
+            getFolderItem={getFolderActionItem}
           />
         }
         collapsedSidebar={

@@ -35,7 +35,12 @@ const getFolderIdFromListItemsQueryKey = (queryKey: readonly unknown[]): string 
   return keyFolderId
 }
 
-export const useListContentItemsQuery = (folderId: string, sortBy: SortBy, sortOrder: SortOrder) =>
+export const useListContentItemsQuery = (
+  folderId: string,
+  sortBy: SortBy,
+  sortOrder: SortOrder,
+  enabled = true,
+) =>
   useQuery<ListContentItemsResult>({
     queryKey: queryKeys.listItems(folderId, sortBy, sortOrder),
     staleTime: 5_000,
@@ -68,4 +73,5 @@ export const useListContentItemsQuery = (folderId: string, sortBy: SortBy, sortO
         items: response.items.map(mapItemResourceDto),
       }
     },
+    enabled,
   })
