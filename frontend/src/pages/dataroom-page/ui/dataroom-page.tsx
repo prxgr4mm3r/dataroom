@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type DragEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react'
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 
 import { useAuth } from '@/app/providers'
@@ -7,32 +7,24 @@ import type { UserProfile } from '@/entities/user'
 import { useContentTreeBrowser } from '@/features/browse-content-tree'
 import { useDataroomShortcuts } from '@/features/dataroom-shortcuts'
 import { useDownloadContentItems } from '@/features/download-content-items'
-import { useDragImportController, type DragImportFailure, type DragImportResult } from '@/features/drag-import-files'
+import { useDragImportController } from '@/features/drag-import-files'
 import { useDragMoveController } from '@/features/drag-move-items'
 import { useListContentItemsQuery } from '@/features/list-content-items'
 import { useOpenFilePreview } from '@/features/open-file-preview'
 import { useSortState } from '@/features/sort-content-items'
-import { useUploadFileFromDevice } from '@/features/upload-file-from-device'
 import { useFolderTreeQuery } from '@/features/load-folder-tree'
 import { useDataroomDelete } from '@/pages/dataroom-page/model/use-dataroom-delete'
+import { useDataroomImport } from '@/pages/dataroom-page/model/use-dataroom-import'
 import { useDataroomSelection } from '@/pages/dataroom-page/model/use-dataroom-selection'
 import { useDataroomTransfer } from '@/pages/dataroom-page/model/use-dataroom-transfer'
 import { toApiError } from '@/shared/api'
-import { t } from '@/shared/i18n/messages'
-import {
-  getImportBatchTooLargeMessage,
-  getImportFileTooLargeMessage,
-  isImportBatchTooLarge,
-  isImportFileTooLarge,
-} from '@/shared/lib/file/import-file-size-limit'
 import {
   normalizeFolderId,
   toFolderPath,
-  toNullableFolderId,
   withPreviewQuery,
 } from '@/shared/routes/dataroom-routes'
 import { Alert, Box } from '@/shared/ui'
-import { notifyError, notifySuccess } from '@/shared/ui'
+import { notifyError } from '@/shared/ui'
 import { AppShell } from '@/widgets/app-shell'
 import { CreateFolderDialog } from '@/widgets/create-folder-dialog'
 import { DataroomSidebar, DataroomSidebarRail } from '@/widgets/dataroom-sidebar'
@@ -86,16 +78,28 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
   const location = useLocation()
   const previewId = searchParams.get('preview')
 
-  const [importDialogOpened, setImportDialogOpened] = useState(false)
   const [createFolderOpened, setCreateFolderOpened] = useState(false)
   const [createFolderParentId, setCreateFolderParentId] = useState<string>(normalizedFolderId)
   const [shareDialogItem, setShareDialogItem] = useState<ContentItem | null>(null)
   const [renameDialogItem, setRenameDialogItem] = useState<ContentItem | null>(null)
-  const [dragImportResultDialog, setDragImportResultDialog] = useState<DragImportResult | null>(null)
   const [searchDialogOpened, setSearchDialogOpened] = useState(false)
   const [shortcutsDialogOpened, setShortcutsDialogOpened] = useState(false)
 
   const navigate = useNavigate()
+
+  const {
+    importDialogOpened,
+    openGoogleImportDialog,
+    closeGoogleImportDialog,
+    dragImportResultDialog,
+    openDragImportResultDialog,
+    closeDragImportResultDialog,
+    nativeImportInputRef,
+    importFromComputerPending,
+    openComputerImportPicker,
+    onComputerImportSelected,
+    handleExternalDragImportResult,
+  } = useDataroomImport({ normalizedFolderId })
 
   useEffect(() => {
     if (searchParams.get('import') !== 'google') {
@@ -103,7 +107,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
     }
 
     const timeoutId = window.setTimeout(() => {
-      setImportDialogOpened(true)
+      openGoogleImportDialog()
     }, 0)
 
     const nextSearchParams = new URLSearchParams(searchParams)
@@ -117,7 +121,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
       { replace: true },
     )
     return () => window.clearTimeout(timeoutId)
-  }, [location.pathname, navigate, searchParams])
+  }, [location.pathname, navigate, openGoogleImportDialog, searchParams])
 
   const { sortBy, sortOrder, toggleSort } = useSortState()
 
@@ -126,7 +130,6 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
   const openFilePreview = useOpenFilePreview(normalizedFolderId)
 
   const downloadItemsMutation = useDownloadContentItems()
-  const uploadFromComputerMutation = useUploadFileFromDevice(normalizedFolderId)
 
   const items = useMemo(() => listQuery.data?.items || [], [listQuery.data?.items])
   const itemMap = useMemo(() => new Map(items.map((item) => [item.id, item])), [items])
@@ -228,7 +231,6 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
   const expandTreeFolder = treeBrowser.expand
   const autoExpandedFolderIdRef = useRef<string | null>(null)
   const previousItemsCountRef = useRef<number | null>(null)
-  const nativeImportInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const hasData = Boolean(listQuery.data)
@@ -273,113 +275,9 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
     navigate(`${toFolderPath(parentFolderId)}${withPreviewQuery(fileId)}`)
   }
 
-  const openGoogleImportDialog = () => {
-    setImportDialogOpened(true)
-  }
-
   const openCreateFolderDialog = (folderId: string = normalizedFolderId) => {
     setCreateFolderParentId(normalizeFolderId(folderId))
     setCreateFolderOpened(true)
-  }
-
-  const openComputerImportPicker = () => {
-    if (uploadFromComputerMutation.isPending) {
-      return
-    }
-    const input = nativeImportInputRef.current
-    if (!input) {
-      return
-    }
-    input.value = ''
-    input.click()
-  }
-
-  const onComputerImportSelected = async (event: ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.currentTarget.files ?? [])
-    event.currentTarget.value = ''
-
-    if (!files.length) {
-      return
-    }
-
-    const targetFolderId = toNullableFolderId(normalizedFolderId)
-    const uploadedFiles: string[] = []
-    const failedFiles: DragImportFailure[] = []
-    const tooLargeMessage = getImportFileTooLargeMessage()
-    const batchTooLargeMessage = getImportBatchTooLargeMessage()
-    const importableFiles = files.filter((file) => !isImportFileTooLarge(file))
-
-    if (importableFiles.length > 0 && isImportBatchTooLarge(importableFiles)) {
-      notifyError(batchTooLargeMessage)
-      return
-    }
-
-    for (const file of files) {
-      if (isImportFileTooLarge(file)) {
-        failedFiles.push({
-          fileName: file.name,
-          message: tooLargeMessage,
-          reason: 'too_large',
-        })
-        continue
-      }
-
-      try {
-        await uploadFromComputerMutation.mutateAsync({
-          file,
-          targetFolderId,
-        })
-        uploadedFiles.push(file.name)
-      } catch (error) {
-        const message = toApiError(error).message
-        const normalizedMessage = message.toLowerCase()
-        const reason: DragImportFailure['reason'] =
-          normalizedMessage.includes('size limit') ||
-          normalizedMessage.includes('too large') ||
-          normalizedMessage.includes('exceeds')
-            ? 'too_large'
-            : 'upload_failed'
-
-        failedFiles.push({
-          fileName: file.name,
-          message,
-          reason,
-        })
-      }
-    }
-
-    const uploadedCount = uploadedFiles.length
-    const failedCount = failedFiles.length
-
-    if (uploadedCount > 0 && failedCount === 0) {
-      notifySuccess(uploadedCount === 1 ? t('fileUploadedSuccess') : `${uploadedCount} files uploaded successfully.`)
-      return
-    }
-
-    if (failedCount === 0) {
-      return
-    }
-
-    const result: DragImportResult = {
-      uploadedCount,
-      failedCount,
-      uploadedFiles,
-      failedFiles,
-      firstErrorMessage: failedFiles[0]?.message ?? null,
-      hasPartialFailures: uploadedCount > 0 && failedCount > 0,
-      allRejectedBySizeLimit:
-        uploadedCount === 0 && failedCount > 0 && failedFiles.every((failedFile) => failedFile.reason === 'too_large'),
-    }
-
-    if (result.hasPartialFailures) {
-      setDragImportResultDialog(result)
-      const summary = failedCount === 1 ? '1 file was not imported.' : `${failedCount} files were not imported.`
-      notifyError(summary)
-      return
-    }
-
-    const summary = failedCount === 1 ? '1 file failed to upload.' : `${failedCount} files failed to upload.`
-    notifyError(result.firstErrorMessage ? `${summary} ${result.firstErrorMessage}` : summary)
   }
 
   const openFileFromSidebar = (fileId: string, parentFolderId: string) => {
@@ -474,26 +372,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
     if (dragImportController.isExternalFilesDrag(event)) {
       const result = await dragImportController.dropOnFolder(folderId, event)
       if (result) {
-        if (result.hasPartialFailures) {
-          setDragImportResultDialog(result)
-          const summary =
-            result.failedCount === 1
-              ? '1 file was not imported.'
-              : `${result.failedCount} files were not imported.`
-          notifyError(summary)
-        } else if (result.uploadedCount > 0) {
-          if (result.uploadedCount === 1) {
-            notifySuccess(t('fileUploadedSuccess'))
-          } else {
-            notifySuccess(`${result.uploadedCount} files uploaded successfully.`)
-          }
-        } else if (result.failedCount > 0) {
-          const summary =
-            result.failedCount === 1
-              ? '1 file failed to upload.'
-              : `${result.failedCount} files failed to upload.`
-          notifyError(result.firstErrorMessage ? `${summary} ${result.firstErrorMessage}` : summary)
-        }
+        handleExternalDragImportResult(result)
       }
       return
     }
@@ -794,7 +673,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
                   onDownloadItem={downloadSingleItem}
                   onImportFromGoogle={openGoogleImportDialog}
                   onImportFromComputer={openComputerImportPicker}
-                  importFromComputerPending={uploadFromComputerMutation.isPending}
+                  importFromComputerPending={importFromComputerPending}
                   onCopyItem={openSingleCopyDialog}
                   onRenameItem={openSingleRenameDialog}
                   onMoveItem={openSingleMoveDialog}
@@ -841,10 +720,8 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
       <ImportFileDialog
         opened={importDialogOpened}
         folderId={normalizedFolderId}
-        onClose={() => setImportDialogOpened(false)}
-        onPartialImportResult={(result) => {
-          setDragImportResultDialog(result)
-        }}
+        onClose={closeGoogleImportDialog}
+        onPartialImportResult={openDragImportResultDialog}
       />
 
       <CreateFolderDialog
@@ -882,7 +759,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
         opened={Boolean(dragImportResultDialog)}
         uploadedFiles={dragImportResultDialog?.uploadedFiles ?? []}
         failedFiles={dragImportResultDialog?.failedFiles ?? []}
-        onClose={() => setDragImportResultDialog(null)}
+        onClose={closeDragImportResultDialog}
       />
 
       <ShareLinksDialog
