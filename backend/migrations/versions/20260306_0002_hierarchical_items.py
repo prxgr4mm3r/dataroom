@@ -153,7 +153,7 @@ def downgrade() -> None:
                 NULL as google_connection_id,
                 CASE
                     WHEN a.origin = 'google_drive' THEN 'google_drive'
-                    ELSE 'google_drive'
+                    ELSE 'local_upload'
                 END as source,
                 COALESCE(a.google_file_id, i.id) as google_file_id,
                 i.name,
