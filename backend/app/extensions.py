@@ -10,6 +10,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.models import Base
+from app.services.rate_limit_service import InMemoryRateLimiter
 
 
 def init_extensions(app: Flask) -> None:
@@ -23,6 +24,7 @@ def init_extensions(app: Flask) -> None:
 
     app.extensions["engine"] = engine
     app.extensions["session_factory"] = session_factory
+    app.extensions["magic_link_rate_limiter"] = InMemoryRateLimiter()
 
     upload_dir = Path(app.config["UPLOAD_DIR"])
     upload_dir.mkdir(parents=True, exist_ok=True)

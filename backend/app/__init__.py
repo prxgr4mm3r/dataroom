@@ -6,7 +6,7 @@ from typing import Any
 from dotenv import load_dotenv
 from flask import Flask
 
-from app.config import build_config
+from app.config import build_config, validate_runtime_config
 from app.errors import register_error_handlers
 from app.extensions import get_engine, init_extensions
 from app.models import Base
@@ -19,6 +19,7 @@ load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 def create_app(config_overrides: dict[str, Any] | None = None) -> Flask:
     app = Flask(__name__)
     app.config.update(build_config(config_overrides))
+    validate_runtime_config(app.config)
 
     init_extensions(app)
     register_error_handlers(app)

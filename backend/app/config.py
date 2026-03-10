@@ -4,6 +4,9 @@ import os
 from pathlib import Path
 from typing import Any
 
+DEFAULT_SECRET_KEY = "change-me"
+DEFAULT_TOKEN_ENCRYPTION_KEY = "change-me-encryption-key"
+
 
 def _as_bool(value: str | None, default: bool = False) -> bool:
     if value is None:
@@ -24,7 +27,7 @@ def build_config(overrides: dict[str, Any] | None = None) -> dict[str, Any]:
         upload_dir = base_dir / upload_dir
 
     config: dict[str, Any] = {
-        "SECRET_KEY": os.getenv("SECRET_KEY", "change-me"),
+        "SECRET_KEY": os.getenv("SECRET_KEY", DEFAULT_SECRET_KEY),
         "FLASK_ENV": os.getenv("FLASK_ENV", "development"),
         "DATABASE_URL": os.getenv("DATABASE_URL", "sqlite:///app.db"),
         "FRONTEND_URL": os.getenv("FRONTEND_URL", "http://localhost:5173"),
@@ -46,7 +49,7 @@ def build_config(overrides: dict[str, Any] | None = None) -> dict[str, Any]:
         "GOOGLE_USERINFO_URL": "https://openidconnect.googleapis.com/v1/userinfo",
         "GOOGLE_DRIVE_FILES_URL": "https://www.googleapis.com/drive/v3/files",
         "OAUTH_STATE_TTL_SECONDS": _as_int(os.getenv("OAUTH_STATE_TTL_SECONDS"), 600),
-        "TOKEN_ENCRYPTION_KEY": os.getenv("TOKEN_ENCRYPTION_KEY", "change-me-encryption-key"),
+        "TOKEN_ENCRYPTION_KEY": os.getenv("TOKEN_ENCRYPTION_KEY", DEFAULT_TOKEN_ENCRYPTION_KEY),
         "FIREBASE_PROJECT_ID": os.getenv("FIREBASE_PROJECT_ID", ""),
         "FIREBASE_CREDENTIALS_JSON": os.getenv("FIREBASE_CREDENTIALS_JSON", ""),
         "AUTH_MAGIC_LINK_CONTINUE_URL": os.getenv("AUTH_MAGIC_LINK_CONTINUE_URL", ""),
@@ -60,6 +63,22 @@ def build_config(overrides: dict[str, Any] | None = None) -> dict[str, Any]:
         "MAIL_FROM_EMAIL": os.getenv("MAIL_FROM_EMAIL", ""),
         "MAIL_FROM_NAME": os.getenv("MAIL_FROM_NAME", "Dataroom.demo"),
         "MAIL_REPLY_TO": os.getenv("MAIL_REPLY_TO", ""),
+        "AUTH_MAGIC_LINK_RATE_LIMIT_IP_LIMIT": _as_int(
+            os.getenv("AUTH_MAGIC_LINK_RATE_LIMIT_IP_LIMIT"),
+            10,
+        ),
+        "AUTH_MAGIC_LINK_RATE_LIMIT_IP_WINDOW_SECONDS": _as_int(
+            os.getenv("AUTH_MAGIC_LINK_RATE_LIMIT_IP_WINDOW_SECONDS"),
+            60,
+        ),
+        "AUTH_MAGIC_LINK_RATE_LIMIT_EMAIL_LIMIT": _as_int(
+            os.getenv("AUTH_MAGIC_LINK_RATE_LIMIT_EMAIL_LIMIT"),
+            5,
+        ),
+        "AUTH_MAGIC_LINK_RATE_LIMIT_EMAIL_WINDOW_SECONDS": _as_int(
+            os.getenv("AUTH_MAGIC_LINK_RATE_LIMIT_EMAIL_WINDOW_SECONDS"),
+            3600,
+        ),
         "ALLOW_INSECURE_TEST_TOKENS": _as_bool(os.getenv("ALLOW_INSECURE_TEST_TOKENS"), False),
         "AUTO_CREATE_SCHEMA": _as_bool(os.getenv("AUTO_CREATE_SCHEMA"), False),
         "MAX_IMPORT_FILE_SIZE_BYTES": _as_int(
@@ -67,7 +86,7 @@ def build_config(overrides: dict[str, Any] | None = None) -> dict[str, Any]:
             4 * 1024 * 1024,
         ),
         "REQUEST_TIMEOUT_SECONDS": _as_int(os.getenv("REQUEST_TIMEOUT_SECONDS"), 20),
-        "SHARE_TOKEN_PEPPER": os.getenv("SHARE_TOKEN_PEPPER", os.getenv("SECRET_KEY", "change-me")),
+        "SHARE_TOKEN_PEPPER": os.getenv("SHARE_TOKEN_PEPPER", os.getenv("SECRET_KEY", DEFAULT_SECRET_KEY)),
         "SHARE_TOKEN_KID_BYTES": _as_int(os.getenv("SHARE_TOKEN_KID_BYTES"), 9),
         "SHARE_TOKEN_SECRET_BYTES": _as_int(os.getenv("SHARE_TOKEN_SECRET_BYTES"), 32),
         "SHARE_DEFAULT_TTL_DAYS": _as_int(os.getenv("SHARE_DEFAULT_TTL_DAYS"), 30),
@@ -78,3 +97,29 @@ def build_config(overrides: dict[str, Any] | None = None) -> dict[str, Any]:
         config.update(overrides)
 
     return config
+
+
+def validate_runtime_config(config: dict[str, Any]) -> None:
+    env = str(config.get("FLASK_ENV", "development")).strip().lower()
+    is_testing = bool(config.get("TESTING"))
+    is_development = env in {"development", "dev", "local"}
+    if is_testing or is_development:
+        return
+
+    errors: list[str] = []
+
+    secret_key = str(config.get("SECRET_KEY", "")).strip()
+    if not secret_key or secret_key == DEFAULT_SECRET_KEY:
+        errors.append("SECRET_KEY must be set to a non-default value.")
+
+    token_key = str(config.get("TOKEN_ENCRYPTION_KEY", "")).strip()
+    if not token_key or token_key == DEFAULT_TOKEN_ENCRYPTION_KEY:
+        errors.append("TOKEN_ENCRYPTION_KEY must be set to a non-default value.")
+
+    share_pepper = str(config.get("SHARE_TOKEN_PEPPER", "")).strip()
+    if not share_pepper or share_pepper == DEFAULT_SECRET_KEY:
+        errors.append("SHARE_TOKEN_PEPPER must be set to a non-default value.")
+
+    if errors:
+        details = "\n".join(f"- {message}" for message in errors)
+        raise RuntimeError(f"Insecure runtime configuration for non-development environment:\n{details}")
