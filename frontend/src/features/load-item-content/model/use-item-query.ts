@@ -10,4 +10,5 @@ export const useItemQuery = (itemId: string | null) =>
     queryKey: queryKeys.item(itemId || 'none'),
     queryFn: async () => mapItemResourceDto(await getItem(itemId!)),
     enabled: Boolean(itemId),
+    staleTime: 10_000,
   })

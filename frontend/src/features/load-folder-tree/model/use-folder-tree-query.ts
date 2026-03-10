@@ -10,4 +10,5 @@ export const useFolderTreeQuery = (enabled: boolean) =>
     queryKey: queryKeys.folderTree,
     queryFn: async () => mapFolderTreeDto(await getFolderTree()),
     enabled,
+    staleTime: 30_000,
   })

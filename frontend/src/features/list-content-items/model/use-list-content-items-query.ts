@@ -38,6 +38,7 @@ const getFolderIdFromListItemsQueryKey = (queryKey: readonly unknown[]): string 
 export const useListContentItemsQuery = (folderId: string, sortBy: SortBy, sortOrder: SortOrder) =>
   useQuery<ListContentItemsResult>({
     queryKey: queryKeys.listItems(folderId, sortBy, sortOrder),
+    staleTime: 5_000,
     placeholderData: (previousData, previousQuery) => {
       if (!previousData || !previousQuery) {
         return undefined
