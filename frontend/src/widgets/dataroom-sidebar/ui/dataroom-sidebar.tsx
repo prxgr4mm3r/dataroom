@@ -518,14 +518,12 @@ export const DataroomSidebarRail = ({
 const handleFolderRowClick = ({
   folderId,
   canExpand,
-  isExpanded,
   isActive,
   onOpenFolder,
   onToggleExpanded,
 }: {
   folderId: string
   canExpand: boolean
-  isExpanded: boolean
   isActive: boolean
   onOpenFolder: (folderId: string) => void
   onToggleExpanded: (folderId: string) => void
@@ -537,11 +535,6 @@ const handleFolderRowClick = ({
   }
 
   if (isActive) {
-    onToggleExpanded(folderId)
-    return
-  }
-
-  if (!isActive && !isExpanded) {
     onToggleExpanded(folderId)
   }
 }
@@ -780,7 +773,6 @@ const FolderChildren = ({
                 handleFolderRowClick({
                   folderId: item.id,
                   canExpand,
-                  isExpanded,
                   isActive: isActiveFolder,
                   onOpenFolder,
                   onToggleExpanded,
@@ -980,14 +972,13 @@ export const DataroomSidebar = ({
           expanded={isRootExpanded}
           onToggle={rootCanExpand ? () => onToggleExpanded('root') : undefined}
           onClick={() =>
-            handleFolderRowClick({
-              folderId: 'root',
-              canExpand: rootCanExpand,
-              isExpanded: isRootExpanded,
-              isActive: isRootActive,
-              onOpenFolder,
-              onToggleExpanded,
-            })
+              handleFolderRowClick({
+                folderId: 'root',
+                canExpand: rootCanExpand,
+                isActive: isRootActive,
+                onOpenFolder,
+                onToggleExpanded,
+              })
           }
           dropState={getFolderDropState('root')}
           onDragOver={(event) => {

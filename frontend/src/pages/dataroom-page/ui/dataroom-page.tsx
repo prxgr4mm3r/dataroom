@@ -229,25 +229,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
     expandedPathIds,
   })
   const expandTreeFolder = treeBrowser.expand
-  const autoExpandedFolderIdRef = useRef<string | null>(null)
   const previousItemsCountRef = useRef<number | null>(null)
-
-  useEffect(() => {
-    const hasData = Boolean(listQuery.data)
-    if (!hasData) {
-      return
-    }
-    if (autoExpandedFolderIdRef.current === normalizedFolderId) {
-      return
-    }
-
-    const pathIds = (listQuery.data?.breadcrumbs ?? []).map((crumb) => crumb.id)
-    pathIds.forEach((folderIdFromPath) => {
-      expandTreeFolder(folderIdFromPath)
-    })
-    expandTreeFolder(normalizedFolderId)
-    autoExpandedFolderIdRef.current = normalizedFolderId
-  }, [listQuery.data, normalizedFolderId, expandTreeFolder])
 
   useEffect(() => {
     previousItemsCountRef.current = null
