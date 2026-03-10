@@ -4,8 +4,8 @@ import { mapItemResourceDto, type ContentItem } from '@/entities/content-item'
 import { apiClient } from '@/shared/api'
 import type { ItemResourceDto } from '@/shared/api'
 import { resolveInlineBlob } from '@/shared/lib/file/resolve-inline-blob'
-import { PreviewPaneView } from '@/shared/lib/preview/preview-pane-view'
 import { usePreviewPaneLayout } from '@/shared/lib/preview/use-preview-pane-layout'
+import { PreviewPaneView } from '@/widgets/preview-pane'
 
 import '@/widgets/preview-pane/ui/preview-pane.css'
 

@@ -1,7 +1,7 @@
 import { useItemContentQuery, useItemQuery } from '@/features/load-item-content'
 import { useCloseFilePreview } from '@/features/open-file-preview'
-import { PreviewPaneView } from '@/shared/lib/preview/preview-pane-view'
 import { usePreviewPaneLayout } from '@/shared/lib/preview/use-preview-pane-layout'
+import { PreviewPaneView } from './preview-pane-view'
 
 import './preview-pane.css'
 
