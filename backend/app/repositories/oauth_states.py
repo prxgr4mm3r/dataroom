@@ -18,6 +18,26 @@ class OAuthStateRepository:
         return state
 
     def consume(self, state_value: str, provider: str) -> OAuthState:
+        now = datetime.now(timezone.utc)
+
+        updated_rows = (
+            self.db.query(OAuthState)
+            .filter(
+                OAuthState.state == state_value,
+                OAuthState.provider == provider,
+                OAuthState.used_at.is_(None),
+                OAuthState.expires_at >= now,
+            )
+            .update({OAuthState.used_at: now}, synchronize_session=False)
+        )
+        if updated_rows:
+            oauth_state = (
+                self.db.query(OAuthState)
+                .filter(OAuthState.state == state_value, OAuthState.provider == provider)
+                .one()
+            )
+            return oauth_state
+
         oauth_state = (
             self.db.query(OAuthState)
             .filter(OAuthState.state == state_value, OAuthState.provider == provider)
@@ -34,10 +54,7 @@ class OAuthStateRepository:
         if expires_at.tzinfo is None:
             expires_at = expires_at.replace(tzinfo=timezone.utc)
 
-        if expires_at < datetime.now(timezone.utc):
+        if expires_at < now:
             raise ApiError(400, "oauth_state_expired", "OAuth state is expired.")
 
-        oauth_state.used_at = datetime.now(timezone.utc)
-        self.db.add(oauth_state)
-        self.db.flush()
-        return oauth_state
+        raise ApiError(400, "invalid_oauth_state", "OAuth state is invalid.")

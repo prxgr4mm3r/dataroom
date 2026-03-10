@@ -97,6 +97,18 @@ class BackendApiTests(unittest.TestCase):
         self.assertEqual(401, response.status_code)
         self.assertEqual("unauthorized", response.json["error"]["code"])
 
+    def test_create_app_fails_with_default_secrets_in_production(self):
+        with self.assertRaises(RuntimeError):
+            create_app(
+                {
+                    "TESTING": False,
+                    "FLASK_ENV": "production",
+                    "SECRET_KEY": "change-me",
+                    "TOKEN_ENCRYPTION_KEY": "change-me-encryption-key",
+                    "SHARE_TOKEN_PEPPER": "change-me",
+                }
+            )
+
     def test_magic_link_rejects_invalid_email(self):
         response = self.client.post("/api/auth/magic-link", json={"email": "not-an-email"})
         self.assertEqual(400, response.status_code)
@@ -109,6 +121,23 @@ class BackendApiTests(unittest.TestCase):
         self.assertEqual(200, response.status_code)
         self.assertEqual("sent", response.json["status"])
         send_mock.assert_called_once_with("demo@example.com")
+
+    def test_magic_link_rate_limit_by_ip(self):
+        self.app.config["AUTH_MAGIC_LINK_RATE_LIMIT_IP_LIMIT"] = 2
+        self.app.config["AUTH_MAGIC_LINK_RATE_LIMIT_IP_WINDOW_SECONDS"] = 3600
+        self.app.config["AUTH_MAGIC_LINK_RATE_LIMIT_EMAIL_LIMIT"] = 100
+        self.app.config["AUTH_MAGIC_LINK_RATE_LIMIT_EMAIL_WINDOW_SECONDS"] = 3600
+
+        with patch("app.routes.auth.MagicLinkEmailService.send_sign_in_email") as send_mock:
+            first = self.client.post("/api/auth/magic-link", json={"email": "demo@example.com"})
+            second = self.client.post("/api/auth/magic-link", json={"email": "demo@example.com"})
+            third = self.client.post("/api/auth/magic-link", json={"email": "demo@example.com"})
+
+        self.assertEqual(200, first.status_code)
+        self.assertEqual(200, second.status_code)
+        self.assertEqual(429, third.status_code)
+        self.assertEqual("rate_limited", third.json["error"]["code"])
+        self.assertEqual(2, send_mock.call_count)
 
     def test_google_connect_returns_auth_url(self):
         response = self.client.post("/api/integrations/google/connect", headers=self._auth_headers("connect-user"))
@@ -153,6 +182,41 @@ class BackendApiTests(unittest.TestCase):
         self.assertEqual(200, status_response.status_code)
         self.assertTrue(status_response.json["connected"])
         self.assertFalse(status_response.json["token_expired"])
+
+    def test_google_callback_rejects_reused_state(self):
+        headers = self._auth_headers("reuse-state-user")
+        connect_response = self.client.post("/api/integrations/google/connect", headers=headers)
+        self.assertEqual(200, connect_response.status_code)
+        auth_url = connect_response.json["auth_url"]
+        state = parse_qs(urlparse(auth_url).query).get("state", [""])[0]
+        self.assertTrue(state)
+
+        with (
+            patch(
+                "app.services.google_oauth_service.GoogleOAuthService.exchange_code_for_tokens",
+                return_value={
+                    "access_token": "access-token",
+                    "refresh_token": "refresh-token",
+                    "expires_in": 3600,
+                    "scope": "https://www.googleapis.com/auth/drive.readonly",
+                },
+            ),
+            patch(
+                "app.services.google_oauth_service.GoogleOAuthService.fetch_google_profile",
+                return_value={
+                    "sub": "google-sub-reuse-state-user",
+                    "email": "reuse-state-user@gmail.com",
+                },
+            ),
+        ):
+            first_callback = self.client.get(f"/api/integrations/google/callback?code=test-code&state={state}")
+            second_callback = self.client.get(f"/api/integrations/google/callback?code=test-code&state={state}")
+
+        self.assertEqual(302, first_callback.status_code)
+        self.assertIn("status=success", first_callback.headers["Location"])
+        self.assertEqual(302, second_callback.status_code)
+        self.assertIn("status=error", second_callback.headers["Location"])
+        self.assertIn("code=oauth_state_already_used", second_callback.headers["Location"])
 
     def test_google_files_requires_connected_account(self):
         response = self.client.get("/api/integrations/google/files", headers=self._auth_headers("no-conn"))
