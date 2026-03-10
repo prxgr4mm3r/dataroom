@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 import type { ContentItem } from '@/entities/content-item'
 import { useRenameItem } from '@/features/rename-content-items'
@@ -13,37 +13,25 @@ type RenameItemDialogProps = {
   onClose: () => void
 }
 
-export const RenameItemDialog = ({ opened, item, onClose }: RenameItemDialogProps) => {
-  const [name, setName] = useState('')
+type RenameItemDialogInnerProps = {
+  opened: boolean
+  item: ContentItem
+  onClose: () => void
+}
+
+const RenameItemDialogInner = ({ opened, item, onClose }: RenameItemDialogInnerProps) => {
+  const [name, setName] = useState(item.name)
   const [inlineError, setInlineError] = useState<string | null>(null)
   const renameItemMutation = useRenameItem()
   const { reset } = renameItemMutation
 
-  useEffect(() => {
-    if (!opened || !item) {
-      setName('')
-      setInlineError(null)
-      reset()
-      return
-    }
-
-    setName(item.name)
-    setInlineError(null)
-    reset()
-  }, [item, opened, reset])
-
   const handleClose = () => {
-    setName('')
     setInlineError(null)
     reset()
     onClose()
   }
 
   const onSubmit = async () => {
-    if (!item) {
-      return
-    }
-
     const trimmedName = name.trim()
     if (!trimmedName) {
       setInlineError(t('itemNameRequired'))
@@ -101,4 +89,12 @@ export const RenameItemDialog = ({ opened, item, onClose }: RenameItemDialogProp
       </Stack>
     </Modal>
   )
+}
+
+export const RenameItemDialog = ({ opened, item, onClose }: RenameItemDialogProps) => {
+  if (!item) {
+    return <Modal opened={opened} onClose={onClose} title={t('renameItemTitle')} />
+  }
+
+  return <RenameItemDialogInner key={`${item.id}:${opened ? 'open' : 'closed'}`} opened={opened} item={item} onClose={onClose} />
 }

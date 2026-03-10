@@ -2,6 +2,7 @@ import {
   useEffect,
   useMemo,
   useRef,
+  useReducer,
   useState,
   type CSSProperties,
   type PointerEvent as ReactPointerEvent,
@@ -26,6 +27,24 @@ type PreviewPaneProps = {
   folderId: string
   previewItemId: string | null
 }
+
+type PreviewRenderState = {
+  isRendered: boolean
+  isOpen: boolean
+  displayPreviewItemId: string | null
+  isOpeningAnimationPending: boolean
+  canRenderHeavyPreview: boolean
+}
+
+type PreviewRenderAction =
+  | { type: 'show_preview_from_closed'; previewItemId: string }
+  | { type: 'show_preview_from_open'; previewItemId: string }
+  | { type: 'show_preview_while_rendered_closed'; previewItemId: string }
+  | { type: 'set_open' }
+  | { type: 'begin_close' }
+  | { type: 'set_closed' }
+  | { type: 'finish_close' }
+  | { type: 'mark_ready' }
 
 const PREVIEW_MIN_WIDTH = 320
 const PREVIEW_MAX_WIDTH = 760
@@ -64,14 +83,100 @@ const getSourceLabel = (origin: 'google_drive' | 'local_upload' | 'copied' | nul
   return '-'
 }
 
+const createInitialPreviewRenderState = (previewItemId: string | null): PreviewRenderState => ({
+  isRendered: Boolean(previewItemId),
+  isOpen: Boolean(previewItemId),
+  displayPreviewItemId: previewItemId,
+  isOpeningAnimationPending: false,
+  canRenderHeavyPreview: Boolean(previewItemId),
+})
+
+const previewRenderReducer = (
+  state: PreviewRenderState,
+  action: PreviewRenderAction,
+): PreviewRenderState => {
+  if (action.type === 'show_preview_from_closed') {
+    return {
+      ...state,
+      isRendered: true,
+      isOpen: false,
+      displayPreviewItemId: action.previewItemId,
+      isOpeningAnimationPending: true,
+      canRenderHeavyPreview: false,
+    }
+  }
+
+  if (action.type === 'show_preview_from_open') {
+    return {
+      ...state,
+      isRendered: true,
+      isOpen: true,
+      displayPreviewItemId: action.previewItemId,
+      isOpeningAnimationPending: false,
+      canRenderHeavyPreview: true,
+    }
+  }
+
+  if (action.type === 'show_preview_while_rendered_closed') {
+    return {
+      ...state,
+      displayPreviewItemId: action.previewItemId,
+      isOpeningAnimationPending: true,
+      canRenderHeavyPreview: false,
+    }
+  }
+
+  if (action.type === 'set_open') {
+    return {
+      ...state,
+      isOpen: true,
+    }
+  }
+
+  if (action.type === 'begin_close') {
+    return {
+      ...state,
+      isOpeningAnimationPending: false,
+      canRenderHeavyPreview: false,
+    }
+  }
+
+  if (action.type === 'set_closed') {
+    return {
+      ...state,
+      isOpen: false,
+    }
+  }
+
+  if (action.type === 'finish_close') {
+    return {
+      ...state,
+      isRendered: false,
+      displayPreviewItemId: null,
+    }
+  }
+
+  if (action.type === 'mark_ready') {
+    return {
+      ...state,
+      isOpeningAnimationPending: false,
+      canRenderHeavyPreview: true,
+    }
+  }
+
+  return state
+}
+
 export const PreviewPane = ({ folderId, previewItemId }: PreviewPaneProps) => {
   const [width, setWidth] = useState(PREVIEW_DEFAULT_WIDTH)
-  const [isRendered, setIsRendered] = useState(Boolean(previewItemId))
-  const [isOpen, setIsOpen] = useState(Boolean(previewItemId))
   const [isResizing, setIsResizing] = useState(false)
-  const [displayPreviewItemId, setDisplayPreviewItemId] = useState<string | null>(previewItemId)
-  const [isOpeningAnimationPending, setIsOpeningAnimationPending] = useState(false)
-  const [canRenderHeavyPreview, setCanRenderHeavyPreview] = useState(Boolean(previewItemId))
+  const [renderState, dispatchRender] = useReducer(
+    previewRenderReducer,
+    previewItemId,
+    createInitialPreviewRenderState,
+  )
+  const { isRendered, isOpen, displayPreviewItemId, isOpeningAnimationPending, canRenderHeavyPreview } =
+    renderState
   const closeTimerRef = useRef<number | null>(null)
   const animationFrameRef = useRef<number | null>(null)
   const resizeAnimationFrameRef = useRef<number | null>(null)
@@ -168,27 +273,29 @@ export const PreviewPane = ({ folderId, previewItemId }: PreviewPaneProps) => {
       }
 
       if (!isRendered) {
-        setCanRenderHeavyPreview(false)
-        setIsOpeningAnimationPending(true)
-        setDisplayPreviewItemId(previewItemId)
-        setIsRendered(true)
-        setIsOpen(false)
+        dispatchRender({
+          type: 'show_preview_from_closed',
+          previewItemId,
+        })
         animationFrameRef.current = window.requestAnimationFrame(() => {
           animationFrameRef.current = window.requestAnimationFrame(() => {
-            setIsOpen(true)
+            dispatchRender({ type: 'set_open' })
             animationFrameRef.current = null
           })
         })
       } else {
-        setDisplayPreviewItemId(previewItemId)
         if (isOpen) {
-          setIsOpeningAnimationPending(false)
-          setCanRenderHeavyPreview(true)
+          dispatchRender({
+            type: 'show_preview_from_open',
+            previewItemId,
+          })
         } else {
-          setCanRenderHeavyPreview(false)
-          setIsOpeningAnimationPending(true)
+          dispatchRender({
+            type: 'show_preview_while_rendered_closed',
+            previewItemId,
+          })
           animationFrameRef.current = window.requestAnimationFrame(() => {
-            setIsOpen(true)
+            dispatchRender({ type: 'set_open' })
             animationFrameRef.current = null
           })
         }
@@ -200,18 +307,16 @@ export const PreviewPane = ({ folderId, previewItemId }: PreviewPaneProps) => {
       return
     }
 
-    setIsOpeningAnimationPending(false)
-    setCanRenderHeavyPreview(false)
+    dispatchRender({ type: 'begin_close' })
     animationFrameRef.current = window.requestAnimationFrame(() => {
-      setIsOpen(false)
+      dispatchRender({ type: 'set_closed' })
       animationFrameRef.current = null
     })
     if (closeTimerRef.current !== null) {
       window.clearTimeout(closeTimerRef.current)
     }
     closeTimerRef.current = window.setTimeout(() => {
-      setIsRendered(false)
-      setDisplayPreviewItemId(null)
+      dispatchRender({ type: 'finish_close' })
       closeTimerRef.current = null
     }, PREVIEW_ANIMATION_MS)
   }, [isOpen, isRendered, previewItemId])
@@ -225,8 +330,7 @@ export const PreviewPane = ({ folderId, previewItemId }: PreviewPaneProps) => {
       typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
     const timeoutMs = prefersReducedMotion ? 0 : PREVIEW_ANIMATION_MS + 34
     const timeoutId = window.setTimeout(() => {
-      setIsOpeningAnimationPending(false)
-      setCanRenderHeavyPreview(true)
+      dispatchRender({ type: 'mark_ready' })
     }, timeoutMs)
 
     return () => {
@@ -459,7 +563,6 @@ export const PreviewPane = ({ folderId, previewItemId }: PreviewPaneProps) => {
     isResizing,
     itemContentQuery.error,
     itemContentQuery.isPending,
-    shouldLoadPreviewContent,
   ])
 
   let previewBody = null
@@ -558,8 +661,7 @@ export const PreviewPane = ({ folderId, previewItemId }: PreviewPaneProps) => {
       return
     }
 
-    setIsOpeningAnimationPending(false)
-    setCanRenderHeavyPreview(true)
+    dispatchRender({ type: 'mark_ready' })
   }
 
   const paneClassName = [
