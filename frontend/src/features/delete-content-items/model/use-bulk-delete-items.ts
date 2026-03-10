@@ -9,9 +9,9 @@ export const useBulkDeleteItems = (folderId: string) => {
 
   return useMutation({
     mutationFn: bulkDeleteItems,
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.itemsPrefix(folderId) })
-      await queryClient.invalidateQueries({ queryKey: queryKeys.folderTree })
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.itemsPrefix(folderId) })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.folderTree })
     },
   })
 }

@@ -5,19 +5,18 @@ import { useAuth } from '@/app/providers'
 import type { ContentItem } from '@/entities/content-item'
 import type { UserProfile } from '@/entities/user'
 import { useContentTreeBrowser } from '@/features/browse-content-tree'
-import { useBulkCopyItems, useCopyItem } from '@/features/copy-content-items'
 import { useDataroomShortcuts } from '@/features/dataroom-shortcuts'
-import { useBulkDeleteItems, useDeleteItem } from '@/features/delete-content-items'
 import { useDownloadContentItems } from '@/features/download-content-items'
 import { useDragImportController, type DragImportFailure, type DragImportResult } from '@/features/drag-import-files'
-import { useDragMoveController, validateMoveTarget } from '@/features/drag-move-items'
+import { useDragMoveController } from '@/features/drag-move-items'
 import { useListContentItemsQuery } from '@/features/list-content-items'
-import { useBulkMoveItems, useMoveItem } from '@/features/move-content-items'
 import { useOpenFilePreview } from '@/features/open-file-preview'
 import { useSortState } from '@/features/sort-content-items'
 import { useUploadFileFromDevice } from '@/features/upload-file-from-device'
 import { useFolderTreeQuery } from '@/features/load-folder-tree'
+import { useDataroomDelete } from '@/pages/dataroom-page/model/use-dataroom-delete'
 import { useDataroomSelection } from '@/pages/dataroom-page/model/use-dataroom-selection'
+import { useDataroomTransfer } from '@/pages/dataroom-page/model/use-dataroom-transfer'
 import { toApiError } from '@/shared/api'
 import { t } from '@/shared/i18n/messages'
 import {
@@ -55,45 +54,11 @@ type DataroomPageProps = {
   currentUser: UserProfile
 }
 
-type DeleteDialogState =
-  | {
-      mode: 'single'
-      item: ContentItem
-    }
-  | {
-      mode: 'bulk'
-    }
-
-type TransferMode = 'copy' | 'move'
-
-type TransferDialogState = {
-  mode: TransferMode
-  scope: 'single' | 'bulk'
-  itemIds: string[]
-  label: string
-}
-
 type DropState = 'none' | 'valid' | 'warning' | 'invalid'
 const SYNTHETIC_FOLDER_TIMESTAMP = '1970-01-01T00:00:00.000Z'
 const DOWNLOAD_FALLBACK_NAME = 'dataroom-download.zip'
 const ZIP_EXTENSION_PATTERN = /\.zip$/i
 const ROOT_FOLDER_NAME = 'Data Room'
-
-const moveReasonMessage = (reason: ReturnType<typeof validateMoveTarget>['reason']): string | null => {
-  if (reason === 'self') {
-    return t('invalidMoveSelf')
-  }
-  if (reason === 'descendant') {
-    return t('invalidMoveDescendant')
-  }
-  if (reason === 'same_parent') {
-    return t('invalidMoveSameFolder')
-  }
-  if (reason === 'target_not_found') {
-    return t('invalidMoveTarget')
-  }
-  return null
-}
 
 const resolveFallbackDownloadName = (itemIds: string[], items: ContentItem[]): string => {
   if (itemIds.length !== 1) {
@@ -124,14 +89,11 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
   const [importDialogOpened, setImportDialogOpened] = useState(false)
   const [createFolderOpened, setCreateFolderOpened] = useState(false)
   const [createFolderParentId, setCreateFolderParentId] = useState<string>(normalizedFolderId)
-  const [deleteDialog, setDeleteDialog] = useState<DeleteDialogState | null>(null)
-  const [transferDialog, setTransferDialog] = useState<TransferDialogState | null>(null)
   const [shareDialogItem, setShareDialogItem] = useState<ContentItem | null>(null)
   const [renameDialogItem, setRenameDialogItem] = useState<ContentItem | null>(null)
   const [dragImportResultDialog, setDragImportResultDialog] = useState<DragImportResult | null>(null)
   const [searchDialogOpened, setSearchDialogOpened] = useState(false)
   const [shortcutsDialogOpened, setShortcutsDialogOpened] = useState(false)
-  const [targetFolderId, setTargetFolderId] = useState<string>('root')
 
   const navigate = useNavigate()
 
@@ -163,13 +125,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
   const folderTreeQuery = useFolderTreeQuery(true)
   const openFilePreview = useOpenFilePreview(normalizedFolderId)
 
-  const deleteItemMutation = useDeleteItem(normalizedFolderId)
-  const bulkDeleteMutation = useBulkDeleteItems(normalizedFolderId)
   const downloadItemsMutation = useDownloadContentItems()
-  const copyItemMutation = useCopyItem()
-  const bulkCopyMutation = useBulkCopyItems()
-  const moveItemMutation = useMoveItem()
-  const bulkMoveMutation = useBulkMoveItems()
   const uploadFromComputerMutation = useUploadFileFromDevice(normalizedFolderId)
 
   const items = useMemo(() => listQuery.data?.items || [], [listQuery.data?.items])
@@ -230,16 +186,6 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
     openFilePreview(selectedItem.id)
   }
 
-  const hasBlockingDialog =
-    importDialogOpened ||
-    createFolderOpened ||
-    Boolean(deleteDialog) ||
-    Boolean(transferDialog) ||
-    Boolean(shareDialogItem) ||
-    Boolean(renameDialogItem) ||
-    Boolean(dragImportResultDialog) ||
-    searchDialogOpened ||
-    shortcutsDialogOpened
   const getFolderActionItem = (folderId: string): ContentItem | null => {
     const existingItem = itemMap.get(folderId)
     if (existingItem) {
@@ -451,217 +397,63 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
     }
   }
 
-  const getMovingItems = (itemIds: string[]): ContentItem[] =>
-    itemIds.map((id) => getFolderActionItem(id)).filter((item): item is ContentItem => Boolean(item))
+  const {
+    transferDialog,
+    targetFolderId,
+    setTargetFolderId,
+    transferPending,
+    transferError,
+    transferDialogTitle,
+    transferConfirmLabel,
+    bulkCopyPending,
+    bulkMovePending,
+    getTransferTargetError,
+    openSingleCopyDialog,
+    openSingleMoveDialog,
+    openBulkCopyDialog,
+    openBulkMoveDialog,
+    closeTransferDialog,
+    onConfirmTransfer,
+    moveItemsToFolder,
+  } = useDataroomTransfer({
+    normalizedFolderId,
+    selectedIds,
+    folderTree: folderTreeQuery.data,
+    resolveItems: (itemIds) =>
+      itemIds.map((id) => getFolderActionItem(id)).filter((item): item is ContentItem => Boolean(item)),
+    closePreviewIfMoved,
+    excludeIdsFromSelection,
+  })
 
-  const getTargetError = (mode: TransferMode, itemIds: string[], folderIdCandidate: string): string | null => {
-    const normalizedTarget = normalizeFolderId(folderIdCandidate)
-    const transferItems = getMovingItems(itemIds)
-
-    if (mode === 'copy') {
-      const validation = validateMoveTarget(transferItems, normalizedTarget, folderTreeQuery.data)
-      if (validation.reason === 'none' || validation.reason === 'same_parent') {
-        return null
-      }
-      return moveReasonMessage(validation.reason)
-    }
-
-    const validation = validateMoveTarget(transferItems, normalizedTarget, folderTreeQuery.data)
-    return moveReasonMessage(validation.reason)
-  }
-
-  const resolveInitialTransferTarget = (
-    mode: TransferMode,
-    itemIds: string[],
-    preferredFolderId: string,
-  ): string => {
-    const preferred = normalizeFolderId(preferredFolderId)
-    if (!getTargetError(mode, itemIds, preferred)) {
-      return preferred
-    }
-
-    const folderTree = folderTreeQuery.data
-    if (!folderTree) {
-      return preferred
-    }
-
-    const stack: Array<typeof folderTree> = [folderTree]
-    while (stack.length) {
-      const node = stack.pop()
-      if (!node) {
-        continue
-      }
-      if (!getTargetError(mode, itemIds, node.id)) {
-        return node.id
-      }
-      for (let idx = node.children.length - 1; idx >= 0; idx -= 1) {
-        stack.push(node.children[idx])
-      }
-    }
-
-    return preferred
-  }
-
-  const resetTransferMutations = () => {
-    copyItemMutation.reset()
-    bulkCopyMutation.reset()
-    moveItemMutation.reset()
-    bulkMoveMutation.reset()
-  }
-
-  const openTransferDialog = (
-    mode: TransferMode,
-    scope: 'single' | 'bulk',
-    itemIds: string[],
-    label: string,
-  ) => {
-    resetTransferMutations()
-    setTargetFolderId(resolveInitialTransferTarget(mode, itemIds, normalizedFolderId))
-    setTransferDialog({ mode, scope, itemIds, label })
-  }
-
-  const openSingleCopyDialog = (item: ContentItem) => {
-    openTransferDialog('copy', 'single', [item.id], item.name)
-  }
-
-  const openSingleMoveDialog = (item: ContentItem) => {
-    openTransferDialog('move', 'single', [item.id], item.name)
-  }
-
-  const openBulkCopyDialog = () => {
-    if (!selectedIds.length) {
-      return
-    }
-    openTransferDialog('copy', 'bulk', selectedIds, `${selectedIds.length} selected item(s)`)
-  }
-
-  const openBulkMoveDialog = () => {
-    if (!selectedIds.length) {
-      return
-    }
-    openTransferDialog('move', 'bulk', selectedIds, `${selectedIds.length} selected item(s)`)
-  }
-
-  const closeTransferDialog = () => {
-    setTransferDialog(null)
-    resetTransferMutations()
-  }
-
-  const transferPending = (() => {
-    if (!transferDialog) {
-      return false
-    }
-    if (transferDialog.mode === 'copy' && transferDialog.scope === 'single') {
-      return copyItemMutation.isPending
-    }
-    if (transferDialog.mode === 'copy' && transferDialog.scope === 'bulk') {
-      return bulkCopyMutation.isPending
-    }
-    if (transferDialog.mode === 'move' && transferDialog.scope === 'single') {
-      return moveItemMutation.isPending
-    }
-    return bulkMoveMutation.isPending
-  })()
-
-  const transferError = (() => {
-    if (!transferDialog) {
-      return null
-    }
-    if (transferDialog.mode === 'copy' && transferDialog.scope === 'single' && copyItemMutation.error) {
-      return toApiError(copyItemMutation.error).message
-    }
-    if (transferDialog.mode === 'copy' && transferDialog.scope === 'bulk' && bulkCopyMutation.error) {
-      return toApiError(bulkCopyMutation.error).message
-    }
-    if (transferDialog.mode === 'move' && transferDialog.scope === 'single' && moveItemMutation.error) {
-      return toApiError(moveItemMutation.error).message
-    }
-    if (transferDialog.mode === 'move' && transferDialog.scope === 'bulk' && bulkMoveMutation.error) {
-      return toApiError(bulkMoveMutation.error).message
-    }
-    return null
-  })()
-
-  const onConfirmTransfer = async () => {
-    if (!transferDialog) {
-      return
-    }
-
-    const targetError = getTargetError(transferDialog.mode, transferDialog.itemIds, targetFolderId)
-    if (targetError) {
-      return
-    }
-
-    const targetFolderNullable = toNullableFolderId(targetFolderId)
-
-    try {
-      if (transferDialog.mode === 'copy') {
-        if (transferDialog.scope === 'single') {
-          await copyItemMutation.mutateAsync({
-            itemId: transferDialog.itemIds[0],
-            targetFolderId: targetFolderNullable,
-          })
-          notifySuccess(t('copyItemSuccess'))
-        } else {
-          await bulkCopyMutation.mutateAsync({
-            itemIds: transferDialog.itemIds,
-            targetFolderId: targetFolderNullable,
-          })
-          notifySuccess(t('copyItemsSuccess'))
-        }
-      } else if (transferDialog.scope === 'single') {
-        await moveItemMutation.mutateAsync({
-          itemId: transferDialog.itemIds[0],
-          targetFolderId: targetFolderNullable,
-        })
-        closePreviewIfMoved(transferDialog.itemIds, targetFolderId)
-        excludeIdsFromSelection(transferDialog.itemIds)
-        notifySuccess(t('moveItemSuccess'))
-      } else {
-        await bulkMoveMutation.mutateAsync({
-          itemIds: transferDialog.itemIds,
-          targetFolderId: targetFolderNullable,
-        })
-        closePreviewIfMoved(transferDialog.itemIds, targetFolderId)
-        excludeIdsFromSelection(transferDialog.itemIds)
-        notifySuccess(t('moveItemsSuccess'))
-      }
-
-      closeTransferDialog()
-    } catch (error) {
-      notifyError(toApiError(error).message)
-    }
-  }
+  const {
+    deleteDialog,
+    deletePending,
+    deleteError,
+    deleteDialogTitle,
+    deleteDialogMessage,
+    bulkDeletePending,
+    openSingleDeleteDialog,
+    openBulkDeleteDialog,
+    closeDeleteDialog,
+    onConfirmDelete,
+  } = useDataroomDelete({
+    normalizedFolderId,
+    breadcrumbs,
+    selectedIds,
+    clearSelectedItems,
+    excludeIdsFromSelection,
+    closePreviewIfMoved,
+    navigateToFolderReplace: (folderId) => {
+      navigate(toFolderPath(folderId), { replace: true })
+    },
+  })
 
   const dragMoveController = useDragMoveController({
     items,
     selectedIds,
     folderTree: folderTreeQuery.data,
     onInvalidDrop: (message) => notifyError(message),
-    onMoveItems: async (itemIds, destinationFolderId) => {
-      const targetFolderNullable = toNullableFolderId(destinationFolderId)
-
-      try {
-        if (itemIds.length === 1) {
-          await moveItemMutation.mutateAsync({
-            itemId: itemIds[0],
-            targetFolderId: targetFolderNullable,
-          })
-          notifySuccess(t('moveItemSuccess'))
-        } else {
-          await bulkMoveMutation.mutateAsync({
-            itemIds,
-            targetFolderId: targetFolderNullable,
-          })
-          notifySuccess(t('moveItemsSuccess'))
-        }
-
-        closePreviewIfMoved(itemIds, destinationFolderId)
-        excludeIdsFromSelection(itemIds)
-      } catch (error) {
-        notifyError(toApiError(error).message)
-      }
-    },
+    onMoveItems: moveItemsToFolder,
   })
   const dragImportController = useDragImportController()
 
@@ -718,12 +510,6 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
   }
   const currentFolderImportOverlayState = dragImportController.getFolderImportOverlayState(normalizedFolderId)
   const currentFolderMoveOverlayCount = dragMoveController.dragPayload?.itemIds.length ?? 0
-
-  const openSingleDeleteDialog = (item: ContentItem) => {
-    deleteItemMutation.reset()
-    bulkDeleteMutation.reset()
-    setDeleteDialog({ mode: 'single', item })
-  }
 
   const openSingleShareDialog = (item: ContentItem) => {
     setShareDialogItem(item)
@@ -815,15 +601,6 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
     )
   }
 
-  const openBulkDeleteDialog = () => {
-    if (!selectedIds.length) {
-      return
-    }
-    deleteItemMutation.reset()
-    bulkDeleteMutation.reset()
-    setDeleteDialog({ mode: 'bulk' })
-  }
-
   const downloadItems = async (itemIds: string[], fallbackName?: string) => {
     try {
       await downloadItemsMutation.mutateAsync({ itemIds, fallbackName })
@@ -850,102 +627,16 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
     void downloadItems(selectedIds, fallbackName)
   }
 
-  const deletePending =
-    deleteDialog?.mode === 'bulk' ? bulkDeleteMutation.isPending : deleteItemMutation.isPending
-
-  const deleteError = (() => {
-    if (!deleteDialog) {
-      return null
-    }
-    if (deleteDialog.mode === 'bulk' && bulkDeleteMutation.error) {
-      return toApiError(bulkDeleteMutation.error).message
-    }
-    if (deleteDialog.mode === 'single' && deleteItemMutation.error) {
-      return toApiError(deleteItemMutation.error).message
-    }
-    return null
-  })()
-
-  const onConfirmDelete = async () => {
-    if (!deleteDialog) {
-      return
-    }
-
-    try {
-      const navigationTargetFolderIdAfterDelete = (() => {
-        if (deleteDialog.mode !== 'single' || deleteDialog.item.kind !== 'folder') {
-          return null
-        }
-
-        const deletedFolderId = deleteDialog.item.id
-        const deletedFolderParentId = normalizeFolderId(deleteDialog.item.parentId ?? 'root')
-
-        if (deletedFolderId === normalizedFolderId) {
-          return deletedFolderParentId
-        }
-
-        const deletedFolderPathIndex = breadcrumbs.findIndex((crumb) => crumb.id === deletedFolderId)
-        const isDeletedFolderInCurrentPath = deletedFolderPathIndex >= 0
-        const isDeletedFolderAncestorOfCurrent = deletedFolderPathIndex >= 0 && deletedFolderPathIndex < breadcrumbs.length - 1
-
-        if (!isDeletedFolderInCurrentPath || !isDeletedFolderAncestorOfCurrent) {
-          return null
-        }
-
-        if (deletedFolderPathIndex <= 0) {
-          return 'root'
-        }
-
-        return normalizeFolderId(breadcrumbs[deletedFolderPathIndex - 1]?.id ?? deletedFolderParentId)
-      })()
-
-      if (deleteDialog.mode === 'single') {
-        await deleteItemMutation.mutateAsync(deleteDialog.item.id)
-        closePreviewIfMoved([deleteDialog.item.id], normalizedFolderId)
-        excludeIdsFromSelection([deleteDialog.item.id])
-      } else {
-        await bulkDeleteMutation.mutateAsync(selectedIds)
-        closePreviewIfMoved(selectedIds, normalizedFolderId)
-        clearSelectedItems()
-      }
-
-      setDeleteDialog(null)
-
-      if (navigationTargetFolderIdAfterDelete) {
-        navigate(toFolderPath(navigationTargetFolderIdAfterDelete), { replace: true })
-      }
-
-      notifySuccess(deleteDialog.mode === 'single' ? t('deleteItemSuccess') : t('deleteItemsSuccess'))
-    } catch (error) {
-      notifyError(toApiError(error).message)
-    }
-  }
-
-  const deleteDialogTitle =
-    deleteDialog?.mode === 'single' ? t('deleteItemTitle') : t('deleteItemsTitle')
-
-  const deleteDialogMessage =
-    deleteDialog?.mode === 'single'
-      ? `Delete "${deleteDialog.item.name}"? This action cannot be undone.`
-      : `Delete ${selectedIds.length} selected item(s)? This action cannot be undone.`
-
-  const transferDialogTitle = (() => {
-    if (!transferDialog) {
-      return ''
-    }
-    if (transferDialog.mode === 'copy' && transferDialog.scope === 'single') {
-      return t('copyItemTitle')
-    }
-    if (transferDialog.mode === 'copy' && transferDialog.scope === 'bulk') {
-      return t('copyItemsTitle')
-    }
-    if (transferDialog.mode === 'move' && transferDialog.scope === 'single') {
-      return t('moveItemTitle')
-    }
-    return t('moveItemsTitle')
-  })()
-
-  const transferConfirmLabel = transferDialog?.mode === 'copy' ? t('copyConfirm') : t('moveConfirm')
+  const hasBlockingDialog =
+    importDialogOpened ||
+    createFolderOpened ||
+    Boolean(deleteDialog) ||
+    Boolean(transferDialog) ||
+    Boolean(shareDialogItem) ||
+    Boolean(renameDialogItem) ||
+    Boolean(dragImportResultDialog) ||
+    searchDialogOpened ||
+    shortcutsDialogOpened
 
   useDataroomShortcuts({
     suspended: hasBlockingDialog,
@@ -1115,13 +806,9 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
                   onMoveSelected={openBulkMoveDialog}
                   onDeleteSelected={openBulkDeleteDialog}
                   downloadPending={downloadItemsMutation.isPending}
-                  copyPending={Boolean(
-                    transferDialog?.mode === 'copy' && transferDialog.scope === 'bulk' && transferPending,
-                  )}
-                  movePending={Boolean(
-                    transferDialog?.mode === 'move' && transferDialog.scope === 'bulk' && transferPending,
-                  )}
-                  deletePending={deleteDialog?.mode === 'bulk' && bulkDeleteMutation.isPending}
+                  copyPending={bulkCopyPending}
+                  movePending={bulkMovePending}
+                  deletePending={bulkDeletePending}
                   onDragStartItem={dragMoveController.startDragFromTable}
                   onDragEnd={dragMoveController.endDrag}
                   onFolderDragOver={handleFolderDragOver}
@@ -1172,7 +859,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
         message={deleteDialogMessage}
         pending={deletePending}
         error={deleteError}
-        onClose={() => setDeleteDialog(null)}
+        onClose={closeDeleteDialog}
         onConfirm={() => void onConfirmDelete()}
       />
 
@@ -1185,12 +872,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
         targetFolderId={targetFolderId}
         folderTree={folderTreeQuery.data}
         error={transferError}
-        getTargetError={(folderIdCandidate) => {
-          if (!transferDialog) {
-            return null
-          }
-          return getTargetError(transferDialog.mode, transferDialog.itemIds, folderIdCandidate)
-        }}
+        getTargetError={getTransferTargetError}
         onSelectFolder={setTargetFolderId}
         onConfirm={() => void onConfirmTransfer()}
         onClose={closeTransferDialog}

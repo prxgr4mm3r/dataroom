@@ -1,4 +1,4 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 
 import { mapItemResourceDto, type ContentItem } from '@/entities/content-item'
 import type { Breadcrumb } from '@/entities/folder'
@@ -22,10 +22,34 @@ export type ListContentItemsResult = {
 const normalizeParentId = (folderId: string): string | null =>
   folderId === 'root' ? 'root' : folderId
 
+const getFolderIdFromListItemsQueryKey = (queryKey: readonly unknown[]): string | null => {
+  if (queryKey.length < 3) {
+    return null
+  }
+
+  const [scope, entity, keyFolderId] = queryKey
+  if (scope !== 'dataroom' || entity !== 'items' || typeof keyFolderId !== 'string') {
+    return null
+  }
+
+  return keyFolderId
+}
+
 export const useListContentItemsQuery = (folderId: string, sortBy: SortBy, sortOrder: SortOrder) =>
   useQuery<ListContentItemsResult>({
     queryKey: queryKeys.listItems(folderId, sortBy, sortOrder),
-    placeholderData: keepPreviousData,
+    placeholderData: (previousData, previousQuery) => {
+      if (!previousData || !previousQuery) {
+        return undefined
+      }
+
+      const previousFolderId = getFolderIdFromListItemsQueryKey(previousQuery.queryKey)
+      if (previousFolderId !== folderId) {
+        return undefined
+      }
+
+      return previousData
+    },
     queryFn: async () => {
       const response = await listContentItems({
         parent_id: normalizeParentId(folderId),

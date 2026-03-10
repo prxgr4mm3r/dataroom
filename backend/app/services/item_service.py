@@ -565,8 +565,33 @@ class ItemService:
 
         removed_size = self._normalize_size(root.size_bytes)
         root_parent_id = root.parent_id
-        subtree = self._collect_subtree(user_id, root)
         now = datetime.now(timezone.utc)
+
+        # Fast path: deleting a single file does not require loading the full tree.
+        if root.kind == ItemKind.FILE.value:
+            root.status = ItemStatus.DELETED.value
+            root.size_bytes = 0
+            root.updated_at = now
+
+            asset = self.assets.get_for_item(root.id)
+            if asset is not None:
+                self.storage_service.delete_file(asset.storage_path)
+                asset.storage_path = None
+                asset.size_bytes = None
+
+            self._apply_size_delta_to_ancestors(user_id, root_parent_id, -removed_size)
+            return {"id": root.id, "status": ItemStatus.DELETED.value}
+
+        # Fast path: empty folders can be deleted without scanning all items.
+        if root.kind == ItemKind.FOLDER.value and self.items.count_children(user_id, root.id) == 0:
+            root.status = ItemStatus.DELETED.value
+            root.size_bytes = 0
+            root.updated_at = now
+
+            self._apply_size_delta_to_ancestors(user_id, root_parent_id, -removed_size)
+            return {"id": root.id, "status": ItemStatus.DELETED.value}
+
+        subtree = self._collect_subtree(user_id, root)
         assets_by_item = {
             asset.item_id: asset for asset in self.assets.list_for_items([item.id for item in subtree if item.kind == ItemKind.FILE.value])
         }
