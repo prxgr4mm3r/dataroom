@@ -106,8 +106,14 @@ export const PreviewPaneView = ({
     ]
   }, [currentFileType?.label, currentItem])
 
-  const canUseFileActions = Boolean(
-    currentItem && currentItem.kind === 'file' && currentContent && currentContentObjectUrl,
+  const canDownloadFile = Boolean(
+    currentItem && currentItem.kind === 'file' && currentContent,
+  )
+  const canOpenInBrowser = Boolean(
+    currentItem &&
+      currentItem.kind === 'file' &&
+      currentContentObjectUrl &&
+      isInlinePreviewableMime(currentItem.mimeType),
   )
 
   const handleOpenInNewTab = () => {
@@ -288,7 +294,7 @@ export const PreviewPaneView = ({
                   className="preview-pane__action-button"
                   leftSection={<IconExternalLink size={14} />}
                   onClick={handleOpenInNewTab}
-                  disabled={!canUseFileActions}
+                  disabled={!canOpenInBrowser}
                 >
                   {t('previewActionOpen')}
                 </Button>
@@ -298,7 +304,7 @@ export const PreviewPaneView = ({
                   className="preview-pane__action-button"
                   leftSection={<IconDownload size={14} />}
                   onClick={handleDownload}
-                  disabled={!canUseFileActions}
+                  disabled={!canDownloadFile}
                 >
                   {t('previewActionDownload')}
                 </Button>
