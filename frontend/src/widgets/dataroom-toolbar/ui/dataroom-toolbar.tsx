@@ -6,7 +6,6 @@ import { t } from '@/shared/i18n/messages'
 import { APP_SHORTCUTS, withShortcutHint } from '@/shared/lib/keyboard/shortcuts'
 import { ActionIcon, Box, Group, Tooltip, useComputedColorScheme, useMantineColorScheme } from '@/shared/ui'
 import { BreadcrumbsBar } from '@/widgets/breadcrumbs-bar'
-import './dataroom-toolbar.css'
 
 type DropState = 'none' | 'valid' | 'warning' | 'invalid'
 
@@ -47,6 +46,11 @@ export const DataroomToolbar = ({
   const toggleThemeLabel = isDark ? t('switchToLightTheme') : t('switchToDarkTheme')
   const searchLabel = 'Search files and folders'
   const searchLabelWithShortcut = withShortcutHint(searchLabel, APP_SHORTCUTS.openSearch.label)
+  const searchButtonClassName =
+    'inline-flex min-h-9 items-center gap-2.5 whitespace-nowrap rounded-[10px] border border-[var(--table-separator)] bg-[var(--bg-subtle)] px-[14px] font-inherit text-[var(--text-secondary)] enabled:cursor-pointer enabled:hover:border-[var(--accent)] enabled:hover:text-[var(--accent)] disabled:cursor-default disabled:opacity-60'
+  const themeToggleClassName = isDark
+    ? 'border border-[#c7d8f3] bg-[#f4f8ff] text-[#223a5c] hover:bg-[#eaf1ff]'
+    : 'border border-[#344b66] bg-[#1b2a3d] text-[#dbe7f7] hover:bg-[#24364d]'
 
   return (
     <Group justify="space-between" align="center" px="md" py="sm" wrap="nowrap" gap="md">
@@ -67,15 +71,15 @@ export const DataroomToolbar = ({
         <Tooltip label={searchLabelWithShortcut}>
           <button
             type="button"
-            className="dataroom-toolbar__search-button"
+            className={searchButtonClassName}
             aria-label={searchLabelWithShortcut}
             title={searchLabelWithShortcut}
             onClick={onOpenSearch}
             disabled={!onOpenSearch}
           >
             <IconSearch size={16} />
-            <span className="dataroom-toolbar__search-button-label">Search</span>
-            <span className="dataroom-toolbar__search-button-shortcut">{APP_SHORTCUTS.openSearch.compactLabel}</span>
+            <span className="text-[13px] font-semibold">Search</span>
+            <span className="text-[11px] text-[var(--text-muted)]">{APP_SHORTCUTS.openSearch.compactLabel}</span>
           </button>
         </Tooltip>
         <Tooltip label={toggleThemeLabel}>
@@ -83,10 +87,7 @@ export const DataroomToolbar = ({
             variant="default"
             size="lg"
             radius="md"
-            className={[
-              'dataroom-toolbar__theme-toggle',
-              isDark ? 'dataroom-toolbar__theme-toggle--sun' : 'dataroom-toolbar__theme-toggle--moon',
-            ].join(' ')}
+            className={themeToggleClassName}
             aria-label={toggleThemeLabel}
             onClick={() => setColorScheme(isDark ? 'light' : 'dark')}
           >
