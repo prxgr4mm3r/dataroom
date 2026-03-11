@@ -1,8 +1,6 @@
 import { Modal, Text } from '@/shared/ui'
 import { APP_SHORTCUTS } from '@/shared/lib/keyboard/shortcuts'
 
-import './shortcuts-dialog.css'
-
 type ShortcutsDialogProps = {
   opened: boolean
   onClose: () => void
@@ -25,22 +23,46 @@ const shortcuts = [
 ]
 
 export const ShortcutsDialog = ({ opened, onClose }: ShortcutsDialogProps) => (
-  <Modal opened={opened} onClose={onClose} title="Keyboard shortcuts" centered size="md">
+  <Modal
+    opened={opened}
+    onClose={onClose}
+    title="Keyboard shortcuts"
+    centered
+    size="md"
+    styles={{
+      header: {
+        padding: '10px 14px',
+        minHeight: 0,
+      },
+      body: {
+        paddingTop: '18px',
+      },
+      title: {
+        fontSize: '0.95rem',
+      },
+    }}
+  >
     <Text size="sm" c="dimmed" mb="sm">
       Shortcuts are active in Data Room and ignored while typing in input fields.
     </Text>
-    <table className="shortcuts-dialog__table">
+    <table className="w-full border-collapse">
       <thead>
         <tr>
-          <th>Shortcut</th>
-          <th>Action</th>
+          <th className="border-b border-[var(--separator-soft)] py-2 text-left align-top text-xs font-bold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+            Shortcut
+          </th>
+          <th className="border-b border-[var(--separator-soft)] py-2 text-left align-top text-xs font-bold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+            Action
+          </th>
         </tr>
       </thead>
       <tbody>
         {shortcuts.map((shortcut) => (
           <tr key={shortcut.keys}>
-            <td className="shortcuts-dialog__keys">{shortcut.keys}</td>
-            <td>{shortcut.description}</td>
+            <td className="border-b border-[var(--separator-soft)] py-2 text-left align-top font-mono text-[13px] whitespace-nowrap text-[var(--accent)]">
+              {shortcut.keys}
+            </td>
+            <td className="border-b border-[var(--separator-soft)] py-2 text-left align-top text-sm">{shortcut.description}</td>
           </tr>
         ))}
       </tbody>

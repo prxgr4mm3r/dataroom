@@ -77,6 +77,13 @@ export const AppShell = ({ sidebar, collapsedSidebar, header, content, bulkActio
 
   const toggleLabel = isSidebarCollapsed ? t('expandSidebar') : t('collapseSidebar')
   const sidebarColumnWidth = isSidebarCollapsed ? COLLAPSED_RAIL_WIDTH : sidebarWidth
+  const toggleLeft = isSidebarCollapsed ? 6 : Math.max(6, sidebarColumnWidth - 46)
+  const toggleStyle: CSSProperties = {
+    position: 'absolute',
+    top: 12,
+    left: toggleLeft,
+    zIndex: 35,
+  }
   const hasCollapsedSidebar = Boolean(collapsedSidebar)
   const hasBulkActions = Boolean(bulkActions)
 
@@ -98,13 +105,13 @@ export const AppShell = ({ sidebar, collapsedSidebar, header, content, bulkActio
       >
         <ActionIcon
           className={cx(
-            'absolute top-3 z-[35] min-h-9 min-w-9 rounded-[10px] text-[var(--icon-muted)]',
+            'min-h-9 min-w-9 rounded-[10px] text-[var(--icon-muted)]',
             'hover:bg-[var(--bg-hover-soft)]',
-            isSidebarCollapsed ? 'left-[6px]' : 'left-[calc(var(--sidebar-width)-46px)]',
             isResizing
               ? 'transition-colors duration-[120ms] ease-[ease]'
               : 'transition-[left,background-color] [transition-duration:220ms,120ms] [transition-timing-function:cubic-bezier(0.2,0,0,1),ease] motion-reduce:transition-none',
           )}
+          style={toggleStyle}
           variant="subtle"
           size="lg"
           aria-label={toggleLabel}
