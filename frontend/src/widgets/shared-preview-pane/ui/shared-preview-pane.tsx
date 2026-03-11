@@ -7,8 +7,6 @@ import { resolveInlineBlob } from '@/shared/lib/file/resolve-inline-blob'
 import { usePreviewPaneLayout } from '@/shared/lib/preview/use-preview-pane-layout'
 import { PreviewPaneView } from '@/widgets/preview-pane'
 
-import '@/widgets/preview-pane/ui/preview-pane.css'
-
 type SharedPreviewPaneProps = {
   shareToken: string
   previewItemId: string | null

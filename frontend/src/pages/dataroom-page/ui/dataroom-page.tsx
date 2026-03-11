@@ -41,8 +41,6 @@ import { SearchItemsDialog } from '@/widgets/search-items-dialog'
 import { ShortcutsDialog } from '@/widgets/shortcuts-dialog'
 import { ShareLinksDialog } from '@/widgets/share-links-dialog'
 
-import './dataroom-page.css'
-
 type DataroomPageProps = {
   currentUser: UserProfile
 }
@@ -711,8 +709,8 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
           />
         }
         content={
-          <div className="dataroom-page__content">
-            <Box className="dataroom-page__table">
+          <div className="flex h-full min-h-0">
+            <Box className="min-h-0 min-w-0 flex-1">
               {listQuery.error ? (
                 <Alert color="red" m="md" title="Failed to load items">
                   {toApiError(listQuery.error).message}

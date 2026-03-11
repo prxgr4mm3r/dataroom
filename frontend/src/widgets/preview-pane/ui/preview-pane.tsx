@@ -3,8 +3,6 @@ import { useCloseFilePreview } from '@/features/open-file-preview'
 import { usePreviewPaneLayout } from '@/shared/lib/preview/use-preview-pane-layout'
 import { PreviewPaneView } from './preview-pane-view'
 
-import './preview-pane.css'
-
 type PreviewPaneProps = {
   folderId: string
   previewItemId: string | null

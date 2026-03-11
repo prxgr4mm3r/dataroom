@@ -138,10 +138,14 @@ export const usePreviewPaneLayout = ({
       return
     }
 
-    document.body.classList.add('preview-pane-resizing')
+    const previousCursor = document.body.style.cursor
+    const previousUserSelect = document.body.style.userSelect
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
 
     return () => {
-      document.body.classList.remove('preview-pane-resizing')
+      document.body.style.cursor = previousCursor
+      document.body.style.userSelect = previousUserSelect
     }
   }, [isResizing])
 
@@ -171,15 +175,16 @@ export const usePreviewPaneLayout = ({
   }
 
   const paneClassName = [
-    'preview-pane',
-    isOpen ? 'preview-pane--open' : 'preview-pane--closed',
-    isResizing ? 'preview-pane--resizing' : '',
+    'relative h-full min-w-0 flex-[0_0_auto] overflow-visible will-change-[width] transition-[width] duration-[220ms] ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none',
+    isOpen ? '' : 'pointer-events-none',
+    isResizing ? 'transition-none' : '',
   ]
     .filter(Boolean)
     .join(' ')
   const slidePanelClassName = [
-    'preview-pane__slide-panel',
-    isOpen ? 'preview-pane__slide-panel--open' : 'preview-pane__slide-panel--closed',
+    'absolute inset-y-0 right-0 flex w-[var(--preview-pane-open-width,100%)] flex-col border-l border-[var(--separator-soft)] bg-[var(--bg-sidebar)] will-change-transform transition-transform duration-[220ms] ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none',
+    isOpen ? 'translate-x-0' : 'translate-x-full',
+    isResizing ? 'transition-none' : '',
   ]
     .filter(Boolean)
     .join(' ')
