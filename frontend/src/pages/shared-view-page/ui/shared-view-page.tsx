@@ -18,8 +18,6 @@ import { FileTable } from '@/widgets/file-table'
 import { SearchItemsDialog } from '@/widgets/search-items-dialog'
 import { SharedPreviewPane } from '@/widgets/shared-preview-pane'
 
-import './shared-view-page.css'
-
 type ShareMetaDto = {
   share: {
     id: string
@@ -278,8 +276,11 @@ export const SharedViewPage = () => {
 
   if (metaQuery.error) {
     return (
-      <Center mih="100vh" className="shared-view-page__error-wrap">
-        <Paper className="shared-view-page__error-card" withBorder>
+      <Center
+        mih="100vh"
+        className="bg-[radial-gradient(circle_at_20%_0%,var(--error-glow-primary),transparent_42%),radial-gradient(circle_at_85%_10%,var(--error-glow-danger),transparent_40%),var(--bg-subtle)]"
+      >
+        <Paper className="w-full max-w-[560px] bg-[var(--bg-surface)] p-6" withBorder>
           <Stack gap="sm">
             <Group gap={8}>
               <IconAlertTriangle size={18} color="var(--state-danger-icon)" />
@@ -296,10 +297,10 @@ export const SharedViewPage = () => {
   }
 
   return (
-    <Box className="shared-view-page">
-      <header className="shared-view-page__header">
+    <Box className="grid h-screen grid-rows-[auto_minmax(0,1fr)] bg-[var(--bg-surface)]">
+      <header className="relative px-3 py-3 max-[900px]:px-2.5 max-[900px]:py-2 after:absolute after:right-0 after:bottom-0 after:left-0 after:h-px after:bg-[var(--separator-soft)] after:content-['']">
         <Group justify="space-between" align="center" wrap="nowrap" gap="md">
-          <Box className="shared-view-page__breadcrumbs">
+          <Box className="min-w-0 flex-1">
             <BreadcrumbsBar breadcrumbs={breadcrumbs} onNavigate={openSharedFolder} compact />
           </Box>
           <Group gap="xs" wrap="nowrap">
@@ -318,9 +319,9 @@ export const SharedViewPage = () => {
         </Group>
       </header>
 
-      <main className="shared-view-page__body">
-        <div className="shared-view-page__content">
-          <Box className="shared-view-page__table">
+      <main className="min-h-0 min-w-0 overflow-hidden">
+        <div className="flex h-full min-h-0 max-[900px]:flex-col">
+          <Box className="min-h-0 min-w-0 flex-1">
             {listQuery.error ? (
               <Alert color="red" m="md" title="Failed to load items">
                 {toApiError(listQuery.error).message}
