@@ -78,12 +78,6 @@ export const AppShell = ({ sidebar, collapsedSidebar, header, content, bulkActio
   const toggleLabel = isSidebarCollapsed ? t('expandSidebar') : t('collapseSidebar')
   const sidebarColumnWidth = isSidebarCollapsed ? COLLAPSED_RAIL_WIDTH : sidebarWidth
   const toggleLeft = isSidebarCollapsed ? 6 : Math.max(6, sidebarColumnWidth - 46)
-  const toggleStyle: CSSProperties = {
-    position: 'absolute',
-    top: 12,
-    left: toggleLeft,
-    zIndex: 35,
-  }
   const hasCollapsedSidebar = Boolean(collapsedSidebar)
   const hasBulkActions = Boolean(bulkActions)
 
@@ -103,23 +97,30 @@ export const AppShell = ({ sidebar, collapsedSidebar, header, content, bulkActio
         )}
         style={{ '--sidebar-width': `${sidebarColumnWidth}px` } as CSSProperties}
       >
-        <ActionIcon
+        <div
           className={cx(
-            'min-h-9 min-w-9 rounded-[10px] text-[var(--icon-muted)]',
-            'hover:bg-[var(--bg-hover-soft)]',
+            'absolute top-3 z-[35]',
             isResizing
-              ? 'transition-colors duration-[120ms] ease-[ease]'
-              : 'transition-[left,background-color] [transition-duration:220ms,120ms] [transition-timing-function:cubic-bezier(0.2,0,0,1),ease] motion-reduce:transition-none',
+              ? 'transition-none'
+              : 'transition-[left] duration-[220ms] ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none',
           )}
-          style={toggleStyle}
-          variant="subtle"
-          size="lg"
-          aria-label={toggleLabel}
-          title={toggleLabel}
-          onClick={handleToggleSidebar}
+          style={{ left: `${toggleLeft}px` }}
         >
-          {isSidebarCollapsed ? <IconLayoutSidebarLeftExpand size={18} /> : <IconLayoutSidebarLeftCollapse size={18} />}
-        </ActionIcon>
+          <ActionIcon
+            className={cx(
+              'min-h-9 min-w-9 rounded-[10px] text-[var(--icon-muted)]',
+              'hover:bg-[var(--bg-hover-soft)]',
+              'transition-colors duration-[120ms] ease-[ease]',
+            )}
+            variant="subtle"
+            size="lg"
+            aria-label={toggleLabel}
+            title={toggleLabel}
+            onClick={handleToggleSidebar}
+          >
+            {isSidebarCollapsed ? <IconLayoutSidebarLeftExpand size={18} /> : <IconLayoutSidebarLeftCollapse size={18} />}
+          </ActionIcon>
+        </div>
 
         {!isSidebarCollapsed ? (
           <div
