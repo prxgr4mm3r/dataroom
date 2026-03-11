@@ -2,8 +2,6 @@ import { IconCheck, IconMinus } from '@tabler/icons-react'
 import * as RadixCheckbox from '@radix-ui/react-checkbox'
 import type { MouseEventHandler } from 'react'
 
-import './selection-checkbox.css'
-
 type SelectionCheckboxProps = {
   checked: boolean
   indeterminate?: boolean
@@ -14,6 +12,10 @@ type SelectionCheckboxProps = {
   onClick?: MouseEventHandler<HTMLButtonElement>
   onCheckedChange: (checked: boolean) => void
 }
+const cx = (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(' ')
+const CHECKBOX_ROOT_CLASS_NAME =
+  "[all:unset] box-border flex h-[18px] w-[18px] shrink-0 cursor-pointer items-center justify-center self-center rounded-[5px] border-[1.5px] border-[var(--checkbox-border)] bg-[var(--checkbox-bg)] leading-[0] text-[var(--checkbox-bg)] transition-[border-color,background-color,box-shadow] duration-[140ms] ease-[ease] hover:border-[var(--checkbox-hover-border)] hover:bg-[var(--checkbox-hover-bg)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] data-[state=checked]:border-[var(--checkbox-checked)] data-[state=checked]:bg-[var(--checkbox-checked)] data-[state=indeterminate]:border-[var(--checkbox-checked)] data-[state=indeterminate]:bg-[var(--checkbox-checked)] data-[state=checked]:hover:border-[var(--checkbox-checked-hover)] data-[state=checked]:hover:bg-[var(--checkbox-checked-hover)] data-[state=indeterminate]:hover:border-[var(--checkbox-checked-hover)] data-[state=indeterminate]:hover:bg-[var(--checkbox-checked-hover)] data-[disabled]:cursor-not-allowed data-[disabled]:border-[var(--checkbox-disabled-border)] data-[disabled]:bg-[var(--checkbox-disabled-bg)] data-[disabled]:text-[var(--checkbox-disabled-color)]"
+const CHECKBOX_INDICATOR_CLASS_NAME = 'inline-flex items-center justify-center leading-[0] text-current [&>svg]:h-3 [&>svg]:w-3'
 
 export const SelectionCheckbox = ({
   checked,
@@ -25,7 +27,7 @@ export const SelectionCheckbox = ({
   onClick,
   onCheckedChange,
 }: SelectionCheckboxProps) => {
-  const rootClassName = ['selection-checkbox', className].filter(Boolean).join(' ')
+  const rootClassName = cx(CHECKBOX_ROOT_CLASS_NAME, className)
   const state: boolean | 'indeterminate' = indeterminate ? 'indeterminate' : checked
 
   return (
@@ -42,7 +44,7 @@ export const SelectionCheckbox = ({
       onClick={onClick}
       onCheckedChange={(state) => onCheckedChange(state === true)}
     >
-      <RadixCheckbox.Indicator className="selection-checkbox__indicator">
+      <RadixCheckbox.Indicator className={CHECKBOX_INDICATOR_CLASS_NAME}>
         {indeterminate ? <IconMinus size={12} stroke={3} /> : <IconCheck size={12} stroke={3} />}
       </RadixCheckbox.Indicator>
     </RadixCheckbox.Root>
