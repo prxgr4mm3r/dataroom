@@ -3,7 +3,8 @@ import { IconFolder } from '@tabler/icons-react'
 import type { FolderNode } from '@/entities/folder'
 import { t } from '@/shared/i18n/messages'
 import { Alert, Box, Button, Group, Modal, ScrollArea, Stack, Text } from '@/shared/ui'
-import './folder-picker-dialog.css'
+
+const cx = (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(' ')
 
 type FolderPickerDialogProps = {
   opened: boolean
@@ -33,14 +34,11 @@ const FolderRow = ({
   invalid: boolean
   onClick?: () => void
 }) => {
-  const className = [
-    'folder-picker-node',
-    selected ? 'folder-picker-node--selected' : '',
-    invalid ? 'folder-picker-node--invalid' : '',
-    onClick ? '' : 'folder-picker-node--disabled',
-  ]
-    .filter(Boolean)
-    .join(' ')
+  const className = cx(
+    'rounded-lg transition-colors duration-[120ms] ease-[ease]',
+    invalid || !onClick ? 'cursor-not-allowed' : 'cursor-pointer hover:bg-[var(--bg-hover-muted)]',
+    selected && !invalid ? 'bg-[var(--accent-soft)]' : '',
+  )
 
   return (
     <Group className={className} px="sm" py={6} gap={8} wrap="nowrap" style={{ marginLeft: depth * 12 }} onClick={onClick}>

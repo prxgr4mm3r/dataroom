@@ -22,8 +22,6 @@ import {
 } from '@/shared/ui'
 import { notifyError, notifySuccess } from '@/shared/ui'
 
-import './share-links-dialog.css'
-
 type ShareLinksDialogProps = {
   opened: boolean
   item: ContentItem | null
@@ -60,6 +58,7 @@ export const ShareLinksDialog = ({ opened, item, onClose }: ShareLinksDialogProp
   const link = links[0] ?? null
   const hasLink = Boolean(link)
   const pendingRevoke = revokeLinkMutation.isPending
+  const showLinkState = !linksQuery.isPending && Boolean(link)
 
   useEffect(() => {
     if (!opened) {
@@ -117,6 +116,17 @@ export const ShareLinksDialog = ({ opened, item, onClose }: ShareLinksDialogProp
     }
   }
 
+  const closeButton = (
+    <ActionIcon
+      variant="transparent"
+      onClick={onClose}
+      aria-label="Close share dialog"
+      className="h-8 w-8 shrink-0 rounded-xl border-0 bg-transparent text-[var(--accent)] transition-colors duration-[120ms] ease-[ease] hover:!bg-[var(--accent-soft)] hover:!text-[var(--accent-hover)]"
+    >
+      <IconX size={18} />
+    </ActionIcon>
+  )
+
   return (
     <Modal
       opened={opened}
@@ -125,21 +135,37 @@ export const ShareLinksDialog = ({ opened, item, onClose }: ShareLinksDialogProp
       withCloseButton={false}
       centered
       size="md"
-      classNames={{
-        content: 'share-links-dialog__modal-content',
-        body: 'share-links-dialog__modal-body',
+      styles={{
+        content: {
+          background: 'transparent',
+          border: 0,
+          boxShadow: 'none',
+          outline: 'none',
+        },
+        body: {
+          padding: 0,
+          background: 'transparent',
+        },
       }}
     >
-      <Stack gap="sm" className="share-links-dialog__shell">
-        <ActionIcon
-          variant="subtle"
-          color="gray"
-          onClick={onClose}
-          className="share-links-dialog__shell-close"
-          aria-label="Close share dialog"
-        >
-          <IconX size={18} />
-        </ActionIcon>
+      <Stack gap="2" className="rounded-xl border border-[var(--border-soft)] bg-[var(--bg-surface)] px-3.5 py-3">
+        {showLinkState && link ? (
+          <Box className="flex min-h-8 items-center justify-between gap-2">
+            <Text
+              size="xs"
+              fw={600}
+              className="inline-flex min-w-0 items-center gap-1.5 leading-5"
+              style={{ color: 'var(--accent)' }}
+            >
+              <IconLink size={12} />
+              Read-only
+              {link.expires_at ? ` • Expires ${formatDateCompact(link.expires_at)}` : ' • No expiry'}
+            </Text>
+            {closeButton}
+          </Box>
+        ) : (
+          <Box className="flex min-h-8 items-center justify-end">{closeButton}</Box>
+        )}
 
         {linksQuery.error ? (
           <Alert color="red" title="Failed to load share links">
@@ -148,7 +174,7 @@ export const ShareLinksDialog = ({ opened, item, onClose }: ShareLinksDialogProp
         ) : null}
 
         {linksQuery.isPending || createLinkMutation.isPending ? (
-          <Box className="share-links-dialog__loading">
+          <Box className="inline-flex items-center gap-2.5 py-1 text-[var(--text-secondary)]">
             <Loader size="sm" />
             <Text size="sm" c="dimmed">
               Preparing share link...
@@ -157,29 +183,27 @@ export const ShareLinksDialog = ({ opened, item, onClose }: ShareLinksDialogProp
         ) : null}
 
         {!linksQuery.isPending && !hasLink ? (
-          <Box className="share-links-dialog__empty">
+          <Box className="flex items-center gap-2 py-1 text-[var(--text-secondary)]">
             <IconLink size={16} />
             <Text size="sm">No active share link available.</Text>
           </Box>
         ) : null}
 
         {!linksQuery.isPending && link ? (
-          <Box className="share-links-dialog__panel">
-            <Text size="xs" fw={600} className="share-links-dialog__meta-line">
-              <IconLink size={12} />
-              Read-only
-              {link.expires_at ? ` • Expires ${formatDateCompact(link.expires_at)}` : ' • No expiry'}
-            </Text>
-            <Text size="xs" c="dimmed" mb={6}>
+          <Box>
+            <Text size="xs" c="dimmed" mb={10}>
               Created {formatDate(link.created_at)}
               {link.last_access_at ? ` • Last opened ${formatDate(link.last_access_at)}` : ''}
             </Text>
 
-            <Box className="share-links-dialog__link-box" title={link.share_url ?? ''}>
+            <Box
+              className="overflow-hidden text-ellipsis whitespace-nowrap rounded-[10px] border border-[var(--border-soft)] bg-[var(--state-info-bg-soft)] px-3 py-2.5 text-[13px] leading-[1.35] text-[var(--text-primary)]"
+              title={link.share_url ?? ''}
+            >
               {link.share_url ?? 'Link is not ready yet'}
             </Box>
 
-            <Box className="share-links-dialog__actions">
+            <Box className="mt-2 flex items-center justify-between gap-2">
               <Button
                 size="sm"
                 leftSection={<IconCopy size={14} />}
