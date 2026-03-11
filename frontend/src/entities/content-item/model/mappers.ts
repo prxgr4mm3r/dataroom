@@ -13,6 +13,7 @@ export const mapItemResourceDto = (dto: ItemResourceDto): ContentItem => ({
   updatedAt: dto.updated_at,
   mimeType: dto.mime_type ?? null,
   sizeBytes: dto.size_bytes ?? null,
+  fileCount: dto.file_count ?? null,
   importedAt: dto.imported_at ?? null,
   origin: dto.origin ?? null,
   googleFileId: dto.google_file_id ?? null,

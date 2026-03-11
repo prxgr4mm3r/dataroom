@@ -964,7 +964,7 @@ export const FileTable = ({
                       </Text>
                     </Group>
                   </Table.Td>
-                  <Table.Td className="file-table__td">{item.kind === 'folder' ? 'Folder' : fileTypePresentation?.label}</Table.Td>
+                  <Table.Td className="file-table__td">{item.kind === 'folder' ? `Folder(${item.fileCount} files)` : fileTypePresentation?.label}</Table.Td>
                   <Table.Td className="file-table__td file-table__td--size">{formatFileSize(item.sizeBytes)}</Table.Td>
                   <Table.Td
                     className={[

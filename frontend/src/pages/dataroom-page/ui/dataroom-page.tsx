@@ -521,6 +521,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
       updatedAt: nowIso,
       mimeType: null,
       sizeBytes: items.reduce((total, item) => total + Number(item.sizeBytes || 0), 0),
+      fileCount: items.filter((item) => item.kind === 'file').length,
       importedAt: null,
       origin: null,
       googleFileId: null,

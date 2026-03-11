@@ -38,6 +38,7 @@ class DataRoomItem(Base, IdMixin, TimestampMixin):
     normalized_name: Mapped[str] = mapped_column(String(512), nullable=False)
     status: Mapped[str] = mapped_column(String(16), nullable=False, default=ItemStatus.ACTIVE.value)
     size_bytes: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    file_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     user = relationship("User", back_populates="items")
     parent = relationship("DataRoomItem", remote_side="DataRoomItem.id")
@@ -51,7 +52,7 @@ class DataRoomItem(Base, IdMixin, TimestampMixin):
         Index(
             "uq_items_user_parent_name_active",
             "user_id",
-            "parent_id",
+            text("coalesce(parent_id, '__root__')"),
             "normalized_name",
             unique=True,
             sqlite_where=text("status != 'deleted'"),

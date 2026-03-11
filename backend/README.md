@@ -43,6 +43,22 @@ cd backend
 .venv/bin/alembic upgrade head
 ```
 
+### Root Name Duplicates (20260311_0007)
+
+Migration `20260311_0007` enforces uniqueness for active root items. If upgrade fails with duplicate root names, run remediation SQL once, then rerun Alembic.
+
+SQLite:
+```bash
+cd backend
+sqlite3 app.db < migrations/sql/20260311_0007_remediate_root_duplicates.sql
+```
+
+PostgreSQL:
+```bash
+cd backend
+psql "$DATABASE_URL" -f migrations/sql/20260311_0007_remediate_root_duplicates.sql
+```
+
 ## Test
 
 ```bash

@@ -57,6 +57,9 @@ class ItemService:
             if folder is None or folder.kind != ItemKind.FOLDER.value:
                 break
             folder.size_bytes = max(0, self._normalize_size(folder.size_bytes) + delta)
+            print(f"Applying file count delta {delta} to folder {folder.id} (before: {folder.file_count})")
+            folder.file_count = max(0, folder.file_count + (1 if delta > 0 else -1))
+            print(f"New file count for folder {folder.id}: {folder.file_count}")
             folder.updated_at = now
             cursor_parent_id = folder.parent_id
 
@@ -166,6 +169,7 @@ class ItemService:
         normalized_parent_id = folder.id if folder else None
 
         entries = self.items.list_children(user_id, normalized_parent_id)
+        print(f"Entries before sorting: {[entry.file_count for entry in entries]}")
         assets_by_item_id = {
             asset.item_id: asset for asset in self.assets.list_for_items([entry.id for entry in entries])
         }

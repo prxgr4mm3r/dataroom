@@ -24,6 +24,7 @@ class ItemSerializer:
             "updated_at": item.updated_at.isoformat(),
             "children_count": int(children_count or 0),
             "size_bytes": int(size_bytes or 0),
+            "file_count": item.file_count,
         }
         if item.kind == ItemKind.FILE.value:
             payload.update(

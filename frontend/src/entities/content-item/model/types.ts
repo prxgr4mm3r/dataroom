@@ -12,6 +12,7 @@ export type ContentItem = {
   updatedAt: string
   mimeType: string | null
   sizeBytes: number | null
+  fileCount: number | null
   importedAt: string | null
   origin: 'google_drive' | 'local_upload' | 'copied' | null
   googleFileId: string | null
