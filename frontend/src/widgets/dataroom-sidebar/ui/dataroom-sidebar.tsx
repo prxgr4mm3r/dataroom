@@ -692,6 +692,7 @@ const createFallbackFolderItem = (
   updatedAt: SYNTHETIC_FOLDER_TIMESTAMP,
   mimeType: null,
   sizeBytes: null,
+  fileCount: childrenCount,
   importedAt: null,
   origin: null,
   googleFileId: null,

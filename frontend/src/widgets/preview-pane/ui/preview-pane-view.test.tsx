@@ -8,22 +8,30 @@ import { TestProvider } from '@/shared/ui/test-provider'
 
 import { PreviewPaneView } from './preview-pane-view'
 
-const makeFile = (overrides: Partial<ContentItem> = {}): ContentItem => ({
-  id: 'file-1',
-  kind: 'file',
-  name: 'file.bin',
-  parentId: null,
-  childrenCount: 0,
-  status: 'active',
-  createdAt: '2026-03-10T10:00:00.000Z',
-  updatedAt: '2026-03-10T10:00:00.000Z',
-  mimeType: 'application/octet-stream',
-  sizeBytes: 12,
-  importedAt: null,
-  origin: null,
-  googleFileId: null,
-  ...overrides,
-})
+const makeFile = (overrides: Partial<ContentItem> = {}): ContentItem => {
+  const item: ContentItem = {
+    id: 'file-1',
+    kind: 'file',
+    name: 'file.bin',
+    parentId: null,
+    childrenCount: 0,
+    status: 'active',
+    createdAt: '2026-03-10T10:00:00.000Z',
+    updatedAt: '2026-03-10T10:00:00.000Z',
+    mimeType: 'application/octet-stream',
+    sizeBytes: 12,
+    fileCount: null,
+    importedAt: null,
+    origin: null,
+    googleFileId: null,
+    ...overrides,
+  }
+
+  return {
+    ...item,
+    fileCount: overrides.fileCount ?? item.fileCount ?? null,
+  }
+}
 
 const baseLayout: PreviewPaneLayoutState = {
   isRendered: true,

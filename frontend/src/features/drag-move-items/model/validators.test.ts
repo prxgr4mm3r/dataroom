@@ -16,6 +16,7 @@ const makeFolder = (id: string, parentId: string | null): ContentItem => ({
   updatedAt: '',
   mimeType: null,
   sizeBytes: null,
+  fileCount: 0,
   importedAt: null,
   origin: null,
   googleFileId: null,

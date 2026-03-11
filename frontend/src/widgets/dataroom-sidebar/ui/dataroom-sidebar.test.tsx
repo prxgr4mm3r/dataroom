@@ -26,6 +26,7 @@ const makeFile = (folderId: string): ContentItem => ({
   updatedAt: '2026-03-10T10:00:00.000Z',
   mimeType: 'text/plain',
   sizeBytes: 12,
+  fileCount: null,
   importedAt: null,
   origin: null,
   googleFileId: null,

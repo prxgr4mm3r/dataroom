@@ -33,6 +33,7 @@ describe('mapItemResourceDto', () => {
       updatedAt: '2026-03-06T00:00:00Z',
       mimeType: 'application/pdf',
       sizeBytes: 42,
+      fileCount: null,
       importedAt: '2026-03-06T00:00:00Z',
       origin: 'google_drive',
       googleFileId: 'g-1',
