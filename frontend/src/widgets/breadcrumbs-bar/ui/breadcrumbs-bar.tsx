@@ -17,7 +17,6 @@ import { useEffect, useState } from 'react'
 import type { Breadcrumb } from '@/entities/folder'
 import { APP_SHORTCUTS } from '@/shared/lib/keyboard/shortcuts'
 import { Box, Group, Menu, Text } from '@/shared/ui'
-import './breadcrumbs-bar.css'
 
 type DropState = 'none' | 'valid' | 'warning' | 'invalid'
 
@@ -53,6 +52,11 @@ const NOOP_FOLDER_DRAG_OVER = (): void => {}
 const NOOP_FOLDER_DRAG_LEAVE = (): void => {}
 const NOOP_FOLDER_DROP = (): void => {}
 const NOOP_DROP_STATE = (): DropState => 'none'
+const cx = (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(' ')
+const BREADCRUMB_ITEM_CLASS_NAME =
+  'inline-flex max-w-[min(42vw,280px)] cursor-pointer items-center gap-1.5 rounded-lg border-none bg-transparent px-2.5 py-[5px] font-inherit text-[var(--text-secondary)] transition-colors duration-[120ms] ease-[ease] hover:bg-[var(--bg-hover-soft)] hover:text-[var(--text-primary)] focus-visible:bg-[var(--accent-soft)] focus-visible:text-[var(--text-primary)] focus-visible:outline-none'
+const BREADCRUMB_MENU_BUTTON_CLASS_NAME =
+  'inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg border-none bg-transparent text-[var(--icon-strong)] transition-colors duration-[120ms] ease-[ease] hover:bg-[var(--bg-hover-soft)] hover:text-[var(--text-primary)] focus-visible:bg-[var(--accent-soft)] focus-visible:text-[var(--text-primary)] focus-visible:outline-none'
 
 export const BreadcrumbsBar = ({
   breadcrumbs,
@@ -86,13 +90,13 @@ export const BreadcrumbsBar = ({
   const getDropClassName = (folderId: string): string => {
     const dropState = getFolderDropState(folderId)
     if (dropState === 'valid') {
-      return 'breadcrumbs-bar__item--drop-valid'
+      return '!bg-[var(--state-success-bg-soft)] !text-[var(--state-success-text)] hover:!bg-[var(--state-success-bg-soft)] hover:!text-[var(--state-success-text)]'
     }
     if (dropState === 'warning') {
-      return 'breadcrumbs-bar__item--drop-warning'
+      return '!bg-[var(--state-warning-bg-soft)] !text-[var(--state-warning-text)] hover:!bg-[var(--state-warning-bg-soft)] hover:!text-[var(--state-warning-text)]'
     }
     if (dropState === 'invalid') {
-      return 'breadcrumbs-bar__item--drop-invalid'
+      return '!bg-[var(--state-danger-bg-soft)] !text-[var(--state-danger-text)] hover:!bg-[var(--state-danger-bg-soft)] hover:!text-[var(--state-danger-text)]'
     }
     return ''
   }
@@ -225,7 +229,7 @@ export const BreadcrumbsBar = ({
         <Menu.Target>
           <button
             type="button"
-            className="breadcrumbs-bar__current-menu-target"
+            className={BREADCRUMB_MENU_BUTTON_CLASS_NAME}
             aria-label={`Actions for ${crumb.name}`}
           >
             <IconChevronDown size={14} />
@@ -237,14 +241,16 @@ export const BreadcrumbsBar = ({
   }
 
   return (
-    <Group className="breadcrumbs-bar" px={compact ? 0 : 'md'} py={compact ? 0 : 'xs'} gap={6} wrap="nowrap">
+    <Group className="min-w-0" px={compact ? 0 : 'md'} py={compact ? 0 : 'xs'} gap={6} wrap="nowrap">
       {start ? (
         <Group gap={2} wrap="nowrap">
           <button
             type="button"
-            className={['breadcrumbs-bar__item', 'breadcrumbs-bar__item--root', getDropClassName(start.id)]
-              .filter(Boolean)
-              .join(' ')}
+            className={cx(
+              BREADCRUMB_ITEM_CLASS_NAME,
+              'font-semibold text-[var(--text-primary)]',
+              getDropClassName(start.id),
+            )}
             onClick={() => onNavigate(start.id)}
             onDragOver={(event) => onFolderDragOver(start.id, event)}
             onDrop={(event) => onFolderDrop(start.id, event)}
@@ -252,11 +258,13 @@ export const BreadcrumbsBar = ({
             onContextMenu={hasFolderMenuActions ? (event) => handleBreadcrumbContextMenu(start, event) : undefined}
           >
             {showHomeIcon ? (
-              <span className="breadcrumbs-bar__home-icon" aria-hidden="true">
+              <span className="inline-flex shrink-0 items-center justify-center text-[var(--accent)]" aria-hidden="true">
                 <IconHome2 size={14} />
               </span>
             ) : null}
-            <span className="breadcrumbs-bar__label">{start.name}</span>
+            <span className="block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-sm leading-[1.25]">
+              {start.name}
+            </span>
           </button>
           {renderCurrentFolderMenu(start)}
         </Group>
@@ -264,10 +272,10 @@ export const BreadcrumbsBar = ({
 
       {shouldCollapse ? (
         <>
-          <IconChevronRight size={14} className="breadcrumbs-bar__separator-icon" />
+          <IconChevronRight size={14} className="shrink-0 text-[var(--text-muted)]" />
           <Menu withinPortal>
             <Menu.Target>
-              <button type="button" className="breadcrumbs-bar__menu-target" aria-label="Show hidden folders">
+              <button type="button" className={BREADCRUMB_MENU_BUTTON_CLASS_NAME} aria-label="Show hidden folders">
                 <IconDots size={16} />
               </button>
             </Menu.Target>
@@ -284,18 +292,20 @@ export const BreadcrumbsBar = ({
 
       {end.map((crumb) => (
         <Group gap={6} key={crumb.id} wrap="nowrap">
-          <IconChevronRight size={14} className="breadcrumbs-bar__separator-icon" />
+          <IconChevronRight size={14} className="shrink-0 text-[var(--text-muted)]" />
           <Group gap={2} wrap="nowrap">
             <button
               type="button"
-              className={['breadcrumbs-bar__item', getDropClassName(crumb.id)].filter(Boolean).join(' ')}
+              className={cx(BREADCRUMB_ITEM_CLASS_NAME, getDropClassName(crumb.id))}
               onClick={() => onNavigate(crumb.id)}
               onDragOver={(event) => onFolderDragOver(crumb.id, event)}
               onDrop={(event) => onFolderDrop(crumb.id, event)}
               onDragLeave={(event) => handleDragLeave(crumb.id, event)}
               onContextMenu={hasFolderMenuActions ? (event) => handleBreadcrumbContextMenu(crumb, event) : undefined}
             >
-              <span className="breadcrumbs-bar__label">{crumb.name}</span>
+              <span className="block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-sm leading-[1.25]">
+                {crumb.name}
+              </span>
             </button>
             {renderCurrentFolderMenu(crumb)}
           </Group>
