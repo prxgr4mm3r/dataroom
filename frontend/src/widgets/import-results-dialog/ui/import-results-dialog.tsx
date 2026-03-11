@@ -8,7 +8,6 @@ import {
 
 import type { DragImportFailure } from '@/features/drag-import-files'
 import { Badge, Box, Group, Modal, ScrollArea, Stack, Text } from '@/shared/ui'
-import './import-results-dialog.css'
 
 type ImportResultsDialogProps = {
   opened: boolean
@@ -41,22 +40,46 @@ export const ImportResultsDialog = ({
       opened={opened}
       onClose={onClose}
       title="Import results"
-      size="lg"
+      size={680}
       centered
-      classNames={{
-        content: 'import-results-dialog__modal-content',
-        body: 'import-results-dialog__modal-body',
+      styles={{
+        content: {
+          height: 'min(720px, calc(100dvh - 24px))',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+        },
+        header: {
+          padding: '10px',
+          minHeight: 0,
+        },
+        title: {
+          fontSize: '0.95rem',
+          lineHeight: 1.2,
+        },
+        close: {
+          width: 28,
+          height: 28,
+        },
+        body: {
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100%',
+          minHeight: 0,
+          overflow: 'hidden',
+          padding: '18px 16px 16px',
+        },
       }}
     >
-      <Stack className="import-results-dialog" gap="md">
+      <Stack className="flex-1 min-h-0" gap="md">
         <Box
           className={[
-            'import-results-dialog__hero',
-            hasFailures ? 'import-results-dialog__hero--warning' : 'import-results-dialog__hero--success',
+            'rounded-[10px] border border-[var(--border-soft)] px-3 py-2.5',
+            hasFailures ? 'bg-[var(--state-warning-bg)]' : 'bg-[var(--state-success-bg)]',
           ].join(' ')}
         >
           <Group gap={10} wrap="nowrap" align="flex-start">
-            <span className="import-results-dialog__hero-icon">
+            <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--bg-surface)] text-[var(--text-primary)]">
               {hasFailures ? <IconAlertTriangle size={18} /> : <IconCheck size={18} />}
             </span>
             <Stack gap={2}>
@@ -70,8 +93,8 @@ export const ImportResultsDialog = ({
           </Group>
         </Box>
 
-        <Box className="import-results-dialog__stats">
-          <Box className="import-results-dialog__stat-card import-results-dialog__stat-card--success">
+        <Box className="grid grid-cols-3 gap-2 max-[760px]:grid-cols-1">
+          <Box className="rounded-[10px] border border-[var(--border-soft)] bg-[var(--state-success-bg-soft)] px-3 py-2.5">
             <Text size="xs" c="dimmed">
               Imported
             </Text>
@@ -79,7 +102,7 @@ export const ImportResultsDialog = ({
               {importedCount}
             </Text>
           </Box>
-          <Box className="import-results-dialog__stat-card import-results-dialog__stat-card--failed">
+          <Box className="rounded-[10px] border border-[var(--border-soft)] bg-[var(--state-danger-bg-soft)] px-3 py-2.5">
             <Text size="xs" c="dimmed">
               Failed
             </Text>
@@ -87,7 +110,7 @@ export const ImportResultsDialog = ({
               {failedCount}
             </Text>
           </Box>
-          <Box className="import-results-dialog__stat-card">
+          <Box className="rounded-[10px] border border-[var(--border-soft)] bg-[var(--bg-subtle)] px-3 py-2.5">
             <Text size="xs" c="dimmed">
               Total
             </Text>
@@ -97,8 +120,8 @@ export const ImportResultsDialog = ({
           </Box>
         </Box>
 
-        <Box className="import-results-dialog__sections">
-          <Box className="import-results-dialog__section">
+        <Box className="grid min-h-0 flex-1 grid-cols-2 gap-2.5 max-[760px]:grid-cols-1">
+          <Box className="flex min-h-0 max-h-full flex-col overflow-hidden rounded-[10px] border border-[var(--border-soft)] bg-[var(--bg-surface)] p-2.5">
             <Group justify="space-between" wrap="nowrap">
               <Group gap={6} wrap="nowrap">
                 <IconFileCheck size={16} color="var(--state-success-icon)" />
@@ -111,12 +134,16 @@ export const ImportResultsDialog = ({
               </Badge>
             </Group>
             {importedCount > 0 ? (
-              <ScrollArea className="import-results-dialog__list-scroll" mt={8}>
+              <ScrollArea className="min-h-[120px] flex-1 max-[760px]:min-h-[160px]" mt={8}>
                 <Stack gap={6}>
                   {uploadedFiles.map((fileName, index) => (
-                    <Group key={`${fileName}:${index}`} className="import-results-dialog__file-row" wrap="nowrap">
-                      <IconFile size={14} color="var(--icon-muted)" />
-                      <Text size="sm" className="import-results-dialog__file-name">
+                    <Group
+                      key={`${fileName}:${index}`}
+                      className="rounded-lg border border-[var(--border-soft)] bg-[var(--bg-subtle)] px-2 py-1.5"
+                      wrap="nowrap"
+                    >
+                      <IconFile size={14} color="var(--icon-muted)" className="h-3.5 w-3.5 shrink-0" />
+                      <Text size="sm" className="min-w-0 whitespace-normal [overflow-wrap:anywhere]">
                         {fileName}
                       </Text>
                     </Group>
@@ -130,7 +157,7 @@ export const ImportResultsDialog = ({
             )}
           </Box>
 
-          <Box className="import-results-dialog__section">
+          <Box className="flex min-h-0 max-h-full flex-col overflow-hidden rounded-[10px] border border-[var(--border-soft)] bg-[var(--bg-surface)] p-2.5">
             <Group justify="space-between" wrap="nowrap">
               <Group gap={6} wrap="nowrap">
                 <IconX size={16} color="var(--state-danger-icon)" />
@@ -143,23 +170,26 @@ export const ImportResultsDialog = ({
               </Badge>
             </Group>
             {failedCount > 0 ? (
-              <ScrollArea className="import-results-dialog__list-scroll" mt={8}>
+              <ScrollArea className="min-h-[120px] flex-1 max-[760px]:min-h-[160px]" mt={8}>
                 <Stack gap={8}>
                   {failedFiles.map((failure, index) => (
-                    <Box key={`${failure.fileName}:${failure.message}:${index}`} className="import-results-dialog__failed-row">
+                    <Box
+                      key={`${failure.fileName}:${failure.message}:${index}`}
+                      className="rounded-lg border border-[var(--state-danger-border)] bg-[var(--state-danger-bg-soft)] p-2"
+                    >
                       <Group justify="space-between" gap={6} wrap="wrap" align="flex-start">
-                        <Text size="sm" fw={500} className="import-results-dialog__file-name">
+                        <Text size="sm" fw={500} className="min-w-0 whitespace-normal [overflow-wrap:anywhere]">
                           {failure.fileName}
                         </Text>
                         <Badge
                           variant="light"
                           color={failure.reason === 'too_large' ? 'orange' : 'red'}
-                          className="import-results-dialog__reason-badge"
+                          className="shrink-0 whitespace-nowrap"
                         >
                           {toFailureReasonLabel(failure)}
                         </Badge>
                       </Group>
-                      <Text size="xs" c="dimmed" mt={2} className="import-results-dialog__failure-message">
+                      <Text size="xs" c="dimmed" mt={2} className="whitespace-normal [overflow-wrap:anywhere]">
                         {failure.message}
                       </Text>
                     </Box>
@@ -173,7 +203,6 @@ export const ImportResultsDialog = ({
             )}
           </Box>
         </Box>
-
       </Stack>
     </Modal>
   )
