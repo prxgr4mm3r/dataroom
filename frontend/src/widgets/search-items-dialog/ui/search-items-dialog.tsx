@@ -12,7 +12,6 @@ import { formatDateCompact } from '@/shared/lib/date/format-date'
 import { getFileTypePresentation } from '@/shared/lib/file/file-type-presentation'
 import type { FolderTreeDto } from '@/shared/api'
 import { Box, FileTypeIcon, Loader, Menu, Modal, ScrollArea, Text, TextInput } from '@/shared/ui'
-import './search-items-dialog.css'
 
 type SearchItemsDialogProps = {
   opened: boolean
@@ -283,11 +282,25 @@ export const SearchItemsDialog = ({
       centered
       title="Search files and folders"
       size="lg"
-      classNames={{
-        body: 'search-items-dialog__body',
+      styles={{
+        header: {
+          padding: '10px',
+          minHeight: 0,
+        },
+        title: {
+          fontSize: '0.95rem',
+          lineHeight: 1.2,
+        },
+        close: {
+          width: 28,
+          height: 28,
+        },
+        body: {
+          padding: '18px 16px 16px',
+        },
       }}
     >
-      <Box className="search-items-dialog">
+      <Box className="flex flex-col gap-3">
         <TextInput
           data-autofocus
           value={query}
@@ -301,17 +314,31 @@ export const SearchItemsDialog = ({
           placeholder="Type a name to search across all folders"
           leftSection={<IconSearch size={16} />}
         />
-        <div className="search-items-dialog__filters">
-          <div className="search-items-dialog__scope-toggle" role="group" aria-label="Search scope" data-scope={searchScope}>
-            <span className="search-items-dialog__scope-indicator" aria-hidden="true" />
-            <button
-              type="button"
+        <div className="flex w-full items-center gap-2 max-[760px]:flex-col max-[760px]:items-stretch">
+          <div
+            className="relative inline-flex flex-1 items-center overflow-hidden rounded-[10px] border border-[var(--table-separator)] bg-[var(--bg-subtle)] p-[3px]"
+            role="group"
+            aria-label="Search scope"
+            data-scope={searchScope}
+          >
+            <span
               className={[
-                'search-items-dialog__scope-option',
-                searchScope === 'current' ? 'search-items-dialog__scope-option--active' : '',
+                'pointer-events-none absolute top-[3px] bottom-[3px] left-[3px] w-[calc((100%-6px)/2)] rounded-[7px] bg-[var(--accent-soft)] transition-transform duration-[220ms] ease-[cubic-bezier(0.2,0.8,0.2,1)]',
+                searchScope === 'all' ? 'translate-x-full' : 'translate-x-0',
               ]
                 .filter(Boolean)
                 .join(' ')}
+              aria-hidden="true"
+            />
+            <button
+              type="button"
+              className={[
+                'relative z-[1] flex-1 rounded-[7px] border-0 bg-transparent px-2.5 py-1.5 text-[9px] font-semibold text-[var(--text-secondary)] transition-colors duration-[120ms] ease-[ease] hover:text-[var(--text-primary)]',
+                searchScope === 'current' ? 'text-[var(--accent)]' : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+              style={{ fontSize: '14px', lineHeight: 1.15 }}
               onClick={() => setSearchScope('current')}
             >
               Current folder
@@ -319,11 +346,12 @@ export const SearchItemsDialog = ({
             <button
               type="button"
               className={[
-                'search-items-dialog__scope-option',
-                searchScope === 'all' ? 'search-items-dialog__scope-option--active' : '',
+                'relative z-[1] flex-1 rounded-[7px] border-0 bg-transparent px-2.5 py-1.5 text-[9px] font-semibold text-[var(--text-secondary)] transition-colors duration-[120ms] ease-[ease] hover:text-[var(--text-primary)]',
+                searchScope === 'all' ? 'text-[var(--accent)]' : '',
               ]
                 .filter(Boolean)
                 .join(' ')}
+              style={{ fontSize: '14px', lineHeight: 1.15 }}
               onClick={() => setSearchScope('all')}
             >
               All folders
@@ -331,14 +359,17 @@ export const SearchItemsDialog = ({
           </div>
           <Menu shadow="md" width={220} position="bottom-start" offset={6}>
             <Menu.Target>
-              <button type="button" className="search-items-dialog__filter-trigger search-items-dialog__filter-trigger--type">
+              <button
+                type="button"
+                className="flex w-[220px] min-w-0 cursor-pointer items-center gap-1.5 rounded-[10px] border border-[var(--table-separator)] bg-[var(--bg-subtle)] px-2.5 py-2 text-left text-[var(--text-primary)] transition-[border-color,background-color] duration-[120ms] ease-[ease] hover:border-[var(--accent)] hover:bg-[var(--table-row-hover-bg)] max-[760px]:w-full"
+              >
                 <Text size="xs" c="dimmed">
                   Type:
                 </Text>
-                <Text size="sm" fw={600} className="search-items-dialog__filter-value">
+                <Text size="sm" fw={600} className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
                   {selectedFileTypeLabel}
                 </Text>
-                <IconChevronDown size={14} className="search-items-dialog__filter-chevron" />
+                <IconChevronDown size={14} className="shrink-0 text-[var(--text-secondary)]" />
               </button>
             </Menu.Target>
             <Menu.Dropdown>
@@ -359,30 +390,30 @@ export const SearchItemsDialog = ({
           type="always"
           offsetScrollbars
           scrollbarSize={RESULTS_SCROLLBAR_SIZE}
-          className="search-items-dialog__results"
+          className="min-h-[220px] max-h-[420px] w-[calc(100%+10px)] -mr-[10px]"
         >
           {showScopeWarning ? (
-            <Text size="xs" c="orange" className="search-items-dialog__scope-warning">
+            <Text size="xs" c="orange" className="px-0.5 pt-2 pb-0.5">
               Current folder tree is unavailable. Showing direct folder matches only.
             </Text>
           ) : null}
           {searchQuery.isPending ? (
-            <Box className="search-items-dialog__loading">
+            <Box className="flex min-h-[180px] items-center justify-center">
               <Loader size="sm" />
             </Box>
           ) : null}
           {!searchQuery.isPending && searchQuery.error ? (
-            <Text size="sm" c="red" className="search-items-dialog__empty">
+            <Text size="sm" c="red" className="flex min-h-[180px] items-center justify-center px-3 text-center">
               {toApiError(searchQuery.error).message}
             </Text>
           ) : null}
           {!searchQuery.isPending && !searchQuery.error && filteredItems.length === 0 ? (
-            <Text size="sm" c="dimmed" className="search-items-dialog__empty">
+            <Text size="sm" c="dimmed" className="flex min-h-[180px] items-center justify-center px-3 text-center">
               {items.length > 0 ? 'No items match current filters.' : 'No items found.'}
             </Text>
           ) : null}
           {!searchQuery.isPending && !searchQuery.error && filteredItems.length > 0 ? (
-            <div className="search-items-dialog__list">
+            <div className="flex flex-col gap-1.5">
               {filteredItems.map(({ raw: item, fileType }) => {
                 const subtitle = item.kind === 'folder' ? 'Folder' : fileType?.label ?? 'File'
 
@@ -390,17 +421,17 @@ export const SearchItemsDialog = ({
                   <button
                     key={item.id}
                     type="button"
-                    className="search-items-dialog__item"
+                    className="flex w-full cursor-pointer items-center gap-2.5 rounded-[10px] border border-[var(--table-separator)] bg-[var(--bg-subtle)] px-3 py-2.5 text-left text-inherit transition-[border-color,background-color] duration-[120ms] ease-[ease] hover:border-[var(--accent)] hover:bg-[var(--table-row-hover-bg)]"
                     onClick={() => openItem(item)}
                   >
-                    <span className="search-items-dialog__item-icon" aria-hidden="true">
+                    <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center" aria-hidden="true">
                       {item.kind === 'folder' ? (
                         <IconFolder size={16} color="var(--accent)" />
                       ) : (
                         <FileTypeIcon iconKey={fileType?.iconKey ?? 'default'} size={16} />
                       )}
                     </span>
-                    <span className="search-items-dialog__item-content">
+                    <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                       <Text size="sm" fw={600} truncate>
                         {item.name}
                       </Text>
