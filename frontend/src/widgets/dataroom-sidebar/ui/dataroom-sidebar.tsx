@@ -38,6 +38,7 @@ type DataroomSidebarProps = {
   activePreviewId: string | null
   expandedIds: Set<string>
   fileContentVisibleFolderIds: Set<string>
+  knownFolderItemCounts: Record<string, number>
   onNewFolder: () => void
   onImportFromGoogle: () => void
   onImportFromComputer: () => void
@@ -72,6 +73,7 @@ type FolderChildrenProps = {
   highlightBranch?: boolean
   expandedIds: Set<string>
   fileContentVisibleFolderIds: Set<string>
+  knownFolderItemCounts: Record<string, number>
   activeFolderId: string
   activePreviewId: string | null
   onToggleExpanded: (folderId: string) => void
@@ -801,6 +803,7 @@ const FolderChildren = ({
   highlightBranch = false,
   expandedIds,
   fileContentVisibleFolderIds,
+  knownFolderItemCounts,
   activeFolderId,
   activePreviewId,
   onToggleExpanded,
@@ -848,6 +851,13 @@ const FolderChildren = ({
           )
         const isExpanded = expandedIds.has(childFolder.id)
         const showFiles = fileContentVisibleFolderIds.has(childFolder.id)
+        const knownItemCount = knownFolderItemCounts[childFolder.id]
+        const isKnownEmpty = childFolder.children.length === 0 && knownItemCount === 0
+        const canExpand = !isKnownEmpty && (
+          childFolder.children.length > 0 ||
+          typeof knownItemCount !== 'number' ||
+          knownItemCount > 0
+        )
         const isActiveFolder = normalizeFolderId(activeFolderId) === childFolder.id
         const folderActiveVariant: ActiveVariant = isActiveFolder && Boolean(activePreviewId) ? 'context' : 'solid'
 
@@ -870,7 +880,7 @@ const FolderChildren = ({
               activeVariant={folderActiveVariant}
               isFile={false}
               name={childFolder.name}
-              canExpand
+              canExpand={canExpand}
               expanded={isExpanded}
               draggable
               isDragging={isDraggingItem(childFolder.id)}
@@ -880,7 +890,7 @@ const FolderChildren = ({
               onClick={() =>
                 handleFolderRowClick({
                   folderId: childFolder.id,
-                  canExpand: true,
+                  canExpand,
                   isActive: isActiveFolder,
                   onOpenFolder,
                   onToggleExpanded: toggleFolderView,
@@ -928,6 +938,7 @@ const FolderChildren = ({
                   highlightBranch={isActiveFolder}
                   expandedIds={expandedIds}
                   fileContentVisibleFolderIds={fileContentVisibleFolderIds}
+                  knownFolderItemCounts={knownFolderItemCounts}
                   activeFolderId={activeFolderId}
                   activePreviewId={activePreviewId}
                   onToggleExpanded={onToggleExpanded}
@@ -966,6 +977,7 @@ export const DataroomSidebar = ({
   activePreviewId,
   expandedIds,
   fileContentVisibleFolderIds,
+  knownFolderItemCounts,
   onNewFolder,
   onImportFromGoogle,
   onImportFromComputer,
@@ -1154,6 +1166,7 @@ export const DataroomSidebar = ({
             highlightBranch={isRootActive}
             expandedIds={expandedIds}
             fileContentVisibleFolderIds={fileContentVisibleFolderIds}
+            knownFolderItemCounts={knownFolderItemCounts}
             activeFolderId={activeFolderId}
             activePreviewId={activePreviewId}
             onToggleExpanded={onToggleExpanded}

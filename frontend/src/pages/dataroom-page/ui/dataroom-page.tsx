@@ -86,6 +86,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
   const [manualFileContentVisibleFolderIds, setManualFileContentVisibleFolderIds] = useState<Set<string>>(
     () => new Set(),
   )
+  const [knownFolderItemCounts, setKnownFolderItemCounts] = useState<Record<string, number>>({})
 
   const navigate = useNavigate()
 
@@ -171,6 +172,23 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
   const downloadItemsMutation = useDownloadContentItems()
 
   const items = useMemo(() => listQuery.data?.items || [], [listQuery.data?.items])
+
+  useEffect(() => {
+    if (!listQuery.data) {
+      return
+    }
+
+    const responseFolderId = normalizeFolderId(listQuery.data.folder.id)
+    if (responseFolderId !== normalizedFolderId) {
+      return
+    }
+
+    setKnownFolderItemCounts((current) => ({
+      ...current,
+      [responseFolderId]: listQuery.data.items.length,
+    }))
+  }, [listQuery.data, normalizedFolderId])
+
   const itemMap = useMemo(() => new Map(items.map((item) => [item.id, item])), [items])
   const breadcrumbs = useMemo(() => listQuery.data?.breadcrumbs || [], [listQuery.data?.breadcrumbs])
   const orderedItemIds = useMemo(() => items.map((item) => item.id), [items])
@@ -614,6 +632,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
             activePreviewId={previewId}
             expandedIds={treeBrowser.expandedIds}
             fileContentVisibleFolderIds={fileContentVisibleFolderIds}
+            knownFolderItemCounts={knownFolderItemCounts}
             onNewFolder={() => openCreateFolderDialog(normalizedFolderId)}
             onImportFromGoogle={openGoogleImportDialog}
             onImportFromComputer={openComputerImportPicker}

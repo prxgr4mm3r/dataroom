@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import type { ReactElement } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -59,6 +59,7 @@ const defaultProps = {
   activePreviewId: null,
   expandedIds: new Set<string>(['root']),
   fileContentVisibleFolderIds: new Set<string>(['root']),
+  knownFolderItemCounts: {},
   onNewFolder: () => undefined,
   onImportFromGoogle: () => undefined,
   onImportFromComputer: () => undefined,
@@ -163,5 +164,33 @@ describe('DataroomSidebar lazy file loading', () => {
 
     const thirdRenderCalledIds = useListContentItemsQueryMock.mock.calls.map((args: unknown[]) => args[0])
     expect(thirdRenderCalledIds).toContain('folder-1')
+  })
+
+  it('hides expander for folders known to be empty', () => {
+    useListContentItemsQueryMock.mockImplementation((folderId: string) => ({
+      isPending: false,
+      error: null,
+      data: {
+        folder: {
+          id: folderId,
+          name: folderId,
+          parentId: folderId === 'root' ? 'root' : 'root',
+        },
+        breadcrumbs: [],
+        items: [],
+      },
+    }))
+
+    renderWithTheme(
+      <DataroomSidebar
+        {...defaultProps}
+        knownFolderItemCounts={{
+          'folder-1': 0,
+        }}
+      />,
+    )
+
+    const folderRow = screen.getByRole('button', { name: /folder 1/i })
+    expect(folderRow.querySelector('.sidebar-tree-row__expander')).toBeNull()
   })
 })
