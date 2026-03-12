@@ -34,7 +34,8 @@ import {
   FileTypeIcon,
 } from '@/shared/ui'
 import { notifyError, notifySuccess } from '@/shared/ui'
-import './import-file-dialog.css'
+
+const cx = (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(' ')
 
 type ImportFileDialogProps = {
   opened: boolean
@@ -272,9 +273,9 @@ export const ImportFileDialog = ({
       opened={opened}
       onClose={onClose}
       title={
-        <Box className="import-file-dialog__modal-header">
-          <Group wrap="nowrap" gap="sm" className="import-file-dialog__modal-header-main">
-            <Text className="import-file-dialog__modal-title" fw={700}>
+        <Box className="flex w-full min-w-0 items-center gap-4 pr-0">
+          <Group wrap="nowrap" gap="sm" className="flex-none items-center max-[860px]:flex-col max-[860px]:items-start max-[860px]:gap-0.5">
+            <Text className="text-[0.95rem] leading-[1.2] text-[var(--text-primary)]" fw={700}>
               Import from Google Drive
             </Text>
           </Group>
@@ -283,33 +284,32 @@ export const ImportFileDialog = ({
             <Group
               gap={6}
               wrap="nowrap"
-              className={[
-                'import-file-dialog__header-status-row',
-                `import-file-dialog__header-status-row--${headerStatusTone}`,
-              ].join(' ')}
+              className={cx(
+                'inline-flex w-auto min-w-0 max-w-[min(42vw,420px)] items-center rounded-full border border-[var(--border-soft)] bg-[var(--bg-subtle)] px-[10px] py-1 pl-2',
+                headerStatusTone === 'disconnected'
+                  ? '[--status-chip-separator-color:var(--border-soft)]'
+                  : '[--status-chip-separator-color:var(--separator-soft)]',
+              )}
             >
-              <GoogleDriveLogo className="import-file-dialog__drive-glyph import-file-dialog__drive-glyph--inline" />
+              <GoogleDriveLogo className="h-3 w-[14px] shrink-0 object-contain" />
               {showHeaderStatusLabel ? (
-                <Text
-                  size="xs"
-                  fw={600}
-                  className={[
-                    'import-file-dialog__header-status',
-                    `import-file-dialog__header-status--${headerStatusTone}`,
-                  ].join(' ')}
-                >
+                <Text size="xs" fw={600} className="leading-[1.35] text-[var(--text-secondary)]">
                   {headerStatusLabel}
                 </Text>
               ) : null}
               {connectedGoogleEmail ? (
-                <Text size="xs" truncate="end" className="import-file-dialog__status-email">
+                <Text
+                  size="xs"
+                  truncate="end"
+                  className="relative ml-[2px] max-w-[min(42vw,320px)] pl-[9px] leading-[1.35] text-[var(--text-secondary)] before:absolute before:left-0 before:top-1/2 before:h-[14px] before:w-px before:-translate-y-1/2 before:bg-[var(--status-chip-separator-color)] max-[860px]:max-w-[min(54vw,240px)]"
+                >
                   {connectedGoogleEmail}
                 </Text>
               ) : null}
               {isGoogleConnected && !tokenExpired ? (
                 <button
                   type="button"
-                  className="import-file-dialog__header-disconnect"
+                  className="ml-1 inline-flex min-h-[18px] items-center gap-1 border-0 bg-transparent px-0 py-px text-xs font-semibold leading-[1.35] text-[var(--text-secondary)] transition-colors duration-[120ms] ease-[ease] hover:text-[var(--text-primary)] disabled:cursor-default disabled:opacity-[0.55]"
                   disabled={googleDisconnect.isPending || googleConnect.isPending}
                   onClick={handleDisconnect}
                 >
@@ -330,31 +330,47 @@ export const ImportFileDialog = ({
       size={!canImport ? 'md' : 'xl'}
       centered
       classNames={{
-        content: [
-          'import-file-dialog__modal-content',
-          !canImport ? 'import-file-dialog__modal-content--compact' : '',
-        ]
-          .filter(Boolean)
-          .join(' '),
-        body: [
-          'import-file-dialog__modal-body',
-          !canImport ? 'import-file-dialog__modal-body--compact' : '',
-        ]
-          .filter(Boolean)
-          .join(' '),
-        header: 'import-file-dialog__modal-shell-header',
-        close: 'import-file-dialog__modal-close',
+        close:
+          'focus:!outline-none focus-visible:!outline-none focus:!shadow-none focus-visible:!shadow-none',
+      }}
+      styles={{
+        content: {
+          height: canImport ? 'min(860px, calc(100dvh - 32px))' : 'auto',
+          maxHeight: 'calc(100dvh - 32px)',
+          display: 'flex',
+          flexDirection: 'column',
+        },
+        body: {
+          display: 'flex',
+          flexDirection: 'column',
+          height: canImport ? '100%' : 'auto',
+          minHeight: 0,
+          overflow: 'hidden',
+          padding: canImport ? undefined : '18px 16px 16px',
+        },
+        header: {
+          alignItems: 'center',
+          position: 'relative',
+          padding: '10px 16px',
+          minHeight: 0,
+          borderBottom: 'none',
+        },
+        close: {
+          alignSelf: 'center',
+          marginTop: 0,
+        },
       }}
     >
-      <Stack className="import-file-dialog" gap="md">
+      <Stack className="flex min-h-0 flex-1 flex-col" gap="md">
         <Stack
           gap="sm"
-          className={['import-file-dialog__main', !canImport ? 'import-file-dialog__main--compact' : '']
-            .filter(Boolean)
-            .join(' ')}
+          className={cx(
+            'flex min-h-0 flex-1 flex-col overflow-hidden',
+            !canImport && 'flex-none overflow-visible',
+          )}
         >
           {googleStatusQuery.isPending ? (
-            <Box className="import-file-dialog__state-card">
+            <Box className="rounded-[10px] border border-[var(--border-soft)] bg-[var(--bg-subtle)] px-3 py-2.5">
               <Group gap={8}>
                 <Loader size="sm" />
                 <Text size="sm">Checking Google Drive connection...</Text>
@@ -364,7 +380,7 @@ export const ImportFileDialog = ({
 
           {!canImport ? (
             tokenExpired ? (
-              <Stack className="import-file-dialog__reconnect-panel" gap="md">
+              <Stack className="mt-2.5 px-0.5 pb-0.5 pt-1" gap="md">
                 <Stack gap={5}>
                   <Text size="md" fw={700}>
                     Reconnect Google Drive
@@ -374,12 +390,12 @@ export const ImportFileDialog = ({
                   </Text>
                 </Stack>
                 <Button
-                  className="import-file-dialog__connect-button import-file-dialog__connect-button--reconnect"
+                  className="min-h-[42px] border border-[#63abff] bg-[#63abff] font-semibold text-white transition-colors duration-[120ms] ease-[ease] hover:enabled:!border-[#79b8ff] hover:enabled:!bg-[#79b8ff] hover:enabled:!text-white"
                   loading={googleConnect.isPending}
                   size="md"
                   variant="default"
                   leftSection={
-                    <GoogleDriveLogo className="import-file-dialog__drive-glyph import-file-dialog__drive-glyph--button" />
+                    <GoogleDriveLogo className="h-[14px] w-4 shrink-0 object-contain" />
                   }
                   onClick={() => googleConnect.mutate()}
                 >
@@ -387,7 +403,7 @@ export const ImportFileDialog = ({
                 </Button>
               </Stack>
             ) : (
-              <Box className="import-file-dialog__connect-card">
+              <Box className="mt-2 grid gap-3.5 rounded-xl border border-[var(--border-soft)] bg-[var(--bg-surface)] p-4">
                 <Stack gap={3}>
                   <Text size="md" fw={700}>
                     Connect Google Drive
@@ -397,12 +413,12 @@ export const ImportFileDialog = ({
                   </Text>
                 </Stack>
                 <Button
-                  className="import-file-dialog__connect-button"
+                  className="min-h-[42px] border border-[var(--border-soft)] bg-[var(--bg-surface)] font-semibold text-[var(--text-primary)] transition-colors duration-[120ms] ease-[ease] hover:enabled:!bg-[var(--bg-subtle)]"
                   loading={googleConnect.isPending}
                   size="md"
                   variant="default"
                   leftSection={
-                    <GoogleDriveLogo className="import-file-dialog__drive-glyph import-file-dialog__drive-glyph--button" />
+                    <GoogleDriveLogo className="h-[14px] w-4 shrink-0 object-contain" />
                   }
                   onClick={() => googleConnect.mutate()}
                 >
@@ -411,29 +427,39 @@ export const ImportFileDialog = ({
               </Box>
             )
           ) : (
-            <Box className="import-file-dialog__drive-browser">
-              <Box className="import-file-dialog__drive-browser-controls">
-                <Group justify="space-between" wrap="nowrap" className="import-file-dialog__drive-browser-toolbar">
+            <Box className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden bg-transparent pt-1">
+              <Box className="rounded-none border-0 border-b border-[var(--separator-muted)] bg-transparent px-0 pb-2.5 pt-1.5">
+                <Group
+                  justify="space-between"
+                  wrap="nowrap"
+                  className="items-stretch gap-2 max-[860px]:flex-col max-[860px]:items-stretch"
+                >
                   <TextInput
                     ref={searchInputRef}
                     data-autofocus
-                    className="import-file-dialog__drive-browser-search"
+                    className="flex-1"
+                    styles={{
+                      input: {
+                        borderColor: 'var(--border-muted)',
+                        minHeight: 36,
+                        borderRadius: 8,
+                        background: 'var(--bg-surface)',
+                      },
+                    }}
                     placeholder="Search in Google Drive"
                     leftSection={<IconSearch size={16} />}
                     value={search}
                     onChange={(event) => setSearch(event.currentTarget.value)}
                   />
 
-                  <Group gap={6} wrap="nowrap" className="import-file-dialog__drive-browser-tabs">
+                  <Group gap={6} wrap="nowrap" className="flex-none max-[860px]:justify-start">
                     <Button
                       size="xs"
                       variant="default"
-                      className={[
-                        'import-file-dialog__drive-browser-tab',
-                        driveTab === 'recent' ? 'import-file-dialog__drive-browser-tab--active' : '',
-                      ]
-                        .filter(Boolean)
-                        .join(' ')}
+                      className={cx(
+                        'min-h-8 rounded-lg border border-transparent bg-transparent px-2.5 font-semibold text-[var(--text-secondary)] transition-[background-color,border-color,color] duration-[150ms] ease-[ease] hover:enabled:!border-[var(--border-muted)] hover:enabled:!bg-[var(--bg-hover-soft)] hover:enabled:!text-[var(--text-secondary)]',
+                        driveTab === 'recent' && '!border-[var(--border-muted)] !bg-[var(--bg-subtle)] !text-[var(--text-primary)]',
+                      )}
                       onClick={() => handleDriveTabChange('recent')}
                     >
                       Recent
@@ -441,12 +467,10 @@ export const ImportFileDialog = ({
                     <Button
                       size="xs"
                       variant="default"
-                      className={[
-                        'import-file-dialog__drive-browser-tab',
-                        driveTab === 'my_drive' ? 'import-file-dialog__drive-browser-tab--active' : '',
-                      ]
-                        .filter(Boolean)
-                        .join(' ')}
+                      className={cx(
+                        'min-h-8 rounded-lg border border-transparent bg-transparent px-2.5 font-semibold text-[var(--text-secondary)] transition-[background-color,border-color,color] duration-[150ms] ease-[ease] hover:enabled:!border-[var(--border-muted)] hover:enabled:!bg-[var(--bg-hover-soft)] hover:enabled:!text-[var(--text-secondary)]',
+                        driveTab === 'my_drive' && '!border-[var(--border-muted)] !bg-[var(--bg-subtle)] !text-[var(--text-primary)]',
+                      )}
                       onClick={() => handleDriveTabChange('my_drive')}
                     >
                       My Drive
@@ -454,32 +478,32 @@ export const ImportFileDialog = ({
                     <Button
                       size="xs"
                       variant="default"
-                      className={[
-                        'import-file-dialog__drive-browser-tab',
-                        driveTab === 'shared' ? 'import-file-dialog__drive-browser-tab--active' : '',
-                      ]
-                        .filter(Boolean)
-                        .join(' ')}
+                      className={cx(
+                        'min-h-8 rounded-lg border border-transparent bg-transparent px-2.5 font-semibold text-[var(--text-secondary)] transition-[background-color,border-color,color] duration-[150ms] ease-[ease] hover:enabled:!border-[var(--border-muted)] hover:enabled:!bg-[var(--bg-hover-soft)] hover:enabled:!text-[var(--text-secondary)]',
+                        driveTab === 'shared' && '!border-[var(--border-muted)] !bg-[var(--bg-subtle)] !text-[var(--text-primary)]',
+                      )}
                       onClick={() => handleDriveTabChange('shared')}
                     >
                       Shared
                     </Button>
                   </Group>
 
-                  <Group gap={6} wrap="nowrap" className="import-file-dialog__drive-browser-sort-wrap">
-                    <Text size="xs" c="dimmed" className="import-file-dialog__drive-browser-sort-label">
+                  <Group
+                    gap={6}
+                    wrap="nowrap"
+                    className="flex-none border-l border-[var(--separator-muted)] pl-2.5 max-[860px]:justify-start"
+                  >
+                    <Text size="xs" c="dimmed" className="tracking-[0.01em] text-[var(--text-muted)]">
                       Sort
                     </Text>
-                    <Group gap={6} wrap="nowrap" className="import-file-dialog__drive-browser-sort">
+                    <Group gap={6} wrap="nowrap" className="flex-none max-[860px]:justify-start">
                       <Button
                         size="xs"
                         variant="default"
-                        className={[
-                          'import-file-dialog__drive-browser-sort-button',
-                          driveSort === 'modified_desc' ? 'import-file-dialog__drive-browser-sort-button--active' : '',
-                        ]
-                          .filter(Boolean)
-                          .join(' ')}
+                        className={cx(
+                          'min-h-8 rounded-lg border border-transparent bg-transparent px-2.5 font-semibold text-[var(--text-secondary)] transition-[background-color,border-color,color] duration-[150ms] ease-[ease] hover:enabled:!border-[var(--border-muted)] hover:enabled:!bg-[var(--bg-hover-soft)] hover:enabled:!text-[var(--text-secondary)]',
+                          driveSort === 'modified_desc' && '!border-[var(--border-muted)] !bg-[var(--bg-subtle)] !text-[var(--text-primary)]',
+                        )}
                         onClick={() => setDriveSort('modified_desc')}
                       >
                         Latest
@@ -487,12 +511,10 @@ export const ImportFileDialog = ({
                       <Button
                         size="xs"
                         variant="default"
-                        className={[
-                          'import-file-dialog__drive-browser-sort-button',
-                          driveSort === 'name_asc' ? 'import-file-dialog__drive-browser-sort-button--active' : '',
-                        ]
-                          .filter(Boolean)
-                          .join(' ')}
+                        className={cx(
+                          'min-h-8 rounded-lg border border-transparent bg-transparent px-2.5 font-semibold text-[var(--text-secondary)] transition-[background-color,border-color,color] duration-[150ms] ease-[ease] hover:enabled:!border-[var(--border-muted)] hover:enabled:!bg-[var(--bg-hover-soft)] hover:enabled:!text-[var(--text-secondary)]',
+                          driveSort === 'name_asc' && '!border-[var(--border-muted)] !bg-[var(--bg-subtle)] !text-[var(--text-primary)]',
+                        )}
                         onClick={() => setDriveSort('name_asc')}
                       >
                         A-Z
@@ -500,12 +522,10 @@ export const ImportFileDialog = ({
                       <Button
                         size="xs"
                         variant="default"
-                        className={[
-                          'import-file-dialog__drive-browser-sort-button',
-                          driveSort === 'size_desc' ? 'import-file-dialog__drive-browser-sort-button--active' : '',
-                        ]
-                          .filter(Boolean)
-                          .join(' ')}
+                        className={cx(
+                          'min-h-8 rounded-lg border border-transparent bg-transparent px-2.5 font-semibold text-[var(--text-secondary)] transition-[background-color,border-color,color] duration-[150ms] ease-[ease] hover:enabled:!border-[var(--border-muted)] hover:enabled:!bg-[var(--bg-hover-soft)] hover:enabled:!text-[var(--text-secondary)]',
+                          driveSort === 'size_desc' && '!border-[var(--border-muted)] !bg-[var(--bg-subtle)] !text-[var(--text-primary)]',
+                        )}
                         onClick={() => setDriveSort('size_desc')}
                       >
                         Size
@@ -515,9 +535,9 @@ export const ImportFileDialog = ({
                 </Group>
               </Box>
 
-              <Box className="import-file-dialog__drive-browser-content">
+              <Box className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden rounded-none border-0 bg-transparent p-0">
                 {googleFilesQuery.isPending ? (
-                  <Box className="import-file-dialog__state-card">
+                  <Box className="rounded-[10px] border border-[var(--border-soft)] bg-[var(--bg-subtle)] px-3 py-2.5">
                     <Group gap={8}>
                       <Loader size="sm" />
                       <Text size="sm">Loading Google Drive files...</Text>
@@ -529,8 +549,8 @@ export const ImportFileDialog = ({
                   <Alert color="red">{toApiError(googleFilesQuery.error).message}</Alert>
                 ) : null}
 
-                <ScrollArea className="import-file-dialog__drive-browser-scroll">
-                  <Box className="import-file-dialog__drive-grid-head">
+                <ScrollArea className="[--drive-grid-columns:32px_minmax(0,1.9fr)_minmax(118px,1fr)_94px_128px_88px] min-h-0 flex-1 rounded-[10px] border border-[var(--separator-muted)] bg-[var(--bg-surface)] p-0 max-[860px]:[--drive-grid-columns:28px_minmax(0,1.7fr)_minmax(100px,1fr)_84px_112px_76px]">
+                  <Box className="sticky top-0 z-[1] grid grid-cols-[var(--drive-grid-columns)] items-center gap-x-2.5 border-b border-[var(--separator-soft)] bg-[var(--bg-subtle)] px-3 py-2.5 max-[860px]:gap-x-2">
                     <span />
                     <Text size="xs" fw={600} c="dimmed">
                       Name
@@ -547,7 +567,7 @@ export const ImportFileDialog = ({
                     <span />
                   </Box>
 
-                  <Stack gap={0} className="import-file-dialog__drive-browser-list">
+                  <Stack gap={0} className="min-h-0">
                     {visibleGoogleFiles.map((file) => {
                       const fileTypePresentation = getFileTypePresentation(file.name, file.mime_type)
                       const isSelected = effectiveSelectedGoogleIdSet.has(file.id)
@@ -555,9 +575,11 @@ export const ImportFileDialog = ({
                       const isTooLarge = (file.size_bytes ?? 0) > MAX_IMPORT_FILE_SIZE_BYTES
                       const { baseName, extension } = splitFileNameForEllipsis(file.name)
                       const rowClassName = [
-                        'import-file-dialog__drive-file-row',
-                        isSelected ? 'import-file-dialog__drive-file-row--selected' : '',
-                        isTooLarge ? 'import-file-dialog__drive-file-row--too-large' : '',
+                        'grid w-full cursor-pointer grid-cols-[var(--drive-grid-columns)] items-center gap-x-2.5 border-0 border-b border-[var(--separator-soft)] bg-transparent px-3 py-2.5 text-left shadow-none transition-[border-color,background-color] duration-[160ms] ease-[ease] hover:border-b-[var(--border-muted)] hover:bg-[var(--bg-hover-soft)] max-[860px]:gap-x-2',
+                        isSelected ? 'bg-[var(--bg-subtle)]' : '',
+                        isTooLarge
+                          ? 'cursor-not-allowed bg-[var(--state-danger-bg-soft)] hover:border-b-[var(--state-danger-border)] hover:bg-[var(--state-danger-bg-soft)]'
+                          : '',
                       ]
                         .filter(Boolean)
                         .join(' ')
@@ -592,29 +614,29 @@ export const ImportFileDialog = ({
                             disabled={isTooLarge}
                             tabIndex={-1}
                             ariaLabel={`Select ${file.name}`}
-                            className="import-file-dialog__drive-file-checkbox"
+                            className="ml-0.5 inline-flex items-center justify-center"
                             onClick={(event) => event.stopPropagation()}
                             onCheckedChange={() => toggleSelection()}
                           />
 
-                          <Box className="import-file-dialog__drive-file-name-cell">
+                          <Box className="min-w-0">
                             <Group wrap="nowrap" gap={10}>
-                              <span className="import-file-dialog__drive-file-icon" aria-hidden="true">
+                              <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-none border-0 bg-transparent" aria-hidden="true">
                                 <FileTypeIcon iconKey={fileTypePresentation.iconKey} size={16} />
                               </span>
-                              <div className="import-file-dialog__drive-file-main">
-                                <Text size="sm" fw={600} className="import-file-dialog__drive-file-name">
-                                  <span className="import-file-dialog__drive-file-name-base" title={file.name}>
+                              <div className="grid min-w-0 gap-0.5">
+                                <Text size="sm" fw={600} className="flex w-full min-w-0 items-baseline gap-0">
+                                  <span className="min-w-0 flex-1 truncate whitespace-nowrap" title={file.name}>
                                     {baseName}
                                   </span>
                                   {extension ? (
-                                    <span className="import-file-dialog__drive-file-name-ext">
+                                    <span className="shrink-0 whitespace-nowrap">
                                       {extension}
                                     </span>
                                   ) : null}
                                 </Text>
                                 {driveTab === 'shared' || file.shared ? (
-                                  <Text size="xs" c="dimmed" className="import-file-dialog__drive-file-owner">
+                                  <Text size="xs" c="dimmed" className="truncate whitespace-nowrap">
                                     {ownerLabel ? `Shared by ${ownerLabel}` : 'Shared with you'}
                                   </Text>
                                 ) : null}
@@ -622,22 +644,22 @@ export const ImportFileDialog = ({
                             </Group>
                           </Box>
 
-                          <Text size="xs" c="dimmed" className="import-file-dialog__drive-file-type-cell" truncate="end">
+                          <Text size="xs" c="dimmed" className="block min-w-0 truncate whitespace-nowrap" truncate="end">
                             {fileTypePresentation.label}
                           </Text>
-                          <Text size="sm" c="dimmed" className="import-file-dialog__drive-file-size-cell">
+                          <Text size="sm" c="dimmed" className="block min-w-0 truncate whitespace-nowrap">
                             {formatFileSize(file.size_bytes)}
                           </Text>
-                          <Text size="sm" c="dimmed" className="import-file-dialog__drive-file-updated-cell">
+                          <Text size="sm" c="dimmed" className="block min-w-0 truncate whitespace-nowrap">
                             {formatDateCompact(file.modified_at)}
                           </Text>
 
                           {isTooLarge ? (
-                            <Text size="xs" className="import-file-dialog__drive-file-too-large-pill">
+                            <Text size="xs" className="justify-self-end whitespace-nowrap rounded-full border border-[var(--state-danger-border)] bg-[var(--state-danger-bg)] px-2.5 py-[3px] font-bold text-[var(--state-danger-text)]">
                               Too large
                             </Text>
                           ) : file.shared ? (
-                            <Text size="xs" c="dimmed" className="import-file-dialog__drive-file-shared-pill">
+                            <Text size="xs" c="dimmed" className="justify-self-end whitespace-nowrap rounded-full border border-[var(--border-soft)] bg-[var(--bg-subtle)] px-2.5 py-[3px] font-semibold text-[var(--text-secondary)]">
                               Shared
                             </Text>
                           ) : (
@@ -650,7 +672,7 @@ export const ImportFileDialog = ({
                     {!googleFilesQuery.isPending &&
                     !googleFilesQuery.error &&
                     visibleGoogleFiles.length === 0 ? (
-                      <Box className="import-file-dialog__drive-browser-empty">
+                      <Box className="rounded-lg border border-dashed border-[var(--border-soft)] bg-[var(--bg-surface)] px-3 py-4 text-center">
                         <Text size="sm" fw={600}>
                           No files found
                         </Text>
@@ -662,7 +684,7 @@ export const ImportFileDialog = ({
                   </Stack>
                 </ScrollArea>
 
-                <Group justify="space-between" className="import-file-dialog__drive-browser-footer">
+                <Group justify="space-between" className="mt-auto border-t border-[var(--separator-muted)] bg-transparent pt-3">
                   <Stack gap={2}>
                     {googleSelectionExceedsBatchLimit ? (
                       <Text size="xs" c="red">
