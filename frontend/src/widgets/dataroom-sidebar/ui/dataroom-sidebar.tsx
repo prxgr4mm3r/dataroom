@@ -27,7 +27,6 @@ import { APP_SHORTCUTS, withShortcutHint } from '@/shared/lib/keyboard/shortcuts
 import { normalizeFolderId } from '@/shared/routes/dataroom-routes'
 import { ActionIcon, Box, Button, FileTypeIcon, Group, Menu, ScrollArea, Text, Title, Tooltip } from '@/shared/ui'
 import { ImportSourceMenu } from '@/widgets/import-source-menu'
-import './dataroom-sidebar.css'
 
 type DropState = 'none' | 'valid' | 'warning' | 'invalid'
 
@@ -108,6 +107,67 @@ type DataroomSidebarRailProps = {
 }
 
 const TREE_INDENT_STEP = 20
+const SIDEBAR_TITLE_HEIGHT_PX = 36
+const SIDEBAR_STACK_GAP_PX = 8
+const CREATE_BUTTON_HEIGHT_PX = 50
+const RAIL_ACTION_ICON_SIZE_PX = 34
+
+const SIDEBAR_CLASS_NAME = 'flex min-h-0 flex-col gap-2 overflow-hidden'
+const SIDEBAR_RAIL_CLASS_NAME = 'flex h-full flex-col items-center px-[6px] pb-3'
+const SIDEBAR_RAIL_ACTIONS_CLASS_NAME = 'flex flex-col items-center'
+const SIDEBAR_RAIL_ACTION_ICON_CLASS_NAME = 'inline-flex h-[34px] min-h-[34px] w-[34px] min-w-[34px] items-center justify-center'
+const SIDEBAR_RAIL_ACCOUNT_CLASS_NAME =
+  'mt-auto inline-flex cursor-pointer items-center justify-center rounded-full border-none bg-transparent px-0 py-[7px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]'
+const SIDEBAR_RAIL_AVATAR_CLASS_NAME =
+  'grid h-8 w-8 place-items-center overflow-hidden rounded-full shadow-[inset_0_0_0_1px_rgb(255_255_255_/_24%),0_1px_2px_rgb(16_24_40_/_16%)]'
+const SIDEBAR_RAIL_AVATAR_IMAGE_CLASS_NAME = 'h-full w-full object-cover'
+const SIDEBAR_RAIL_AVATAR_FALLBACK_CLASS_NAME =
+  'select-none text-xs font-bold uppercase leading-none tracking-[0.02em] text-white'
+
+const SIDEBAR_TITLE_CLASS_NAME = 'm-0 flex h-9 min-w-0 flex-none items-center overflow-hidden text-ellipsis whitespace-nowrap'
+const SIDEBAR_QUICK_ACTIONS_CLASS_NAME = 'grid flex-none gap-2 pb-2'
+const SIDEBAR_CREATE_BUTTON_CLASS_NAME =
+  "h-[50px] min-h-[50px] justify-start rounded-lg border border-[var(--accent)] bg-[var(--accent)] px-2.5 text-white transition-[background-color,border-color,transform] duration-[120ms] ease-[ease] hover:border-[var(--accent-hover)] hover:bg-[var(--accent-hover)] active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--focus-ring)] [&_.mantine-Button-inner]:min-h-[50px] [&_.mantine-Button-inner]:w-full [&_.mantine-Button-inner]:items-center [&_.mantine-Button-inner]:justify-start [&_.mantine-Button-section[data-position='left']]:me-2.5 [&_.mantine-Button-section[data-position='left']]:inline-flex [&_.mantine-Button-section[data-position='left']]:items-center [&_.mantine-Button-section[data-position='left']]:justify-center [&_.mantine-Button-section[data-position='left']]:text-[rgb(255_255_255_/_92%)] [&_.mantine-Button-label]:inline-flex [&_.mantine-Button-label]:flex-1 [&_.mantine-Button-label]:items-center [&_.mantine-Button-label]:text-left [&_.mantine-Button-label]:font-bold [&_.mantine-Button-label]:leading-none [&_.mantine-Button-label]:tracking-[0.01em] [&_.mantine-Button-label]:-translate-y-px [&_.mantine-Button-section[data-position='right']]:ms-2.5 [&_.mantine-Button-section[data-position='right']]:me-0 [&_.mantine-Button-section[data-position='right']]:inline-flex [&_.mantine-Button-section[data-position='right']]:items-center [&_.mantine-Button-section[data-position='right']]:justify-center [&_.mantine-Button-section[data-position='right']]:text-[rgb(255_255_255_/_80%)] [&_.mantine-Button-section_svg]:block [&_.mantine-Button-section_svg]:-translate-y-px"
+const SIDEBAR_TREE_TITLE_CLASS_NAME = 'pb-1 tracking-[0.01em]'
+const SIDEBAR_TREE_CLASS_NAME = 'min-h-0 flex-1 overflow-hidden'
+
+const SIDEBAR_ACCOUNT_WRAP_CLASS_NAME = 'flex-none border-t border-[var(--separator-soft)] p-2'
+const SIDEBAR_ACCOUNT_CARD_CLASS_NAME =
+  'w-full cursor-pointer rounded-xl border-none bg-transparent px-2 py-[7px] text-left transition-colors duration-[120ms] ease-[ease] hover:bg-[var(--bg-hover-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--accent)]'
+const SIDEBAR_ACCOUNT_AVATAR_CLASS_NAME =
+  'grid h-8 w-8 flex-none place-items-center overflow-hidden rounded-full p-0 shadow-[inset_0_0_0_1px_rgb(255_255_255_/_24%),0_1px_2px_rgb(16_24_40_/_16%)]'
+const SIDEBAR_ACCOUNT_AVATAR_IMAGE_CLASS_NAME = 'h-full w-full object-cover'
+const SIDEBAR_ACCOUNT_AVATAR_FALLBACK_CLASS_NAME =
+  'select-none text-xs font-bold uppercase leading-none tracking-[0.02em] text-white'
+const SIDEBAR_ACCOUNT_META_CLASS_NAME = 'min-w-0 flex-1 py-px'
+const SIDEBAR_ACCOUNT_NAME_CLASS_NAME = 'leading-[1.25]'
+const SIDEBAR_ACCOUNT_SUBTITLE_CLASS_NAME = 'mt-0 block leading-[1.35]'
+const SIDEBAR_ACCOUNT_MORE_CLASS_NAME = 'inline-flex flex-none items-center justify-center text-[var(--text-secondary)]'
+
+const TREE_ROW_BASE_CLASS_NAME =
+  'sidebar-tree-row relative block w-[calc(100%-var(--sidebar-tree-indent))] min-w-[164px] cursor-pointer rounded-lg border-none bg-transparent p-0 text-left transition-colors duration-[120ms] ease-[ease] ml-[var(--sidebar-tree-indent)] hover:bg-[var(--tree-row-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--accent)]'
+const TREE_ROW_ACTIVE_SOLID_CLASS_NAME =
+  '!bg-[var(--tree-row-active-solid-bg)] !shadow-[inset_0_0_0_1px_var(--tree-row-active-solid-border)] hover:!bg-[var(--tree-row-active-solid-hover-bg)] hover:!shadow-[inset_0_0_0_1px_var(--tree-row-active-solid-hover-border)]'
+const TREE_ROW_ACTIVE_FILE_CLASS_NAME =
+  '!bg-[var(--tree-row-active-file-bg)] !shadow-[inset_0_0_0_1px_var(--tree-row-active-file-border)] hover:!bg-[var(--tree-row-active-file-hover-bg)] hover:!shadow-[inset_0_0_0_1px_var(--tree-row-active-file-hover-border)]'
+const TREE_ROW_ACTIVE_CONTEXT_CLASS_NAME =
+  '!bg-[var(--tree-row-active-context-bg)] !shadow-[inset_0_0_0_1px_var(--tree-row-active-context-border)] hover:!bg-[var(--tree-row-active-context-hover-bg)] hover:!shadow-[inset_0_0_0_1px_var(--tree-row-active-context-hover-border)]'
+const TREE_ROW_DROP_VALID_CLASS_NAME = '!bg-[var(--state-success-bg)]'
+const TREE_ROW_DROP_WARNING_CLASS_NAME = '!bg-[var(--state-warning-bg)]'
+const TREE_ROW_DROP_INVALID_CLASS_NAME = '!bg-[var(--state-danger-bg)]'
+const TREE_ROW_DRAGGING_CLASS_NAME = 'opacity-[0.45]'
+const TREE_ROW_EXPANDER_CLASS_NAME = 'inline-flex cursor-pointer'
+const TREE_ROW_ICON_CLASS_NAME = 'inline-flex h-4 w-4 flex-none items-center justify-center [&>svg]:h-4 [&>svg]:w-4'
+const TREE_ROW_LABEL_CLASS_NAME = 'inline-flex min-w-0 max-w-full flex-1 items-baseline overflow-hidden whitespace-nowrap'
+const TREE_ROW_NAME_BASE_CLASS_NAME = 'min-w-0 overflow-hidden text-ellipsis whitespace-nowrap'
+const TREE_ROW_NAME_EXT_CLASS_NAME = 'flex-none whitespace-nowrap'
+
+const TREE_CHILDREN_BASE_CLASS_NAME =
+  'sidebar-tree-children relative pl-2 before:pointer-events-none before:absolute before:left-[var(--sidebar-tree-line-x)] before:top-0 before:bottom-0 before:w-px before:bg-[var(--tree-line)] before:opacity-90 [.sidebar-tree-row+&::before]:top-[6px] [&:last-child::before]:bottom-[6px]'
+const TREE_CHILDREN_ACTIVE_BRANCH_CLASS_NAME =
+  'before:!left-[calc(var(--sidebar-tree-line-x)-0.5px)] before:!w-0.5 before:!rounded-full before:!bg-[var(--tree-branch-active)] before:!opacity-100'
+
+const SIDEBAR_RAIL_TOP_PADDING = `calc(var(--mantine-spacing-sm) + ${SIDEBAR_TITLE_HEIGHT_PX + SIDEBAR_STACK_GAP_PX + (CREATE_BUTTON_HEIGHT_PX - RAIL_ACTION_ICON_SIZE_PX) / 2}px)`
 
 type SidebarContextMenuState =
   | {
@@ -468,8 +528,8 @@ export const DataroomSidebarRail = ({
   })
 
   return (
-    <Box className="dataroom-sidebar-rail">
-      <Group className="dataroom-sidebar-rail__actions" gap={4}>
+    <Box className={SIDEBAR_RAIL_CLASS_NAME} style={{ paddingTop: SIDEBAR_RAIL_TOP_PADDING }}>
+      <Group className={SIDEBAR_RAIL_ACTIONS_CLASS_NAME} gap={4}>
         <ImportSourceMenu
           onNewFolder={onNewFolder}
           onImportFromGoogle={onImportFromGoogle}
@@ -480,7 +540,7 @@ export const DataroomSidebarRail = ({
           <Box>
             <Tooltip label={createLabel} position="right">
               <ActionIcon
-                className="dataroom-sidebar-rail__action-icon"
+                className={SIDEBAR_RAIL_ACTION_ICON_CLASS_NAME}
                 variant="subtle"
                 size="lg"
                 radius="md"
@@ -496,21 +556,21 @@ export const DataroomSidebarRail = ({
 
       <Menu withinPortal position="right-end" offset={10}>
         <Menu.Target>
-          <Box component="button" type="button" className="dataroom-sidebar-rail__account" aria-label={accountName}>
+          <Box component="button" type="button" className={SIDEBAR_RAIL_ACCOUNT_CLASS_NAME} aria-label={accountName}>
             <Box
-              className="dataroom-sidebar-rail__avatar"
+              className={SIDEBAR_RAIL_AVATAR_CLASS_NAME}
               style={!showPhotoAvatar ? { backgroundColor: avatarColor } : undefined}
             >
               {showPhotoAvatar ? (
                 <img
                   src={avatarSrc ?? undefined}
                   alt={accountName}
-                  className="dataroom-sidebar-rail__avatar-image"
+                  className={SIDEBAR_RAIL_AVATAR_IMAGE_CLASS_NAME}
                   onError={handleAvatarError}
                   onLoad={handleAvatarLoad}
                 />
               ) : (
-                <span className="dataroom-sidebar-rail__avatar-fallback">{accountInitials}</span>
+                <span className={SIDEBAR_RAIL_AVATAR_FALLBACK_CLASS_NAME}>{accountInitials}</span>
               )}
             </Box>
           </Box>
@@ -601,19 +661,19 @@ const TreeRow = ({
 
   const dropClass =
     dropState === 'valid'
-      ? 'sidebar-tree-row--drop-valid'
+      ? TREE_ROW_DROP_VALID_CLASS_NAME
       : dropState === 'warning'
-        ? 'sidebar-tree-row--drop-warning'
+        ? TREE_ROW_DROP_WARNING_CLASS_NAME
       : dropState === 'invalid'
-        ? 'sidebar-tree-row--drop-invalid'
+        ? TREE_ROW_DROP_INVALID_CLASS_NAME
         : ''
 
   const className = [
-    'sidebar-tree-row',
-    active && activeVariant === 'solid' ? 'sidebar-tree-row--active-solid' : '',
-    active && activeVariant === 'file' ? 'sidebar-tree-row--active-file' : '',
-    active && activeVariant === 'context' ? 'sidebar-tree-row--active-context' : '',
-    isDragging ? 'sidebar-tree-row--dragging' : '',
+    TREE_ROW_BASE_CLASS_NAME,
+    !dropClass && active && activeVariant === 'solid' ? TREE_ROW_ACTIVE_SOLID_CLASS_NAME : '',
+    !dropClass && active && activeVariant === 'file' ? TREE_ROW_ACTIVE_FILE_CLASS_NAME : '',
+    !dropClass && active && activeVariant === 'context' ? TREE_ROW_ACTIVE_CONTEXT_CLASS_NAME : '',
+    isDragging ? TREE_ROW_DRAGGING_CLASS_NAME : '',
     dropClass,
   ]
     .filter(Boolean)
@@ -639,7 +699,7 @@ const TreeRow = ({
       <Group gap={8} px="sm" py={6} wrap="nowrap">
         {canExpand ? (
           <Box
-            className="sidebar-tree-row__expander"
+            className={TREE_ROW_EXPANDER_CLASS_NAME}
             onClick={(event) => {
               event.stopPropagation()
               onToggle?.()
@@ -653,7 +713,7 @@ const TreeRow = ({
           </Box>
         ) : null}
 
-        <Box className="sidebar-tree-row__icon">
+        <Box className={TREE_ROW_ICON_CLASS_NAME}>
           {isFile ? (
             <FileTypeIcon iconKey={fileTypePresentation?.iconKey ?? 'default'} size={16} />
           ) : (
@@ -662,14 +722,14 @@ const TreeRow = ({
         </Box>
 
         <Text
-          className="sidebar-tree-row__label"
+          className={TREE_ROW_LABEL_CLASS_NAME}
           size="sm"
           fw={active ? 600 : 500}
           c={labelColor}
           title={name}
         >
-          <span className="sidebar-tree-row__name-base">{nameParts.base}</span>
-          {nameParts.extension ? <span className="sidebar-tree-row__name-ext">{nameParts.extension}</span> : null}
+          <span className={TREE_ROW_NAME_BASE_CLASS_NAME}>{nameParts.base}</span>
+          {nameParts.extension ? <span className={TREE_ROW_NAME_EXT_CLASS_NAME}>{nameParts.extension}</span> : null}
         </Text>
       </Group>
     </Box>
@@ -755,8 +815,8 @@ const FolderFiles = ({
   return (
     <Box
       className={[
-        'sidebar-tree-children',
-        highlightBranch ? 'sidebar-tree-children--active-branch' : '',
+        TREE_CHILDREN_BASE_CLASS_NAME,
+        highlightBranch ? TREE_CHILDREN_ACTIVE_BRANCH_CLASS_NAME : '',
       ]
         .filter(Boolean)
         .join(' ')}
@@ -829,12 +889,13 @@ const FolderChildren = ({
   if (!folderNode.children.length) {
     return null
   }
+  const normalizedActiveFolderId = normalizeFolderId(activeFolderId)
 
   return (
     <Box
       className={[
-        'sidebar-tree-children',
-        highlightBranch ? 'sidebar-tree-children--active-branch' : '',
+        TREE_CHILDREN_BASE_CLASS_NAME,
+        highlightBranch ? TREE_CHILDREN_ACTIVE_BRANCH_CLASS_NAME : '',
       ]
         .filter(Boolean)
         .join(' ')}
@@ -852,13 +913,10 @@ const FolderChildren = ({
         const isExpanded = expandedIds.has(childFolder.id)
         const showFiles = fileContentVisibleFolderIds.has(childFolder.id)
         const knownItemCount = knownFolderItemCounts[childFolder.id]
-        const isKnownEmpty = childFolder.children.length === 0 && knownItemCount === 0
-        const canExpand = !isKnownEmpty && (
-          childFolder.children.length > 0 ||
-          typeof knownItemCount !== 'number' ||
-          knownItemCount > 0
-        )
-        const isActiveFolder = normalizeFolderId(activeFolderId) === childFolder.id
+        const folderFileCount = typeof folderItem.fileCount === 'number' ? folderItem.fileCount : null
+        const hasKnownItems = typeof knownItemCount === 'number' ? knownItemCount : folderFileCount
+        const canExpand = childFolder.children.length > 0 || (hasKnownItems !== null && hasKnownItems > 0)
+        const isActiveFolder = normalizedActiveFolderId === childFolder.id
         const folderActiveVariant: ActiveVariant = isActiveFolder && Boolean(activePreviewId) ? 'context' : 'solid'
 
         const toggleFolderView = () => {
@@ -914,23 +972,6 @@ const FolderChildren = ({
 
             {isExpanded ? (
               <>
-                {showFiles ? (
-                  <FolderFiles
-                    folderId={childFolder.id}
-                    depth={depth + 1}
-                    highlightBranch={isActiveFolder}
-                    activeFolderId={activeFolderId}
-                    activePreviewId={activePreviewId}
-                    onOpenFile={onOpenFile}
-                    onDragStartItem={onDragStartItem}
-                    onDragEnd={onDragEnd}
-                    onFolderDragOver={onFolderDragOver}
-                    onFolderDrop={onFolderDrop}
-                    isDraggingItem={isDraggingItem}
-                    onItemContextMenu={onItemContextMenu}
-                  />
-                ) : null}
-
                 <FolderChildren
                   folderNode={childFolder}
                   parentFolderId={childFolder.id}
@@ -961,6 +1002,23 @@ const FolderChildren = ({
                   getFolderItem={getFolderItem}
                   onItemContextMenu={onItemContextMenu}
                 />
+
+                {showFiles ? (
+                  <FolderFiles
+                    folderId={childFolder.id}
+                    depth={depth + 1}
+                    highlightBranch={isActiveFolder}
+                    activeFolderId={activeFolderId}
+                    activePreviewId={activePreviewId}
+                    onOpenFile={onOpenFile}
+                    onDragStartItem={onDragStartItem}
+                    onDragEnd={onDragEnd}
+                    onFolderDragOver={onFolderDragOver}
+                    onFolderDrop={onFolderDrop}
+                    isDraggingItem={isDraggingItem}
+                    onItemContextMenu={onItemContextMenu}
+                  />
+                ) : null}
               </>
             ) : null}
           </Box>
@@ -1004,7 +1062,8 @@ export const DataroomSidebar = ({
   isDraggingItem,
   getFolderItem,
 }: DataroomSidebarProps) => {
-  const isRootActive = normalizeFolderId(activeFolderId) === 'root'
+  const normalizedActiveFolderId = normalizeFolderId(activeFolderId)
+  const isRootActive = normalizedActiveFolderId === 'root'
   const isRootExpanded = expandedIds.has('root')
   const rootShowFiles = fileContentVisibleFolderIds.has('root')
   const rootActiveVariant: ActiveVariant = isRootActive && Boolean(activePreviewId) ? 'context' : 'solid'
@@ -1058,12 +1117,12 @@ export const DataroomSidebar = ({
   }
 
   return (
-    <Box h="100%" p="sm" pb={0} className="dataroom-sidebar">
-      <Title order={5} className="dataroom-sidebar__title">
+    <Box h="100%" p="sm" pb={0} className={SIDEBAR_CLASS_NAME}>
+      <Title order={5} className={SIDEBAR_TITLE_CLASS_NAME}>
         Dataroom.demo
       </Title>
 
-      <Box className="dataroom-sidebar__quick-actions">
+      <Box className={SIDEBAR_QUICK_ACTIONS_CLASS_NAME}>
         <ImportSourceMenu
           onNewFolder={onNewFolder}
           onImportFromGoogle={onImportFromGoogle}
@@ -1075,7 +1134,7 @@ export const DataroomSidebar = ({
             variant="filled"
             size="sm"
             fullWidth
-            className="dataroom-sidebar__create-button"
+            className={SIDEBAR_CREATE_BUTTON_CLASS_NAME}
             leftSection={<IconPlus size={18} />}
             rightSection={<IconChevronDown size={14} />}
             title={createLabelWithShortcut}
@@ -1086,12 +1145,12 @@ export const DataroomSidebar = ({
         </ImportSourceMenu>
       </Box>
 
-      <Text size="xs" fw={600} c="var(--text-secondary)" className="dataroom-sidebar__tree-title">
+      <Text size="xs" fw={600} c="var(--text-secondary)" className={SIDEBAR_TREE_TITLE_CLASS_NAME}>
         Documents
       </Text>
 
       <ScrollArea
-        className="dataroom-sidebar__tree"
+        className={SIDEBAR_TREE_CLASS_NAME}
         onDragOver={(event) => {
           event.stopPropagation()
           onFolderDragOver('root', event)
@@ -1209,38 +1268,38 @@ export const DataroomSidebar = ({
         ) : null}
       </ScrollArea>
 
-      <Box className="dataroom-sidebar__account">
+      <Box className={SIDEBAR_ACCOUNT_WRAP_CLASS_NAME}>
         <Menu withinPortal position="top-start" offset={8}>
           <Menu.Target>
-            <Box component="button" type="button" className="dataroom-sidebar__account-card">
+            <Box component="button" type="button" className={SIDEBAR_ACCOUNT_CARD_CLASS_NAME}>
               <Group gap={6} wrap="nowrap">
                 <Box
-                  className="dataroom-sidebar__account-avatar"
+                  className={SIDEBAR_ACCOUNT_AVATAR_CLASS_NAME}
                   style={!showPhotoAvatar ? { backgroundColor: avatarColor } : undefined}
                 >
                   {showPhotoAvatar ? (
                     <img
                       src={avatarSrc ?? undefined}
                       alt={accountName}
-                      className="dataroom-sidebar__account-avatar-image"
+                      className={SIDEBAR_ACCOUNT_AVATAR_IMAGE_CLASS_NAME}
                       onError={handleAvatarError}
                       onLoad={handleAvatarLoad}
                     />
                   ) : (
-                    <span className="dataroom-sidebar__account-avatar-fallback">{accountInitials}</span>
+                    <span className={SIDEBAR_ACCOUNT_AVATAR_FALLBACK_CLASS_NAME}>{accountInitials}</span>
                   )}
                 </Box>
 
-                <Box className="dataroom-sidebar__account-meta">
-                  <Text size="sm" fw={600} truncate="end" className="dataroom-sidebar__account-name">
+                <Box className={SIDEBAR_ACCOUNT_META_CLASS_NAME}>
+                  <Text size="sm" fw={600} truncate="end" className={SIDEBAR_ACCOUNT_NAME_CLASS_NAME}>
                     {accountName}
                   </Text>
-                  <Text size="xs" c="var(--text-secondary)" truncate="end" className="dataroom-sidebar__account-subtitle">
+                  <Text size="xs" c="var(--text-secondary)" truncate="end" className={SIDEBAR_ACCOUNT_SUBTITLE_CLASS_NAME}>
                     {accountSubtitle}
                   </Text>
                 </Box>
 
-                <Box className="dataroom-sidebar__account-more">
+                <Box className={SIDEBAR_ACCOUNT_MORE_CLASS_NAME}>
                   <IconDotsVertical size={16} />
                 </Box>
               </Group>

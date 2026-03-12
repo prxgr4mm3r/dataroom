@@ -150,7 +150,7 @@ export const AppShell = ({ sidebar, collapsedSidebar, header, content, bulkActio
                 className={cx(
                   'absolute inset-0 will-change-[opacity,transform] motion-reduce:transition-none',
                   'transition-[opacity,transform] [transition-duration:200ms,220ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]',
-                  isSidebarCollapsed ? 'pointer-events-none opacity-0 -translate-x-2' : 'pointer-events-auto opacity-100 translate-x-0',
+                  isSidebarCollapsed ? 'pointer-events-none opacity-0' : 'pointer-events-auto opacity-100',
                 )}
                 aria-hidden={isSidebarCollapsed}
               >
@@ -160,7 +160,7 @@ export const AppShell = ({ sidebar, collapsedSidebar, header, content, bulkActio
                 className={cx(
                   'absolute inset-0 will-change-[opacity,transform] motion-reduce:transition-none',
                   'transition-[opacity,transform] [transition-duration:200ms,220ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]',
-                  isSidebarCollapsed ? 'pointer-events-auto opacity-100 translate-x-0' : 'pointer-events-none opacity-0 translate-x-2',
+                  isSidebarCollapsed ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0',
                 )}
                 aria-hidden={!isSidebarCollapsed}
               >
