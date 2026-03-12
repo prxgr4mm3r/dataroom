@@ -13,7 +13,7 @@ import {
   IconUpload,
   IconX,
 } from '@tabler/icons-react'
-import { useEffect, useRef, useState, type DragEvent, type PointerEvent } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type DragEvent, type PointerEvent } from 'react'
 
 import type { ContentItem } from '@/entities/content-item'
 import { isFileItem } from '@/entities/content-item'
@@ -40,7 +40,6 @@ import {
   Text,
 } from '@/shared/ui'
 import type { SortBy, SortOrder } from '@/shared/types/common'
-import './file-table.css'
 
 type DropState = 'none' | 'valid' | 'warning' | 'invalid'
 type ToggleSelectOptions = {
@@ -260,7 +259,12 @@ const SortableHeader = ({
   className?: string
 }) => (
   <Table.Th
-    className={['file-table__th', 'file-table__th--sortable', className].filter(Boolean).join(' ')}
+    className={[
+      'file-table__th file-table__th--sortable h-11 border-b border-[var(--table-separator)] bg-[var(--table-header-bg)] py-0 align-middle font-semibold text-[var(--text-secondary)] cursor-pointer',
+      className,
+    ]
+      .filter(Boolean)
+      .join(' ')}
     style={{ whiteSpace: 'nowrap' }}
     onClick={onClick}
   >
@@ -272,6 +276,21 @@ const SortableHeader = ({
     </Group>
   </Table.Th>
 )
+
+const TABLE_CLASS_NAME =
+  'file-table m-0 w-full border-none border-collapse'
+
+const TH_BASE_CLASS_NAME =
+  'file-table__th h-11 border-b border-[var(--table-separator)] bg-[var(--table-header-bg)] py-0 align-middle font-semibold text-[var(--text-secondary)]'
+
+const TD_BASE_CLASS_NAME =
+  'file-table__td border-b border-[var(--table-separator)] py-[11px] align-middle group-hover:shadow-[inset_0_1px_0_var(--table-row-hover-border),inset_0_-1px_0_var(--table-row-hover-border)]'
+
+const SIZE_COLUMN_CLASS_NAME =
+  'whitespace-nowrap w-[var(--file-table-size-col-width)] min-w-[var(--file-table-size-col-width)] max-w-[var(--file-table-size-col-width)] transition-[width,min-width,max-width] duration-[var(--file-table-layout-ms)] ease-[var(--file-table-layout-ease)] motion-reduce:transition-none'
+
+const UPDATED_COLUMN_CLASS_NAME =
+  'whitespace-nowrap w-[var(--file-table-updated-col-width)] min-w-[var(--file-table-updated-col-width)] max-w-[var(--file-table-updated-col-width)] transition-[width,min-width,max-width] duration-[var(--file-table-layout-ms)] ease-[var(--file-table-layout-ease)] motion-reduce:transition-none'
 
 export const FileTable = ({
   readOnly = false,
@@ -324,7 +343,15 @@ export const FileTable = ({
   const pendingToggleOptionsRef = useRef<ToggleSelectOptions | null>(null)
   const currentFolderDropState = readOnly ? 'none' : getFolderDropState(currentFolderId)
   const compactUpdatedAt = Boolean(openedPreviewId)
-  const tableClassName = ['file-table', compactUpdatedAt ? 'file-table--preview-open' : ''].filter(Boolean).join(' ')
+  const tableStyle: CSSProperties = {
+    ['--file-table-layout-ms' as string]: '220ms',
+    ['--file-table-layout-ease' as string]: 'cubic-bezier(0.2, 0, 0, 1)',
+    ['--file-table-size-col-width' as string]: compactUpdatedAt ? '112px' : '98px',
+    ['--file-table-updated-col-width' as string]: compactUpdatedAt ? '122px' : '168px',
+    ['--mantine-color-body' as string]: 'var(--table-header-bg)',
+    ['--table-sticky-header-background-color' as string]: 'var(--table-header-bg)',
+    ['--table-highlight-on-hover-color' as string]: 'var(--table-row-hover-bg)',
+  }
   const isImportOverlayActive = !readOnly && importOverlayState.mode !== 'none'
   const isMoveOverlayActive =
     !readOnly && !isImportOverlayActive && moveOverlayItemCount > 0 && currentFolderDropState !== 'none'
@@ -443,9 +470,12 @@ export const FileTable = ({
 
     if (importOverlayState.mode === 'uploading') {
       return (
-        <div className="file-table__drop-overlay file-table__drop-overlay--uploading" aria-live="polite">
-          <div className="file-table__drop-overlay-card">
-            <span className="file-table__drop-overlay-icon">
+        <div
+          className="file-table__drop-overlay pointer-events-none absolute inset-0 z-[8] flex items-center justify-center rounded-lg border-2 border-dashed border-[var(--drop-upload-border)] bg-[var(--drop-upload-bg)]"
+          aria-live="polite"
+        >
+          <div className="file-table__drop-overlay-card flex max-w-[520px] items-center gap-2.5 rounded-[10px] bg-[var(--overlay-card-bg)] px-[18px] py-[14px] shadow-[var(--overlay-card-shadow)]">
+            <span className="file-table__drop-overlay-icon inline-flex items-center justify-center">
               <Loader size={18} color="var(--accent)" />
             </span>
             <div>
@@ -466,9 +496,12 @@ export const FileTable = ({
       const rejectedLabel = formatDraggedFileCount(importOverlayState.rejectedCount)
 
       return (
-        <div className="file-table__drop-overlay file-table__drop-overlay--warning" aria-live="polite">
-          <div className="file-table__drop-overlay-card">
-            <span className="file-table__drop-overlay-icon">
+        <div
+          className="file-table__drop-overlay pointer-events-none absolute inset-0 z-[8] flex items-center justify-center rounded-lg border-2 border-dashed border-[var(--drop-warning-border)] bg-[var(--drop-warning-bg)]"
+          aria-live="polite"
+        >
+          <div className="file-table__drop-overlay-card flex max-w-[520px] items-center gap-2.5 rounded-[10px] bg-[var(--overlay-card-bg)] px-[18px] py-[14px] shadow-[var(--overlay-card-shadow)]">
+            <span className="file-table__drop-overlay-icon inline-flex items-center justify-center text-[var(--drop-icon-warning)]">
               <IconAlertTriangle size={18} stroke={2} />
             </span>
             <div>
@@ -486,9 +519,12 @@ export const FileTable = ({
 
     if (importOverlayState.mode === 'too_large') {
       return (
-        <div className="file-table__drop-overlay file-table__drop-overlay--too-large" aria-live="polite">
-          <div className="file-table__drop-overlay-card">
-            <span className="file-table__drop-overlay-icon">
+        <div
+          className="file-table__drop-overlay pointer-events-none absolute inset-0 z-[8] flex items-center justify-center rounded-lg border-2 border-dashed border-[var(--drop-danger-border)] bg-[var(--drop-danger-bg)]"
+          aria-live="polite"
+        >
+          <div className="file-table__drop-overlay-card flex max-w-[520px] items-center gap-2.5 rounded-[10px] bg-[var(--overlay-card-bg)] px-[18px] py-[14px] shadow-[var(--overlay-card-shadow)]">
+            <span className="file-table__drop-overlay-icon inline-flex items-center justify-center text-[var(--drop-icon-danger)]">
               <IconAlertTriangle size={18} stroke={2} />
             </span>
             <div>
@@ -505,9 +541,12 @@ export const FileTable = ({
     }
 
     return (
-      <div className="file-table__drop-overlay file-table__drop-overlay--ready" aria-live="polite">
-        <div className="file-table__drop-overlay-card">
-          <span className="file-table__drop-overlay-icon">
+      <div
+        className="file-table__drop-overlay pointer-events-none absolute inset-0 z-[8] flex items-center justify-center rounded-lg border-2 border-dashed border-[var(--drop-ready-border)] bg-[var(--drop-ready-bg)]"
+        aria-live="polite"
+      >
+        <div className="file-table__drop-overlay-card flex max-w-[520px] items-center gap-2.5 rounded-[10px] bg-[var(--overlay-card-bg)] px-[18px] py-[14px] shadow-[var(--overlay-card-shadow)]">
+          <span className="file-table__drop-overlay-icon inline-flex items-center justify-center text-[var(--drop-icon-ready)]">
             <IconUpload size={18} stroke={2} />
           </span>
           <div>
@@ -530,9 +569,12 @@ export const FileTable = ({
 
     if (currentFolderDropState === 'warning') {
       return (
-        <div className="file-table__drop-overlay file-table__drop-overlay--warning" aria-live="polite">
-          <div className="file-table__drop-overlay-card">
-            <span className="file-table__drop-overlay-icon">
+        <div
+          className="file-table__drop-overlay pointer-events-none absolute inset-0 z-[8] flex items-center justify-center rounded-lg border-2 border-dashed border-[var(--drop-warning-border)] bg-[var(--drop-warning-bg)]"
+          aria-live="polite"
+        >
+          <div className="file-table__drop-overlay-card flex max-w-[520px] items-center gap-2.5 rounded-[10px] bg-[var(--overlay-card-bg)] px-[18px] py-[14px] shadow-[var(--overlay-card-shadow)]">
+            <span className="file-table__drop-overlay-icon inline-flex items-center justify-center text-[var(--drop-icon-warning)]">
               <IconAlertTriangle size={18} stroke={2} />
             </span>
             <div>
@@ -550,9 +592,12 @@ export const FileTable = ({
 
     if (currentFolderDropState === 'invalid') {
       return (
-        <div className="file-table__drop-overlay file-table__drop-overlay--too-large" aria-live="polite">
-          <div className="file-table__drop-overlay-card">
-            <span className="file-table__drop-overlay-icon">
+        <div
+          className="file-table__drop-overlay pointer-events-none absolute inset-0 z-[8] flex items-center justify-center rounded-lg border-2 border-dashed border-[var(--drop-danger-border)] bg-[var(--drop-danger-bg)]"
+          aria-live="polite"
+        >
+          <div className="file-table__drop-overlay-card flex max-w-[520px] items-center gap-2.5 rounded-[10px] bg-[var(--overlay-card-bg)] px-[18px] py-[14px] shadow-[var(--overlay-card-shadow)]">
+            <span className="file-table__drop-overlay-icon inline-flex items-center justify-center text-[var(--drop-icon-danger)]">
               <IconAlertTriangle size={18} stroke={2} />
             </span>
             <div>
@@ -569,9 +614,12 @@ export const FileTable = ({
     }
 
     return (
-      <div className="file-table__drop-overlay file-table__drop-overlay--ready" aria-live="polite">
-        <div className="file-table__drop-overlay-card">
-          <span className="file-table__drop-overlay-icon">
+      <div
+        className="file-table__drop-overlay pointer-events-none absolute inset-0 z-[8] flex items-center justify-center rounded-lg border-2 border-dashed border-[var(--drop-ready-border)] bg-[var(--drop-ready-bg)]"
+        aria-live="polite"
+      >
+        <div className="file-table__drop-overlay-card flex max-w-[520px] items-center gap-2.5 rounded-[10px] bg-[var(--overlay-card-bg)] px-[18px] py-[14px] shadow-[var(--overlay-card-shadow)]">
+          <span className="file-table__drop-overlay-icon inline-flex items-center justify-center text-[var(--drop-icon-ready)]">
             <IconArrowsMove size={18} stroke={2} />
           </span>
           <div>
@@ -616,7 +664,7 @@ export const FileTable = ({
 
     return (
       <Box
-        className="file-table__container file-table__empty-wrap"
+        className="file-table__container file-table__empty-wrap relative flex min-h-0"
         p="md"
         h="100%"
         bg={emptyBackground}
@@ -627,18 +675,21 @@ export const FileTable = ({
       >
         {readOnly ? <Text c="dimmed">This folder is empty.</Text> : null}
         {!readOnly && !isImportOverlayActive && !isMoveOverlayActive ? (
-          <div className="file-table__empty-center">
-            <div className="file-table__empty-state">
-              <span className="file-table__empty-state-icon" aria-hidden="true">
+          <div className="file-table__empty-center flex min-h-full w-full items-center justify-center">
+            <div className="file-table__empty-state relative flex min-h-[180px] w-full flex-col items-center justify-center gap-2 overflow-hidden rounded-xl border border-dashed border-[var(--border-soft)] bg-[var(--bg-subtle)] p-5 text-center">
+              <span
+                className="file-table__empty-state-icon inline-flex h-10 w-10 items-center justify-center rounded-full bg-[var(--accent-soft)] text-[var(--accent)]"
+                aria-hidden="true"
+              >
                 <IconCloudUpload size={22} />
               </span>
               <Text size="sm" fw={700}>
                 This folder is empty.
               </Text>
-              <Text size="xs" c="dimmed" className="file-table__empty-state-hint">
+              <Text size="xs" c="dimmed" className="file-table__empty-state-hint max-w-[460px]">
                 Import files up to {maxImportSizeLabel} each, {maxImportBatchSizeLabel} per import. Drag and drop files or folders here to upload.
               </Text>
-              <Group gap="xs" className="file-table__empty-state-actions">
+              <Group gap="xs" className="file-table__empty-state-actions max-[980px]:w-full max-[980px]:flex-col">
                 <Button
                   size="xs"
                   variant="default"
@@ -652,6 +703,7 @@ export const FileTable = ({
                   aria-label={importFromGoogleLabelWithShortcut}
                   onClick={onImportFromGoogle}
                   disabled={!onImportFromGoogle}
+                  className="max-[980px]:w-full"
                 >
                   Import from Google Drive
                 </Button>
@@ -669,6 +721,7 @@ export const FileTable = ({
                   onClick={onImportFromComputer}
                   disabled={!onImportFromComputer}
                   loading={importFromComputerPending}
+                  className="max-[980px]:w-full"
                 >
                   Upload from computer
                 </Button>
@@ -685,7 +738,7 @@ export const FileTable = ({
   return (
     <Box
       ref={containerRef}
-      className="file-table__container"
+      className="file-table__container relative min-h-0"
       h="100%"
       onDragOver={readOnly ? undefined : (event) => onFolderDragOver(currentFolderId, event)}
       onDrop={readOnly ? undefined : (event) => onFolderDrop(currentFolderId, event)}
@@ -697,11 +750,24 @@ export const FileTable = ({
       onClickCapture={dragSelection.onClickCapture}
     >
       <ScrollArea h="100%">
-        <Table className={tableClassName} stickyHeader highlightOnHover withColumnBorders={false}>
+        <Table
+          className={TABLE_CLASS_NAME}
+          style={tableStyle}
+          stickyHeader
+          highlightOnHover
+          withColumnBorders={false}
+          styles={{
+            th: {
+              backgroundColor: 'var(--table-header-bg)',
+              color: 'var(--text-secondary)',
+              borderBottom: '1px solid var(--table-separator)',
+            },
+          }}
+        >
           <Table.Thead>
             <Table.Tr>
-              <Table.Th className="file-table__th file-table__th--select" w={44}>
-                <span className="file-table__select-control">
+              <Table.Th className={`${TH_BASE_CLASS_NAME} file-table__th--select w-11 px-0 text-center`} w={44}>
+                <span className="file-table__select-control flex min-h-full items-center justify-start pl-2">
                   <SelectionCheckbox
                     checked={allVisibleSelected}
                     indeterminate={partiallyVisibleSelected}
@@ -729,14 +795,14 @@ export const FileTable = ({
                 active={sortBy === 'type'}
                 order={sortOrder}
                 onClick={() => onToggleSort('type')}
-                className={showBulkHeaderActions ? 'file-table__th--bulk-hidden' : undefined}
+                className={showBulkHeaderActions ? 'file-table__th--bulk-hidden pointer-events-none text-transparent' : undefined}
               />
               <SortableHeader
                 label="Size"
                 active={sortBy === 'size'}
                 order={sortOrder}
                 onClick={() => onToggleSort('size')}
-                className={['file-table__th--size', showBulkHeaderActions ? 'file-table__th--bulk-hidden' : '']
+                className={[SIZE_COLUMN_CLASS_NAME, showBulkHeaderActions ? 'file-table__th--bulk-hidden pointer-events-none text-transparent' : '']
                   .filter(Boolean)
                   .join(' ')}
               />
@@ -745,25 +811,25 @@ export const FileTable = ({
                 active={sortBy === 'updated_at'}
                 order={sortOrder}
                 onClick={() => onToggleSort('updated_at')}
-                className={['file-table__th--updated', showBulkHeaderActions ? 'file-table__th--bulk-hidden' : '']
+                className={[UPDATED_COLUMN_CLASS_NAME, showBulkHeaderActions ? 'file-table__th--bulk-hidden pointer-events-none text-transparent' : '']
                   .filter(Boolean)
                   .join(' ')}
               />
-              <Table.Th className="file-table__th file-table__th--actions file-table__th--actions-anchor" w={56}>
+              <Table.Th className={`${TH_BASE_CLASS_NAME} file-table__th--actions file-table__th--actions-anchor relative text-right`} w={56}>
                 {showBulkHeaderActions ? (
-                  <div className="file-table__bulk-header-overlay">
-                    <Text size="sm" fw={600} className="file-table__bulk-count">
+                  <div className="file-table__bulk-header-overlay absolute right-2 top-1/2 z-[2] flex -translate-y-1/2 items-center gap-2.5 whitespace-nowrap">
+                    <Text size="sm" fw={600} className="file-table__bulk-count whitespace-nowrap text-[var(--text-primary)] max-[980px]:hidden">
                       {selectedCount === 1 ? '1 item selected' : `${selectedCount} items selected`}
                     </Text>
-                    <Group gap="xs" wrap="nowrap" className="file-table__bulk-actions">
+                    <Group gap="xs" wrap="nowrap" className="file-table__bulk-actions ml-auto">
                       <Button
                         variant="subtle"
                         size="xs"
                         leftSection={<IconX size={14} />}
                         onClick={onClearSelection}
-                        className="file-table__bulk-button"
+                        className="file-table__bulk-button [&_.mantine-Button-inner]:whitespace-nowrap max-[980px]:min-w-8 max-[980px]:px-2"
                       >
-                        <span className="file-table__bulk-button-label">{t('clearSelection')}</span>
+                        <span className="file-table__bulk-button-label max-[980px]:hidden">{t('clearSelection')}</span>
                       </Button>
                       <Button
                         variant="default"
@@ -771,9 +837,9 @@ export const FileTable = ({
                         leftSection={<IconDownload size={14} />}
                         onClick={onDownloadSelected}
                         loading={downloadPending}
-                        className="file-table__bulk-button"
+                        className="file-table__bulk-button [&_.mantine-Button-inner]:whitespace-nowrap max-[980px]:min-w-8 max-[980px]:px-2"
                       >
-                        <span className="file-table__bulk-button-label">{t('download')}</span>
+                        <span className="file-table__bulk-button-label max-[980px]:hidden">{t('download')}</span>
                       </Button>
                       {onCopySelected ? (
                         <Button
@@ -782,9 +848,9 @@ export const FileTable = ({
                           leftSection={<IconCopy size={14} />}
                           onClick={onCopySelected}
                           loading={copyPending}
-                          className="file-table__bulk-button"
+                          className="file-table__bulk-button [&_.mantine-Button-inner]:whitespace-nowrap max-[980px]:min-w-8 max-[980px]:px-2"
                         >
-                          <span className="file-table__bulk-button-label">{t('copy')}</span>
+                          <span className="file-table__bulk-button-label max-[980px]:hidden">{t('copy')}</span>
                         </Button>
                       ) : null}
                       {onMoveSelected ? (
@@ -794,9 +860,9 @@ export const FileTable = ({
                           leftSection={<IconArrowsMove size={14} />}
                           onClick={onMoveSelected}
                           loading={movePending}
-                          className="file-table__bulk-button"
+                          className="file-table__bulk-button [&_.mantine-Button-inner]:whitespace-nowrap max-[980px]:min-w-8 max-[980px]:px-2"
                         >
-                          <span className="file-table__bulk-button-label">{t('move')}</span>
+                          <span className="file-table__bulk-button-label max-[980px]:hidden">{t('move')}</span>
                         </Button>
                       ) : null}
                       {onDeleteSelected ? (
@@ -807,9 +873,9 @@ export const FileTable = ({
                           leftSection={<IconTrash size={14} />}
                           onClick={onDeleteSelected}
                           loading={deletePending}
-                          className="file-table__bulk-button"
+                          className="file-table__bulk-button [&_.mantine-Button-inner]:whitespace-nowrap max-[980px]:min-w-8 max-[980px]:px-2"
                         >
-                          <span className="file-table__bulk-button-label">{t('deleteSelected')}</span>
+                          <span className="file-table__bulk-button-label max-[980px]:hidden">{t('deleteSelected')}</span>
                         </Button>
                       ) : null}
                     </Group>
@@ -819,7 +885,7 @@ export const FileTable = ({
             </Table.Tr>
           </Table.Thead>
 
-          <Table.Tbody>
+          <Table.Tbody className="[&_tr:last-child_td]:border-b-0">
             {items.map((item) => {
               const isSelected = selectedIdSet.has(item.id)
               const isOpened = openedPreviewId === item.id
@@ -859,7 +925,7 @@ export const FileTable = ({
                     rowRefs.current.delete(item.id)
                   }}
                   data-item-id={item.id}
-                  className="file-table__row"
+                  className="file-table__row group select-none [&_*]:select-none"
                   bg={rowBackground}
                   draggable={canDragRow}
                   onDragStart={
@@ -909,8 +975,8 @@ export const FileTable = ({
                   }
                   style={{ opacity: isDragging ? 0.45 : 1 }}
                 >
-                  <Table.Td className="file-table__td file-table__td--select">
-                    <span className="file-table__select-control">
+                  <Table.Td className={`${TD_BASE_CLASS_NAME} file-table__td--select w-11 px-0 py-0 text-center leading-none`}>
+                    <span className="file-table__select-control flex min-h-full items-center justify-start pl-2">
                       <SelectionCheckbox
                         checked={isSelected}
                         ariaLabel={`Select ${item.name}`}
@@ -933,7 +999,7 @@ export const FileTable = ({
                   </Table.Td>
 
                   <Table.Td
-                    className="file-table__td file-table__td--name"
+                    className={`${TD_BASE_CLASS_NAME} file-table__td--name cursor-pointer`}
                     onClick={(event) => {
                       if (!readOnly && (event.ctrlKey || event.metaKey)) {
                         event.preventDefault()
@@ -950,27 +1016,35 @@ export const FileTable = ({
                       onOpenFolder(item.id)
                     }}
                   >
-                    <Group gap={8} wrap="nowrap">
-                      <span className="file-table__item-icon" aria-hidden="true">
+                    <Group gap={8} wrap="nowrap" className="min-w-0">
+                      <span className="file-table__item-icon inline-flex h-4 w-4 min-w-4 flex-[0_0_16px] items-center justify-center" aria-hidden="true">
                         {isFileItem(item) ? (
                           <FileTypeIcon iconKey={fileTypePresentation?.iconKey ?? 'default'} size={16} />
                         ) : (
                           <IconFolder size={16} color="var(--accent)" />
                         )}
                       </span>
-                      <Text size="sm" fw={item.kind === 'folder' ? 600 : 500} className="file-table__name-text" title={item.name}>
-                        <span className="file-table__name-base">{nameParts.base}</span>
-                        {nameParts.extension ? <span className="file-table__name-ext">{nameParts.extension}</span> : null}
+                      <Text
+                        size="sm"
+                        fw={item.kind === 'folder' ? 600 : 500}
+                        className="file-table__name-text inline-flex max-w-full min-w-0 items-baseline overflow-hidden whitespace-nowrap"
+                        title={item.name}
+                      >
+                        <span className="file-table__name-base min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{nameParts.base}</span>
+                        {nameParts.extension ? <span className="file-table__name-ext flex-none whitespace-nowrap">{nameParts.extension}</span> : null}
                       </Text>
                     </Group>
                   </Table.Td>
-                  <Table.Td className="file-table__td">{item.kind === 'folder' ? `Folder(${item.fileCount} files)` : fileTypePresentation?.label}</Table.Td>
-                  <Table.Td className="file-table__td file-table__td--size">{formatFileSize(item.sizeBytes)}</Table.Td>
+                  <Table.Td className={TD_BASE_CLASS_NAME}>{item.kind === 'folder' ? `Folder(${item.fileCount} files)` : fileTypePresentation?.label}</Table.Td>
+                  <Table.Td className={`${TD_BASE_CLASS_NAME} file-table__td--size ${SIZE_COLUMN_CLASS_NAME} [font-variant-numeric:proportional-nums]`}>
+                    {formatFileSize(item.sizeBytes)}
+                  </Table.Td>
                   <Table.Td
                     className={[
-                      'file-table__td',
+                      TD_BASE_CLASS_NAME,
                       'file-table__td--updated',
-                      compactUpdatedAt ? 'file-table__td--updated-compact' : '',
+                      UPDATED_COLUMN_CLASS_NAME,
+                      compactUpdatedAt ? '[font-variant-numeric:proportional-nums]' : '',
                     ]
                       .filter(Boolean)
                       .join(' ')}
@@ -978,20 +1052,21 @@ export const FileTable = ({
                   >
                     {compactUpdatedAt ? formatDateCompact(item.updatedAt) : formatDate(item.updatedAt)}
                   </Table.Td>
-                  <Table.Td className="file-table__td file-table__td--actions">
+                  <Table.Td className={`${TD_BASE_CLASS_NAME} file-table__td--actions text-right`}>
                     {readOnly ? (
                       <ActionIcon
                         variant="subtle"
                         color="gray"
                         aria-label={`Download ${item.name}`}
                         onClick={() => onDownloadItem(item)}
+                        className="ml-auto"
                       >
                         <IconDownload size={14} />
                       </ActionIcon>
                     ) : (
                       <Menu withinPortal position="bottom-end">
                         <Menu.Target>
-                          <ActionIcon variant="subtle" color="gray" aria-label={`Actions for ${item.name}`}>
+                          <ActionIcon variant="subtle" color="gray" aria-label={`Actions for ${item.name}`} className="ml-auto">
                             <IconDotsVertical size={14} />
                           </ActionIcon>
                         </Menu.Target>
@@ -1016,7 +1091,13 @@ export const FileTable = ({
           </Table.Tbody>
         </Table>
       </ScrollArea>
-      {dragSelection.isSelecting ? <div ref={selectionOverlayRef} className="file-table__selection-rect" aria-hidden="true" /> : null}
+      {dragSelection.isSelecting ? (
+        <div
+          ref={selectionOverlayRef}
+          className="file-table__selection-rect pointer-events-none absolute z-[6] rounded border border-[var(--accent)] bg-[color-mix(in_srgb,var(--accent)_14%,transparent)] shadow-[0_0_0_1px_color-mix(in_srgb,var(--accent)_45%,transparent)]"
+          aria-hidden="true"
+        />
+      ) : null}
       {renderImportOverlay()}
       {renderMoveOverlay()}
       <Menu
