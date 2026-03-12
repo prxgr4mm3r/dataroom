@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent, type MouseEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent, type MouseEvent } from 'react'
 import { IconMail } from '@tabler/icons-react'
 
 import { Alert, Button, Center, Group, Loader, Paper, Stack, Text, TextInput, Title } from '@/shared/ui'
@@ -10,7 +10,7 @@ import { routes } from '@/shared/config/routes'
 import { DataroomPage } from '@/pages/dataroom-page'
 import { OAuthCallbackPage } from '@/pages/oauth-callback-page'
 import { SharedViewPage } from '@/pages/shared-view-page'
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 
 import './styles/auth-screen.css'
 
@@ -283,6 +283,49 @@ const SignInScreen = () => {
 const RequireAuth = () => {
   const { loading, isAuthenticated, signOutUser } = useAuth()
   const meQuery = useCurrentUserQuery(isAuthenticated)
+  const navigate = useNavigate()
+  const location = useLocation()
+  const initialRouteNormalizedRef = useRef(false)
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      initialRouteNormalizedRef.current = false
+    }
+  }, [isAuthenticated])
+
+  useEffect(() => {
+    if (loading || !isAuthenticated || meQuery.isPending || meQuery.error || !meQuery.data) {
+      return
+    }
+
+    if (initialRouteNormalizedRef.current) {
+      return
+    }
+
+    initialRouteNormalizedRef.current = true
+
+    const atRootRoute = location.pathname === routes.dataroomRoot
+    const hasExtraUrlState = Boolean(location.search || location.hash)
+
+    if (!atRootRoute || hasExtraUrlState) {
+      navigate(routes.dataroomRoot, { replace: true })
+    }
+  }, [
+    isAuthenticated,
+    loading,
+    location.hash,
+    location.pathname,
+    location.search,
+    meQuery.data,
+    meQuery.error,
+    meQuery.isPending,
+    navigate,
+  ])
+
+  const handleSignOut = () => {
+    navigate(routes.dataroomRoot, { replace: true })
+    void signOutUser()
+  }
 
   if (loading) {
     return <AuthLoadingScreen label={t('authLoaderPreparing')} />
@@ -320,7 +363,7 @@ const RequireAuth = () => {
               <Button onClick={() => void meQuery.refetch()} loading={meQuery.isRefetching}>
                 Try again
               </Button>
-              <Button variant="light" onClick={() => void signOutUser()}>
+              <Button variant="light" onClick={handleSignOut}>
                 Sign out
               </Button>
             </Group>

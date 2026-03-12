@@ -90,6 +90,11 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
 
   const navigate = useNavigate()
 
+  const handleSignOut = () => {
+    navigate(toFolderPath(), { replace: true })
+    void signOutUser()
+  }
+
   const {
     importDialogOpened,
     openGoogleImportDialog,
@@ -640,7 +645,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
             onSetFileContentVisibility={setFolderFileContentVisibility}
             onOpenFolder={openFolder}
             onOpenFile={openFileFromSidebar}
-            onSignOut={() => void signOutUser()}
+            onSignOut={handleSignOut}
             onDownloadItem={downloadSingleItem}
             onCopyItem={openSingleCopyDialog}
             onRenameItem={openSingleRenameDialog}
@@ -668,7 +673,7 @@ export const DataroomPage = ({ currentUser }: DataroomPageProps) => {
             onNewFolder={() => openCreateFolderDialog(normalizedFolderId)}
             onImportFromGoogle={openGoogleImportDialog}
             onImportFromComputer={openComputerImportPicker}
-            onSignOut={() => void signOutUser()}
+            onSignOut={handleSignOut}
           />
         }
         header={
