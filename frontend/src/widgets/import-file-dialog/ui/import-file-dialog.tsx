@@ -301,7 +301,11 @@ export const ImportFileDialog = ({
                 <Text
                   size="xs"
                   truncate="end"
-                  className="relative ml-[2px] max-w-[min(42vw,320px)] pl-[9px] leading-[1.35] text-[var(--text-secondary)] before:absolute before:left-0 before:top-1/2 before:h-[14px] before:w-px before:-translate-y-1/2 before:bg-[var(--status-chip-separator-color)] max-[860px]:max-w-[min(54vw,240px)]"
+                  className={cx(
+                    'max-w-[min(42vw,320px)] leading-[1.35] text-[var(--text-secondary)] max-[860px]:max-w-[min(54vw,240px)]',
+                    showHeaderStatusLabel &&
+                      'relative ml-[2px] pl-[9px] before:absolute before:left-0 before:top-1/2 before:h-[14px] before:w-px before:-translate-y-1/2 before:bg-[var(--status-chip-separator-color)]',
+                  )}
                 >
                   {connectedGoogleEmail}
                 </Text>
@@ -330,35 +334,19 @@ export const ImportFileDialog = ({
       size={!canImport ? 'md' : 'xl'}
       centered
       classNames={{
+        content: cx(
+          'flex flex-col',
+          canImport
+            ? 'h-[min(860px,calc(100dvh-32px))]'
+            : 'h-auto max-h-[calc(100dvh-32px)]',
+        ),
+        body: cx(
+          'flex min-h-0 flex-col overflow-hidden',
+          canImport ? 'h-full' : 'h-auto px-4 pb-4 pt-[18px]',
+        ),
+        header: 'relative min-h-0 items-center px-4 py-2.5 [&::after]:hidden',
         close:
-          'focus:!outline-none focus-visible:!outline-none focus:!shadow-none focus-visible:!shadow-none',
-      }}
-      styles={{
-        content: {
-          height: canImport ? 'min(860px, calc(100dvh - 32px))' : 'auto',
-          maxHeight: 'calc(100dvh - 32px)',
-          display: 'flex',
-          flexDirection: 'column',
-        },
-        body: {
-          display: 'flex',
-          flexDirection: 'column',
-          height: canImport ? '100%' : 'auto',
-          minHeight: 0,
-          overflow: 'hidden',
-          padding: canImport ? undefined : '18px 16px 16px',
-        },
-        header: {
-          alignItems: 'center',
-          position: 'relative',
-          padding: '10px 16px',
-          minHeight: 0,
-          borderBottom: 'none',
-        },
-        close: {
-          alignSelf: 'center',
-          marginTop: 0,
-        },
+          'mt-0 self-center focus:!outline-none focus-visible:!outline-none focus:!shadow-none focus-visible:!shadow-none',
       }}
     >
       <Stack className="flex min-h-0 flex-1 flex-col" gap="md">
