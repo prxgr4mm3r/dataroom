@@ -40,6 +40,7 @@ const DRIVE_BROWSER_FILTER_BUTTON_CLASS =
   'min-h-8 rounded-lg border border-transparent bg-transparent px-2.5 font-semibold text-[var(--text-secondary)] transition-[background-color,border-color,color] duration-[150ms] ease-[ease] hover:enabled:!border-[var(--border-muted)] hover:enabled:!bg-[var(--bg-hover-soft)] hover:enabled:!text-[var(--text-secondary)]'
 const DRIVE_BROWSER_FILTER_BUTTON_ACTIVE_CLASS =
   '!border-[var(--border-muted)] !bg-[var(--bg-subtle)] !text-[var(--text-primary)]'
+const DRIVE_FILES_SCROLLBAR_SIZE = 10
 
 type ImportFileDialogProps = {
   opened: boolean
@@ -317,7 +318,7 @@ export const ImportFileDialog = ({
               {isGoogleConnected && !tokenExpired ? (
                 <button
                   type="button"
-                  className="ml-1 inline-flex min-h-[18px] items-center gap-1 border-0 bg-transparent px-0 py-px text-xs font-semibold leading-[1.35] text-[var(--text-secondary)] transition-colors duration-[120ms] ease-[ease] hover:text-[var(--text-primary)] disabled:cursor-default disabled:opacity-[0.55]"
+                  className="ml-1 inline-flex min-h-[18px] items-center gap-1 border-0 bg-transparent px-0 py-px text-[12px] font-medium leading-[1.35] text-[var(--text-secondary)] transition-colors duration-[120ms] ease-[ease] hover:text-[var(--text-primary)] disabled:cursor-default disabled:opacity-[0.55]"
                   disabled={googleDisconnect.isPending || googleConnect.isPending}
                   onClick={handleDisconnect}
                 >
@@ -432,7 +433,7 @@ export const ImportFileDialog = ({
                     className="flex-1"
                     classNames={{
                       input:
-                        '!min-h-9 !rounded-lg !border-[var(--border-muted)] !bg-[var(--bg-surface)]',
+                        '!min-h-9 !rounded-lg !border-[var(--border-muted)] !bg-[var(--bg-surface)] !text-[var(--text-primary)] !transition-[border-color,box-shadow,background-color] !duration-[120ms] !ease-[ease] hover:!border-[var(--border-muted)] focus:!outline-none focus-visible:!outline-none focus:!border-[var(--border-muted)] focus-visible:!border-[var(--border-muted)] focus:!shadow-[0_0_0_1px_rgb(148_163_184_/_22%)] focus-visible:!shadow-[0_0_0_1px_rgb(148_163_184_/_22%)]',
                     }}
                     placeholder="Search in Google Drive"
                     leftSection={<IconSearch size={16} />}
@@ -537,7 +538,11 @@ export const ImportFileDialog = ({
                   <Alert color="red">{toApiError(googleFilesQuery.error).message}</Alert>
                 ) : null}
 
-                <ScrollArea className="[--drive-grid-columns:32px_minmax(0,1.9fr)_minmax(118px,1fr)_94px_128px_88px] min-h-0 flex-1 rounded-[10px] border border-[var(--separator-muted)] bg-[var(--bg-surface)] p-0 max-[860px]:[--drive-grid-columns:28px_minmax(0,1.7fr)_minmax(100px,1fr)_84px_112px_76px]">
+                <ScrollArea
+                  type="always"
+                  scrollbarSize={DRIVE_FILES_SCROLLBAR_SIZE}
+                  className="[--drive-grid-columns:32px_minmax(0,1.9fr)_minmax(118px,1fr)_94px_128px_88px] min-h-0 flex-1 rounded-[10px] border border-[var(--separator-muted)] bg-[var(--bg-surface)] p-0 max-[860px]:[--drive-grid-columns:28px_minmax(0,1.7fr)_minmax(100px,1fr)_84px_112px_76px]"
+                >
                   <Box className="sticky top-0 z-[1] grid grid-cols-[var(--drive-grid-columns)] items-center gap-x-2.5 border-b border-[var(--separator-soft)] bg-[var(--bg-subtle)] px-3 py-2.5 max-[860px]:gap-x-2">
                     <span />
                     <Text size="xs" fw={600} c="dimmed">
@@ -640,11 +645,11 @@ export const ImportFileDialog = ({
                           </Text>
 
                           {isTooLarge ? (
-                            <Text size="xs" className="justify-self-end whitespace-nowrap rounded-full border border-[var(--state-danger-border)] bg-[var(--state-danger-bg)] px-2.5 py-[3px] font-bold text-[var(--state-danger-text)]">
+                            <Text size="xs" className="justify-self-end inline-flex min-h-[22px] items-center whitespace-nowrap rounded-full border border-[var(--state-danger-border)] bg-[var(--state-danger-bg)] px-2.5 py-0.5 leading-[1.1] font-semibold text-[var(--state-danger-text)]">
                               Too large
                             </Text>
                           ) : file.shared ? (
-                            <Text size="xs" c="dimmed" className="justify-self-end whitespace-nowrap rounded-full border border-[var(--border-soft)] bg-[var(--bg-subtle)] px-2.5 py-[3px] font-semibold text-[var(--text-secondary)]">
+                            <Text size="xs" c="dimmed" className="justify-self-end inline-flex min-h-[22px] items-center whitespace-nowrap rounded-full border border-[var(--border-soft)] bg-[var(--bg-subtle)] px-2.5 py-0.5 leading-[1.1] font-semibold text-[var(--text-secondary)]">
                               Shared
                             </Text>
                           ) : (
