@@ -17,7 +17,7 @@ const DEFAULT_SIDEBAR_WIDTH = 260
 const COLLAPSED_RAIL_WIDTH = 48
 const MIN_SIDEBAR_WIDTH = 220
 const MAX_SIDEBAR_WIDTH = 460
-const AUTO_COLLAPSE_SIDEBAR_MAX_WIDTH = 1320
+const AUTO_COLLAPSE_SIDEBAR_MAX_WIDTH = 1000
 
 const clampSidebarWidth = (value: number) => Math.min(MAX_SIDEBAR_WIDTH, Math.max(MIN_SIDEBAR_WIDTH, value))
 const cx = (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(' ')
