@@ -513,7 +513,6 @@ export const FileTable = ({
   const showActionsColumn = showBulkHeaderActions || containerWidth >= FILE_TABLE_NO_TYPE_UPDATED_SIZE_MIN_WIDTH
   const showBulkCountLabel = containerWidth >= FILE_TABLE_BULK_COUNT_MIN_WIDTH
   const showBulkButtonLabels = containerWidth >= FILE_TABLE_BULK_TEXT_BUTTONS_MIN_WIDTH
-
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.ctrlKey || event.metaKey) {
@@ -564,18 +563,30 @@ export const FileTable = ({
     }
 
     const updateWidth = () => {
-      setContainerWidth(container.clientWidth)
+      const nextWidth = Math.round(
+        container.getBoundingClientRect().width ||
+          container.parentElement?.getBoundingClientRect().width ||
+          window.innerWidth ||
+          0,
+      )
+      setContainerWidth(nextWidth)
     }
 
     updateWidth()
 
     const resizeObserver = new ResizeObserver(updateWidth)
     resizeObserver.observe(container)
+    if (container.parentElement) {
+      resizeObserver.observe(container.parentElement)
+    }
+
+    window.addEventListener('resize', updateWidth)
 
     return () => {
       resizeObserver.disconnect()
+      window.removeEventListener('resize', updateWidth)
     }
-  }, [])
+  }, [loading, items.length])
 
   const renderImportOverlay = () => {
     if (readOnly) {
@@ -856,7 +867,7 @@ export const FileTable = ({
   return (
     <Box
       ref={containerRef}
-      className="file-table__container relative min-h-0"
+      className="file-table__container relative min-h-0 w-full"
       h="100%"
       onDragOver={readOnly ? undefined : (event) => onFolderDragOver(currentFolderId, event)}
       onDrop={readOnly ? undefined : (event) => onFolderDrop(currentFolderId, event)}
