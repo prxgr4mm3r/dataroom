@@ -13,18 +13,17 @@ import {
   IconUpload,
   IconX,
 } from '@tabler/icons-react'
-import { useEffect, useRef, useState, type CSSProperties, type DragEvent, type PointerEvent } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type DragEvent, type PointerEvent } from 'react'
 
 import type { ContentItem } from '@/entities/content-item'
 import { isFileItem } from '@/entities/content-item'
 import type { DragImportOverlayState } from '@/features/drag-import-files'
 import { useDragSelectionController } from '@/features/select-content-items'
 import { t } from '@/shared/i18n/messages'
-import { formatDate, formatDateCompact } from '@/shared/lib/date/format-date'
+import { formatDate } from '@/shared/lib/date/format-date'
 import { formatFileSize } from '@/shared/lib/file/format-file-size'
 import { getFileTypePresentation } from '@/shared/lib/file/file-type-presentation'
 import { MAX_IMPORT_BATCH_SIZE_BYTES, MAX_IMPORT_FILE_SIZE_BYTES } from '@/shared/lib/file/import-file-size-limit'
-import { splitFileName } from '@/shared/lib/file/split-file-name'
 import { APP_SHORTCUTS, withShortcutHint } from '@/shared/lib/keyboard/shortcuts'
 import {
   ActionIcon,
@@ -40,6 +39,7 @@ import {
   Text,
 } from '@/shared/ui'
 import type { SortBy, SortOrder } from '@/shared/types/common'
+import { computeMiddleEllipsisText } from './middle-ellipsis'
 
 type DropState = 'none' | 'valid' | 'warning' | 'invalid'
 type ToggleSelectOptions = {
@@ -219,6 +219,71 @@ const INTERACTIVE_TARGET_SELECTOR = [
   '.mantine-Checkbox-root',
 ].join(',')
 
+export const MiddleEllipsisText = ({
+  text,
+  preserveExtension = false,
+  className,
+}: {
+  text: string
+  preserveExtension?: boolean
+  className?: string
+}) => {
+  const containerRef = useRef<HTMLSpanElement>(null)
+  const measureRef = useRef<HTMLSpanElement>(null)
+  const [displayText, setDisplayText] = useState(text)
+
+  useLayoutEffect(() => {
+    const container = containerRef.current
+    const measure = measureRef.current
+    if (!container || !measure) {
+      return
+    }
+
+    const measureWidth = (value: string) => {
+      measure.textContent = value
+      return measure.offsetWidth
+    }
+
+    const update = () => {
+      const availableWidth = container.parentElement?.clientWidth || container.clientWidth
+      setDisplayText(
+        computeMiddleEllipsisText({
+          text,
+          availableWidth,
+          preserveExtension,
+          measureWidth,
+        }),
+      )
+    }
+
+    update()
+
+    const resizeObserver = new ResizeObserver(update)
+    resizeObserver.observe(container)
+
+    return () => {
+      resizeObserver.disconnect()
+    }
+  }, [preserveExtension, text])
+
+  return (
+    <span
+      ref={containerRef}
+      data-testid="middle-ellipsis-root"
+      className={['relative block min-w-0 overflow-hidden whitespace-nowrap', className].filter(Boolean).join(' ')}
+    >
+      <span
+        ref={measureRef}
+        aria-hidden="true"
+        className="pointer-events-none absolute left-0 top-0 whitespace-nowrap opacity-0"
+      />
+      <span data-testid="middle-ellipsis-value" className="block overflow-hidden text-ellipsis whitespace-nowrap">
+        {displayText}
+      </span>
+    </span>
+  )
+}
+
 const canStartAreaSelectionFromEvent = (event: PointerEvent<HTMLElement>): boolean => {
   const target = event.target
   if (!(target instanceof Element)) {
@@ -269,31 +334,51 @@ const SortableHeader = ({
       .filter(Boolean)
       .join(' ')}
     style={{ whiteSpace: 'nowrap' }}
-    onClick={onClick}
+    onClick={hidden ? undefined : onClick}
+    aria-label={hidden ? label : undefined}
   >
-    <Group gap={4} wrap="nowrap" className={hidden ? 'invisible' : undefined}>
-      <Text size="sm" fw={600}>
-        {label}
-      </Text>
-      {active ? <Text size="xs">{order === 'asc' ? '↑' : '↓'}</Text> : null}
-    </Group>
+    {hidden ? null : (
+      <Group gap={4} wrap="nowrap">
+        <Text size="sm" fw={600}>
+          {label}
+        </Text>
+        {active ? <Text size="xs">{order === 'asc' ? '↑' : '↓'}</Text> : null}
+      </Group>
+    )}
   </Table.Th>
 )
 
 const TABLE_CLASS_NAME =
-  'file-table m-0 w-full border-none border-collapse'
+  'file-table m-0 w-full table-fixed border-none border-collapse'
 
 const TH_BASE_CLASS_NAME =
   'file-table__th h-11 border-b border-[var(--table-separator)] bg-[var(--table-header-bg)] py-0 align-middle font-semibold text-[var(--text-secondary)]'
 
 const TD_BASE_CLASS_NAME =
-  'file-table__td border-b border-[var(--table-separator)] py-[11px] align-middle group-hover:shadow-[inset_0_1px_0_var(--table-row-hover-border),inset_0_-1px_0_var(--table-row-hover-border)]'
+  'file-table__td overflow-hidden whitespace-nowrap border-b border-[var(--table-separator)] py-[11px] align-middle group-hover:shadow-[inset_0_1px_0_var(--table-row-hover-border),inset_0_-1px_0_var(--table-row-hover-border)]'
+
+const SELECT_COLUMN_CLASS_NAME =
+  'w-[var(--file-table-select-col-width)] min-w-[var(--file-table-select-col-width)] max-w-[var(--file-table-select-col-width)]'
 
 const SIZE_COLUMN_CLASS_NAME =
   'whitespace-nowrap w-[var(--file-table-size-col-width)] min-w-[var(--file-table-size-col-width)] max-w-[var(--file-table-size-col-width)] transition-[width,min-width,max-width] duration-[var(--file-table-layout-ms)] ease-[var(--file-table-layout-ease)] motion-reduce:transition-none'
 
+const TYPE_COLUMN_CLASS_NAME =
+  'whitespace-nowrap w-[var(--file-table-type-col-width)] min-w-[var(--file-table-type-col-width)] max-w-[var(--file-table-type-col-width)] overflow-hidden text-ellipsis transition-[width,min-width,max-width] duration-[var(--file-table-layout-ms)] ease-[var(--file-table-layout-ease)] motion-reduce:transition-none'
+
 const UPDATED_COLUMN_CLASS_NAME =
   'whitespace-nowrap w-[var(--file-table-updated-col-width)] min-w-[var(--file-table-updated-col-width)] max-w-[var(--file-table-updated-col-width)] transition-[width,min-width,max-width] duration-[var(--file-table-layout-ms)] ease-[var(--file-table-layout-ease)] motion-reduce:transition-none'
+
+const ACTIONS_COLUMN_CLASS_NAME =
+  'w-[var(--file-table-actions-col-width)] min-w-[var(--file-table-actions-col-width)] max-w-[var(--file-table-actions-col-width)]'
+
+const FILE_TABLE_NAME_MIN_WIDTH = 260
+const FILE_TABLE_FULL_MIN_WIDTH = 44 + FILE_TABLE_NAME_MIN_WIDTH + 168 + 98 + 168 + 56
+const FILE_TABLE_NO_TYPE_MIN_WIDTH = 44 + FILE_TABLE_NAME_MIN_WIDTH + 98 + 168 + 56
+const FILE_TABLE_NO_TYPE_UPDATED_MIN_WIDTH = 44 + FILE_TABLE_NAME_MIN_WIDTH + 98 + 56
+const FILE_TABLE_NO_TYPE_UPDATED_SIZE_MIN_WIDTH = 44 + FILE_TABLE_NAME_MIN_WIDTH + 56
+const FILE_TABLE_BULK_COUNT_MIN_WIDTH = 860
+const FILE_TABLE_BULK_TEXT_BUTTONS_MIN_WIDTH = 700
 
 export const FileTable = ({
   readOnly = false,
@@ -343,14 +428,18 @@ export const FileTable = ({
   const rowRefs = useRef(new Map<string, HTMLTableRowElement>())
   const [isAreaSelectionModifierPressed, setIsAreaSelectionModifierPressed] = useState(false)
   const [contextMenuState, setContextMenuState] = useState<ContextMenuState | null>(null)
+  const [containerWidth, setContainerWidth] = useState(0)
   const pendingToggleOptionsRef = useRef<ToggleSelectOptions | null>(null)
   const currentFolderDropState = readOnly ? 'none' : getFolderDropState(currentFolderId)
-  const compactUpdatedAt = Boolean(openedPreviewId)
   const tableStyle: CSSProperties = {
     ['--file-table-layout-ms' as string]: '220ms',
     ['--file-table-layout-ease' as string]: 'cubic-bezier(0.2, 0, 0, 1)',
-    ['--file-table-size-col-width' as string]: compactUpdatedAt ? '112px' : '98px',
-    ['--file-table-updated-col-width' as string]: compactUpdatedAt ? '122px' : '168px',
+    ['--file-table-select-col-width' as string]: '44px',
+    ['--file-table-type-col-width' as string]: '168px',
+    ['--file-table-size-col-width' as string]: '98px',
+    ['--file-table-updated-col-width' as string]: '168px',
+    ['--file-table-actions-col-width' as string]: '56px',
+    ['--table-layout' as string]: 'fixed',
     ['--mantine-color-body' as string]: 'var(--table-header-bg)',
     ['--table-sticky-header-background-color' as string]: 'var(--table-header-bg)',
     ['--table-highlight-on-hover-color' as string]: 'var(--table-row-hover-bg)',
@@ -418,6 +507,12 @@ export const FileTable = ({
   const hasVisibleSelection = visibleSelectedCount > 0
   const selectedCount = effectiveSelectedIds.length
   const showBulkHeaderActions = selectedCount > 0 && Boolean(onClearSelection) && Boolean(onDownloadSelected)
+  const showTypeColumn = containerWidth >= FILE_TABLE_FULL_MIN_WIDTH
+  const showUpdatedColumn = containerWidth >= FILE_TABLE_NO_TYPE_MIN_WIDTH
+  const showSizeColumn = containerWidth >= FILE_TABLE_NO_TYPE_UPDATED_MIN_WIDTH
+  const showActionsColumn = showBulkHeaderActions || containerWidth >= FILE_TABLE_NO_TYPE_UPDATED_SIZE_MIN_WIDTH
+  const showBulkCountLabel = containerWidth >= FILE_TABLE_BULK_COUNT_MIN_WIDTH
+  const showBulkButtonLabels = containerWidth >= FILE_TABLE_BULK_TEXT_BUTTONS_MIN_WIDTH
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -461,6 +556,26 @@ export const FileTable = ({
       window.removeEventListener('scroll', handleWindowScroll, true)
     }
   }, [contextMenuState])
+
+  useLayoutEffect(() => {
+    const container = containerRef.current
+    if (!container) {
+      return
+    }
+
+    const updateWidth = () => {
+      setContainerWidth(container.clientWidth)
+    }
+
+    updateWidth()
+
+    const resizeObserver = new ResizeObserver(updateWidth)
+    resizeObserver.observe(container)
+
+    return () => {
+      resizeObserver.disconnect()
+    }
+  }, [])
 
   const renderImportOverlay = () => {
     if (readOnly) {
@@ -752,7 +867,7 @@ export const FileTable = ({
       onPointerCancel={dragSelection.onPointerCancel}
       onClickCapture={dragSelection.onClickCapture}
     >
-      <ScrollArea h="100%">
+      <ScrollArea h="100%" scrollbars="y">
         <Table
           className={TABLE_CLASS_NAME}
           style={tableStyle}
@@ -767,9 +882,17 @@ export const FileTable = ({
             },
           }}
         >
+          <colgroup>
+            <col className={SELECT_COLUMN_CLASS_NAME} />
+            <col />
+            {showTypeColumn ? <col className={TYPE_COLUMN_CLASS_NAME} /> : null}
+            {showSizeColumn ? <col className={SIZE_COLUMN_CLASS_NAME} /> : null}
+            {showUpdatedColumn ? <col className={UPDATED_COLUMN_CLASS_NAME} /> : null}
+            {showActionsColumn ? <col className={ACTIONS_COLUMN_CLASS_NAME} /> : null}
+          </colgroup>
           <Table.Thead>
             <Table.Tr>
-              <Table.Th className={`${TH_BASE_CLASS_NAME} file-table__th--select w-11 px-0 text-center`} w={44}>
+              <Table.Th className={`${TH_BASE_CLASS_NAME} ${SELECT_COLUMN_CLASS_NAME} file-table__th--select px-0 text-center`} w={44}>
                 <span className="file-table__select-control flex min-h-full items-center justify-start pl-2">
                   <SelectionCheckbox
                     checked={allVisibleSelected}
@@ -794,100 +917,191 @@ export const FileTable = ({
                 onClick={() => onToggleSort('name')}
                 hidden={showBulkHeaderActions}
               />
-              <SortableHeader
-                label="Type"
-                active={sortBy === 'type'}
-                order={sortOrder}
-                onClick={() => onToggleSort('type')}
-                hidden={showBulkHeaderActions}
-              />
-              <SortableHeader
-                label="Size"
-                active={sortBy === 'size'}
-                order={sortOrder}
-                onClick={() => onToggleSort('size')}
-                hidden={showBulkHeaderActions}
-                className={[SIZE_COLUMN_CLASS_NAME, showBulkHeaderActions ? 'file-table__th--bulk-hidden' : '']
-                  .filter(Boolean)
-                  .join(' ')}
-              />
-              <SortableHeader
-                label={compactUpdatedAt ? 'Updated' : 'Updated at'}
-                active={sortBy === 'updated_at'}
-                order={sortOrder}
-                onClick={() => onToggleSort('updated_at')}
-                hidden={showBulkHeaderActions}
-                className={[UPDATED_COLUMN_CLASS_NAME, showBulkHeaderActions ? 'file-table__th--bulk-hidden' : '']
-                  .filter(Boolean)
-                  .join(' ')}
-              />
-              <Table.Th className={`${TH_BASE_CLASS_NAME} file-table__th--actions file-table__th--actions-anchor relative text-right`} w={56}>
+              {showTypeColumn ? (
+                <SortableHeader
+                  label="Type"
+                  active={sortBy === 'type'}
+                  order={sortOrder}
+                  onClick={() => onToggleSort('type')}
+                  className={TYPE_COLUMN_CLASS_NAME}
+                  hidden={showBulkHeaderActions}
+                />
+              ) : null}
+              {showSizeColumn ? (
+                <SortableHeader
+                  label="Size"
+                  active={sortBy === 'size'}
+                  order={sortOrder}
+                  onClick={() => onToggleSort('size')}
+                  hidden={showBulkHeaderActions}
+                  className={[SIZE_COLUMN_CLASS_NAME, showBulkHeaderActions ? 'file-table__th--bulk-hidden' : '']
+                    .filter(Boolean)
+                    .join(' ')}
+                />
+              ) : null}
+              {showUpdatedColumn ? (
+                <SortableHeader
+                  label="Updated at"
+                  active={sortBy === 'updated_at'}
+                  order={sortOrder}
+                  onClick={() => onToggleSort('updated_at')}
+                  hidden={showBulkHeaderActions}
+                  className={[UPDATED_COLUMN_CLASS_NAME, showBulkHeaderActions ? 'file-table__th--bulk-hidden' : '']
+                    .filter(Boolean)
+                    .join(' ')}
+                />
+              ) : null}
+              {showActionsColumn ? (
+                <Table.Th className={`${TH_BASE_CLASS_NAME} ${ACTIONS_COLUMN_CLASS_NAME} file-table__th--actions file-table__th--actions-anchor relative px-2 text-right`} w={56}>
                 {showBulkHeaderActions ? (
                   <div className="file-table__bulk-header-overlay absolute right-2 top-1/2 z-[2] flex -translate-y-1/2 items-center gap-2.5 whitespace-nowrap">
-                    <Text size="sm" fw={600} className="file-table__bulk-count whitespace-nowrap text-[var(--text-primary)] max-[980px]:hidden">
-                      {selectedCount === 1 ? '1 item selected' : `${selectedCount} items selected`}
-                    </Text>
+                    {showBulkCountLabel ? (
+                      <Text size="sm" fw={600} className="file-table__bulk-count whitespace-nowrap text-[var(--text-primary)]">
+                        {selectedCount === 1 ? '1 item selected' : `${selectedCount} items selected`}
+                      </Text>
+                    ) : null}
                     <Group gap="xs" wrap="nowrap" className="file-table__bulk-actions ml-auto">
-                      <Button
-                        variant="subtle"
-                        size="xs"
-                        leftSection={<IconX size={14} />}
-                        onClick={onClearSelection}
-                        className="file-table__bulk-button [&_.mantine-Button-inner]:whitespace-nowrap max-[980px]:min-w-8 max-[980px]:px-2"
-                      >
-                        <span className="file-table__bulk-button-label max-[980px]:hidden">{t('clearSelection')}</span>
-                      </Button>
-                      <Button
-                        variant="default"
-                        size="xs"
-                        leftSection={<IconDownload size={14} />}
-                        onClick={onDownloadSelected}
-                        loading={downloadPending}
-                        className="file-table__bulk-button [&_.mantine-Button-inner]:whitespace-nowrap max-[980px]:min-w-8 max-[980px]:px-2"
-                      >
-                        <span className="file-table__bulk-button-label max-[980px]:hidden">{t('download')}</span>
-                      </Button>
-                      {onCopySelected ? (
+                      {showBulkButtonLabels ? (
+                        <Button
+                          variant="subtle"
+                          size="xs"
+                          leftSection={<IconX size={14} />}
+                          onClick={onClearSelection}
+                          aria-label={t('clearSelection')}
+                          title={t('clearSelection')}
+                          className="file-table__bulk-button [&_.mantine-Button-inner]:whitespace-nowrap"
+                        >
+                          <span className="file-table__bulk-button-label">{t('clearSelection')}</span>
+                        </Button>
+                      ) : (
+                        <ActionIcon
+                          variant="subtle"
+                          size="lg"
+                          onClick={onClearSelection}
+                          aria-label={t('clearSelection')}
+                          title={t('clearSelection')}
+                          className="file-table__bulk-button !bg-transparent !text-[var(--text-secondary)] hover:!bg-[var(--bg-hover-soft)] hover:!text-[var(--text-primary)]"
+                        >
+                          <IconX size={14} />
+                        </ActionIcon>
+                      )}
+                      {showBulkButtonLabels ? (
                         <Button
                           variant="default"
                           size="xs"
-                          leftSection={<IconCopy size={14} />}
-                          onClick={onCopySelected}
-                          loading={copyPending}
-                          className="file-table__bulk-button [&_.mantine-Button-inner]:whitespace-nowrap max-[980px]:min-w-8 max-[980px]:px-2"
+                          leftSection={<IconDownload size={14} />}
+                          onClick={onDownloadSelected}
+                          loading={downloadPending}
+                          aria-label={t('download')}
+                          title={t('download')}
+                          className="file-table__bulk-button [&_.mantine-Button-inner]:whitespace-nowrap"
                         >
-                          <span className="file-table__bulk-button-label max-[980px]:hidden">{t('copy')}</span>
+                          <span className="file-table__bulk-button-label">{t('download')}</span>
                         </Button>
+                      ) : (
+                        <ActionIcon
+                          variant="subtle"
+                          size="lg"
+                          onClick={onDownloadSelected}
+                          loading={downloadPending}
+                          aria-label={t('download')}
+                          title={t('download')}
+                          className="file-table__bulk-button !bg-transparent !text-[var(--text-secondary)] hover:!bg-[var(--bg-hover-soft)] hover:!text-[var(--text-primary)]"
+                        >
+                          <IconDownload size={14} />
+                        </ActionIcon>
+                      )}
+                      {onCopySelected ? (
+                        showBulkButtonLabels ? (
+                          <Button
+                            variant="default"
+                            size="xs"
+                            leftSection={<IconCopy size={14} />}
+                            onClick={onCopySelected}
+                            loading={copyPending}
+                            aria-label={t('copy')}
+                            title={t('copy')}
+                            className="file-table__bulk-button [&_.mantine-Button-inner]:whitespace-nowrap"
+                          >
+                            <span className="file-table__bulk-button-label">{t('copy')}</span>
+                          </Button>
+                        ) : (
+                          <ActionIcon
+                            variant="subtle"
+                            size="lg"
+                            onClick={onCopySelected}
+                            loading={copyPending}
+                            aria-label={t('copy')}
+                            title={t('copy')}
+                            className="file-table__bulk-button !bg-transparent !text-[var(--text-secondary)] hover:!bg-[var(--bg-hover-soft)] hover:!text-[var(--text-primary)]"
+                          >
+                            <IconCopy size={14} />
+                          </ActionIcon>
+                        )
                       ) : null}
                       {onMoveSelected ? (
-                        <Button
-                          variant="default"
-                          size="xs"
-                          leftSection={<IconArrowsMove size={14} />}
-                          onClick={onMoveSelected}
-                          loading={movePending}
-                          className="file-table__bulk-button [&_.mantine-Button-inner]:whitespace-nowrap max-[980px]:min-w-8 max-[980px]:px-2"
-                        >
-                          <span className="file-table__bulk-button-label max-[980px]:hidden">{t('move')}</span>
-                        </Button>
+                        showBulkButtonLabels ? (
+                          <Button
+                            variant="default"
+                            size="xs"
+                            leftSection={<IconArrowsMove size={14} />}
+                            onClick={onMoveSelected}
+                            loading={movePending}
+                            aria-label={t('move')}
+                            title={t('move')}
+                            className="file-table__bulk-button [&_.mantine-Button-inner]:whitespace-nowrap"
+                          >
+                            <span className="file-table__bulk-button-label">{t('move')}</span>
+                          </Button>
+                        ) : (
+                          <ActionIcon
+                            variant="subtle"
+                            size="lg"
+                            onClick={onMoveSelected}
+                            loading={movePending}
+                            aria-label={t('move')}
+                            title={t('move')}
+                            className="file-table__bulk-button !bg-transparent !text-[var(--text-secondary)] hover:!bg-[var(--bg-hover-soft)] hover:!text-[var(--text-primary)]"
+                          >
+                            <IconArrowsMove size={14} />
+                          </ActionIcon>
+                        )
                       ) : null}
                       {onDeleteSelected ? (
-                        <Button
-                          color="red"
-                          variant="light"
-                          size="xs"
-                          leftSection={<IconTrash size={14} />}
-                          onClick={onDeleteSelected}
-                          loading={deletePending}
-                          className="file-table__bulk-button [&_.mantine-Button-inner]:whitespace-nowrap max-[980px]:min-w-8 max-[980px]:px-2"
-                        >
-                          <span className="file-table__bulk-button-label max-[980px]:hidden">{t('deleteSelected')}</span>
-                        </Button>
+                        showBulkButtonLabels ? (
+                          <Button
+                            color="red"
+                            variant="light"
+                            size="xs"
+                            leftSection={<IconTrash size={14} />}
+                            onClick={onDeleteSelected}
+                            loading={deletePending}
+                            aria-label={t('deleteSelected')}
+                            title={t('deleteSelected')}
+                            className="file-table__bulk-button [&_.mantine-Button-inner]:whitespace-nowrap"
+                          >
+                            <span className="file-table__bulk-button-label">{t('deleteSelected')}</span>
+                          </Button>
+                        ) : (
+                          <ActionIcon
+                            color="red"
+                            variant="subtle"
+                            size="lg"
+                            onClick={onDeleteSelected}
+                            loading={deletePending}
+                            aria-label={t('deleteSelected')}
+                            title={t('deleteSelected')}
+                            className="file-table__bulk-button !bg-transparent !text-[var(--state-danger-text)] hover:!bg-[var(--state-danger-bg-soft)] hover:!text-[var(--state-danger-text)]"
+                          >
+                            <IconTrash size={14} />
+                          </ActionIcon>
+                        )
                       ) : null}
                     </Group>
                   </div>
                 ) : null}
-              </Table.Th>
+                </Table.Th>
+              ) : null}
             </Table.Tr>
           </Table.Thead>
 
@@ -901,12 +1115,6 @@ export const FileTable = ({
               const fileTypePresentation = isFileItem(item)
                 ? getFileTypePresentation(item.name, item.mimeType)
                 : null
-              const nameParts = isFileItem(item)
-                ? splitFileName(item.name)
-                : {
-                    base: item.name,
-                    extension: '',
-                  }
 
               let rowBackground: string | undefined
               if (dropState === 'valid') {
@@ -981,7 +1189,7 @@ export const FileTable = ({
                   }
                   style={{ opacity: isDragging ? 0.45 : 1 }}
                 >
-                  <Table.Td className={`${TD_BASE_CLASS_NAME} file-table__td--select w-11 px-0 py-0 text-center leading-none`}>
+                  <Table.Td className={`${TD_BASE_CLASS_NAME} ${SELECT_COLUMN_CLASS_NAME} file-table__td--select px-0 py-0 text-center leading-none`}>
                     <span className="file-table__select-control flex min-h-full items-center justify-start pl-2">
                       <SelectionCheckbox
                         checked={isSelected}
@@ -1005,7 +1213,7 @@ export const FileTable = ({
                   </Table.Td>
 
                   <Table.Td
-                    className={`${TD_BASE_CLASS_NAME} file-table__td--name cursor-pointer`}
+                    className={`${TD_BASE_CLASS_NAME} file-table__td--name min-w-0 cursor-pointer`}
                     onClick={(event) => {
                       if (!readOnly && (event.ctrlKey || event.metaKey)) {
                         event.preventDefault()
@@ -1022,7 +1230,7 @@ export const FileTable = ({
                       onOpenFolder(item.id)
                     }}
                   >
-                    <Group gap={8} wrap="nowrap" className="min-w-0">
+                    <Group gap={8} wrap="nowrap" className="w-full min-w-0">
                       <span className="file-table__item-icon inline-flex h-4 w-4 min-w-4 flex-[0_0_16px] items-center justify-center" aria-hidden="true">
                         {isFileItem(item) ? (
                           <FileTypeIcon iconKey={fileTypePresentation?.iconKey ?? 'default'} size={16} />
@@ -1030,35 +1238,52 @@ export const FileTable = ({
                           <IconFolder size={16} color="var(--accent)" />
                         )}
                       </span>
-                      <Text
-                        size="sm"
-                        fw={item.kind === 'folder' ? 600 : 500}
-                        className="file-table__name-text inline-flex max-w-full min-w-0 items-baseline overflow-hidden whitespace-nowrap"
+                      <div
+                        className={[
+                          'file-table__name-text min-w-0 flex-1 overflow-hidden whitespace-nowrap text-sm',
+                          item.kind === 'folder' ? 'font-semibold' : 'font-medium',
+                        ]
+                          .filter(Boolean)
+                          .join(' ')}
                         title={item.name}
                       >
-                        <span className="file-table__name-base min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{nameParts.base}</span>
-                        {nameParts.extension ? <span className="file-table__name-ext flex-none whitespace-nowrap">{nameParts.extension}</span> : null}
-                      </Text>
+                        <MiddleEllipsisText
+                          text={item.name}
+                          preserveExtension={isFileItem(item)}
+                          className="w-full"
+                        />
+                      </div>
                     </Group>
                   </Table.Td>
-                  <Table.Td className={TD_BASE_CLASS_NAME}>{item.kind === 'folder' ? `Folder(${item.fileCount} files)` : fileTypePresentation?.label}</Table.Td>
-                  <Table.Td className={`${TD_BASE_CLASS_NAME} file-table__td--size ${SIZE_COLUMN_CLASS_NAME} [font-variant-numeric:proportional-nums]`}>
-                    {formatFileSize(item.sizeBytes)}
-                  </Table.Td>
-                  <Table.Td
-                    className={[
-                      TD_BASE_CLASS_NAME,
-                      'file-table__td--updated',
-                      UPDATED_COLUMN_CLASS_NAME,
-                      compactUpdatedAt ? '[font-variant-numeric:proportional-nums]' : '',
-                    ]
-                      .filter(Boolean)
-                      .join(' ')}
-                    title={compactUpdatedAt ? formatDate(item.updatedAt) : undefined}
-                  >
-                    {compactUpdatedAt ? formatDateCompact(item.updatedAt) : formatDate(item.updatedAt)}
-                  </Table.Td>
-                  <Table.Td className={`${TD_BASE_CLASS_NAME} file-table__td--actions text-right`}>
+                  {showTypeColumn ? (
+                    <Table.Td className={`${TD_BASE_CLASS_NAME} ${TYPE_COLUMN_CLASS_NAME}`}>
+                      <span className="block overflow-hidden text-ellipsis whitespace-nowrap">
+                        {item.kind === 'folder' ? `Folder(${item.fileCount} files)` : fileTypePresentation?.label}
+                      </span>
+                    </Table.Td>
+                  ) : null}
+                  {showSizeColumn ? (
+                    <Table.Td className={`${TD_BASE_CLASS_NAME} file-table__td--size ${SIZE_COLUMN_CLASS_NAME} [font-variant-numeric:proportional-nums]`}>
+                      {formatFileSize(item.sizeBytes)}
+                    </Table.Td>
+                  ) : null}
+                  {showUpdatedColumn ? (
+                    <Table.Td
+                      className={[
+                        TD_BASE_CLASS_NAME,
+                        'file-table__td--updated',
+                        UPDATED_COLUMN_CLASS_NAME,
+                        '[font-variant-numeric:proportional-nums]',
+                      ]
+                        .filter(Boolean)
+                        .join(' ')}
+                      title={formatDate(item.updatedAt)}
+                    >
+                      {formatDate(item.updatedAt)}
+                    </Table.Td>
+                  ) : null}
+                  {showActionsColumn ? (
+                    <Table.Td className={`${TD_BASE_CLASS_NAME} ${ACTIONS_COLUMN_CLASS_NAME} file-table__td--actions px-2 text-right`}>
                     {readOnly ? (
                       <ActionIcon
                         variant="subtle"
@@ -1090,7 +1315,8 @@ export const FileTable = ({
                         </Menu.Dropdown>
                       </Menu>
                     )}
-                  </Table.Td>
+                    </Table.Td>
+                  ) : null}
                 </Table.Tr>
               )
             })}
