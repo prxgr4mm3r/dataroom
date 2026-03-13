@@ -17,6 +17,7 @@ const DEFAULT_SIDEBAR_WIDTH = 260
 const COLLAPSED_RAIL_WIDTH = 48
 const MIN_SIDEBAR_WIDTH = 220
 const MAX_SIDEBAR_WIDTH = 460
+const AUTO_COLLAPSE_SIDEBAR_MAX_WIDTH = 1320
 
 const clampSidebarWidth = (value: number) => Math.min(MAX_SIDEBAR_WIDTH, Math.max(MIN_SIDEBAR_WIDTH, value))
 const cx = (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(' ')
@@ -26,6 +27,21 @@ export const AppShell = ({ sidebar, collapsedSidebar, header, content, bulkActio
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [isResizing, setIsResizing] = useState(false)
   const dragStartRef = useRef<{ startX: number; startWidth: number } | null>(null)
+
+  useEffect(() => {
+    const collapseSidebarIfNeeded = () => {
+      if (window.innerWidth <= AUTO_COLLAPSE_SIDEBAR_MAX_WIDTH) {
+        setIsSidebarCollapsed(true)
+      }
+    }
+
+    collapseSidebarIfNeeded()
+    window.addEventListener('resize', collapseSidebarIfNeeded)
+
+    return () => {
+      window.removeEventListener('resize', collapseSidebarIfNeeded)
+    }
+  }, [])
 
   useEffect(() => {
     if (!isResizing) {
