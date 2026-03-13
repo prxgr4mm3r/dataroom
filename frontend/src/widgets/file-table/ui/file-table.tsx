@@ -251,16 +251,19 @@ const SortableHeader = ({
   order,
   onClick,
   className,
+  hidden = false,
 }: {
   label: string
   active: boolean
   order: SortOrder
   onClick: () => void
   className?: string
+  hidden?: boolean
 }) => (
   <Table.Th
     className={[
       'file-table__th file-table__th--sortable h-11 border-b border-[var(--table-separator)] bg-[var(--table-header-bg)] py-0 align-middle font-semibold text-[var(--text-secondary)] cursor-pointer',
+      hidden && 'pointer-events-none',
       className,
     ]
       .filter(Boolean)
@@ -268,7 +271,7 @@ const SortableHeader = ({
     style={{ whiteSpace: 'nowrap' }}
     onClick={onClick}
   >
-    <Group gap={4} wrap="nowrap">
+    <Group gap={4} wrap="nowrap" className={hidden ? 'invisible' : undefined}>
       <Text size="sm" fw={600}>
         {label}
       </Text>
@@ -789,20 +792,22 @@ export const FileTable = ({
                 active={sortBy === 'name'}
                 order={sortOrder}
                 onClick={() => onToggleSort('name')}
+                hidden={showBulkHeaderActions}
               />
               <SortableHeader
                 label="Type"
                 active={sortBy === 'type'}
                 order={sortOrder}
                 onClick={() => onToggleSort('type')}
-                className={showBulkHeaderActions ? 'file-table__th--bulk-hidden pointer-events-none text-transparent' : undefined}
+                hidden={showBulkHeaderActions}
               />
               <SortableHeader
                 label="Size"
                 active={sortBy === 'size'}
                 order={sortOrder}
                 onClick={() => onToggleSort('size')}
-                className={[SIZE_COLUMN_CLASS_NAME, showBulkHeaderActions ? 'file-table__th--bulk-hidden pointer-events-none text-transparent' : '']
+                hidden={showBulkHeaderActions}
+                className={[SIZE_COLUMN_CLASS_NAME, showBulkHeaderActions ? 'file-table__th--bulk-hidden' : '']
                   .filter(Boolean)
                   .join(' ')}
               />
@@ -811,7 +816,8 @@ export const FileTable = ({
                 active={sortBy === 'updated_at'}
                 order={sortOrder}
                 onClick={() => onToggleSort('updated_at')}
-                className={[UPDATED_COLUMN_CLASS_NAME, showBulkHeaderActions ? 'file-table__th--bulk-hidden pointer-events-none text-transparent' : '']
+                hidden={showBulkHeaderActions}
+                className={[UPDATED_COLUMN_CLASS_NAME, showBulkHeaderActions ? 'file-table__th--bulk-hidden' : '']
                   .filter(Boolean)
                   .join(' ')}
               />
