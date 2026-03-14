@@ -1,7 +1,7 @@
 export const messages = {
   appTitle: 'Data Room',
   signInHeroTitle: 'Dataroom.demo',
-  signInCardTitle: 'Welcome back',
+  signInCardTitle: 'Welcome back!',
   signInTitle: 'Sign in to Data Room',
   signInSubtitle: 'Secure workspace for your files and shared content.',
   signInWithGoogle: 'Continue with Google',
