@@ -1,22 +1,29 @@
-# Data Room Frontend (Vertical Slice v1)
+# Frontend
 
-React + TypeScript frontend for Data Room Explorer shell.
+React + TypeScript app for the Data Room UI.
+
+## What it does
+
+- Signs users in with Firebase
+- Opens the main Data Room explorer
+- Uploads files from device
+- Imports files from Google Drive
+- Supports folders, preview, search, sorting, bulk actions, and share view
 
 ## Stack
 
-- React + Vite + TypeScript
+- React 19 + Vite + TypeScript
 - React Router
 - TanStack Query
 - Firebase Web Auth
-- Axios
 - Zustand
-- Mantine (wrapped via `shared/ui`)
-- OpenAPI generated types (`openapi-typescript`)
+- Mantine via `src/shared/ui`
+- Tailwind CSS v4
 - Vitest + Testing Library
 
-## Environment
+## Setup
 
-Copy `frontend/.env.example` to `frontend/.env` and fill values:
+Create `frontend/.env` from `frontend/.env.example`:
 
 ```bash
 VITE_API_BASE_URL=http://localhost:5000
@@ -26,28 +33,34 @@ VITE_FIREBASE_PROJECT_ID=
 VITE_FIREBASE_APP_ID=
 ```
 
+Optional:
+
+```bash
+VITE_MAX_IMPORT_FILE_SIZE_BYTES=4194304
+VITE_GOOGLE_PICKER_API_KEY=
+VITE_GOOGLE_PICKER_APP_ID=
+```
+
 ## Scripts
 
 ```bash
 npm --prefix frontend run dev
+npm --prefix frontend run build
 npm --prefix frontend run lint
 npm --prefix frontend run test
-npm --prefix frontend run build
 npm --prefix frontend run generate:api-types
 ```
 
-## Implemented v1 slice
+## Structure
 
-- Firebase sign-in gate + `/api/me` bootstrap
-- Explorer shell: sidebar, toolbar, breadcrumbs, table, preview pane, bulk bar scaffold
-- URL-driven folder navigation: `/dataroom`, `/dataroom/f/:folderId`
-- URL-driven preview: `?preview=:itemId`
-- Google integration status/connect flow and OAuth callback route
-- Google Drive file browsing/import into current folder
-- Server-driven sorting (`name`, `type`, `size`, `imported_at`)
-- Selection state independent from preview open state
+- `src/app` app bootstrap, providers, global styles
+- `src/pages` route-level pages
+- `src/widgets` composed UI blocks
+- `src/features` user actions and flows
+- `src/entities` domain entities
+- `src/shared` api client, config, ui primitives, helpers
 
 ## Notes
 
-- UI layer is isolated via `shared/ui` wrappers to keep visual stack swappable.
-- OpenAPI types are generated to `src/shared/api/openapi/schema.ts`.
+- API types are generated from `../backend/openapi.yaml` into `src/shared/api/openapi/schema.ts`.
+- More architecture details live in `frontend/docs/`.
